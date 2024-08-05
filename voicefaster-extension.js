@@ -1,5 +1,5 @@
 // TypingMind Extension for handling audio streams
-const VOICEFASTER_EXTENSION_VERSION = '1.1.1';
+const VOICEFASTER_EXTENSION_VERSION = '1.1.2';
 
 (function() {
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} loading...`);
@@ -87,8 +87,13 @@ const VOICEFASTER_EXTENSION_VERSION = '1.1.1';
     }
   }
 
-  // Expose the function to the global scope
-  window.playAudioStream = playAudioStream;
+  // Listen for messages from the parent window
+  window.addEventListener('message', function(event) {
+    if (event.data.type === 'PLAY_AUDIO_STREAM') {
+      console.log('Received PLAY_AUDIO_STREAM message');
+      playAudioStream(event.data.payload);
+    }
+  }, false);
 
   // Set up audio controls
   document.getElementById('tm-audio-play-pause').onclick = () => {
