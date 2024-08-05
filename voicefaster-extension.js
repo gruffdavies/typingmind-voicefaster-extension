@@ -89,15 +89,21 @@
   };
 
   // Listen for new messages and automatically play audio if present
-  document.addEventListener('tm-new-message', function(e) {
-    console.log('Received tm-new-message event:', JSON.stringify(e.detail));
-    if (e.detail && e.detail.audioStream) {
+document.addEventListener('tm-new-message', function(e) {
+  console.log('Received tm-new-message event:', JSON.stringify(e.detail));
+  if (e.detail && e.detail.audioStream) {
+    if (e.detail.audioStream.url) {
       console.log('Calling playAudioStream with:', JSON.stringify(e.detail.audioStream));
       playAudioStream(e.detail.audioStream);
     } else {
-      console.log('Event did not contain expected audioStream data');
+      console.log('audioStream object found, but missing url property:', e.detail.audioStream);
     }
-  });
+  } else {
+    console.log('Event did not contain expected audioStream data');
+  }
+});
+
+
 
   console.log('VoiceFaster Extension initialized successfully');
 })();
