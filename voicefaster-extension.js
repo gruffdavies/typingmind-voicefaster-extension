@@ -1,7 +1,14 @@
 // TypingMind Extension for handling audio streams
+const VOICEFASTER_EXTENSION_VERSION = '1.1.0';
 
 (function() {
-  console.log('VoiceFaster Extension loading...');
+  console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} loading...`);
+
+  // Add metadata to the document
+  const metaVersion = document.createElement('meta');
+  metaVersion.name = 'voicefaster-extension-version';
+  metaVersion.content = VOICEFASTER_EXTENSION_VERSION;
+  document.head.appendChild(metaVersion);
 
   // Create a visible audio element and controls
   function createAudioPlayerAndControls() {
@@ -88,5 +95,5 @@
     audioPlayer.currentTime = 0;
   };
 
-  console.log('VoiceFaster Extension initialized successfully');
+  console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} initialized successfully`);
 })();
