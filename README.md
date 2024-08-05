@@ -1,0 +1,1 @@
+# typingmind-voicefaster-extension
