@@ -45,12 +45,12 @@
 
 (() => {
   // TypingMind Extension for handling audio streams
-  const VOICEFASTER_EXTENSION_VERSION = '1.2.27';
+  const VOICEFASTER_EXTENSION_VERSION = '1.2.28';
 
   class AudioStream {
     constructor(id, url) {
       this.id = id;
-      this.url = url;C
+      this.url = url; C
       this.state = 'queued';
       this.startTime = null;
       this.endTime = null;
@@ -210,57 +210,132 @@
     }
   }
 
-
+  /**
+ * @class UIManager
+ * @description Manages the user interface for the audio player
+ * @param {AudioPlayer} audioPlayer - The audio player instance
+ * @param {QueueVisualizer} queueVisualizer - The queue visualizer instance
+ *
+ * ## SOLID Principles
+ * - **S**ingle Responsibility: Handles UI creation and management
+ * - **O**pen/Closed: Extendable for additional UI features
+ * - **L**iskov Substitution: N/A (not inherited)
+ * - **I**nterface Segregation: Focuses solely on UI-related methods
+ * - **D**ependency Inversion: Depends on AudioPlayer and QueueVisualizer abstractions
+ *
+ * ## DRY Principle
+ * - Reuse styles and element creation logic where possible
+ *
+ * ## Clean Code Practices
+ * - Use descriptive method names and keep methods focused on single tasks
+ */
   class UIManager {
     constructor(audioPlayer, queueVisualizer) {
       this.audioPlayer = audioPlayer;
-      this.audioPlayer = queueVisualizer;
+      this.queueVisualizer = queueVisualizer;
+      this.container = null;
       this.createPlayerAndControls();
     }
 
     createPlayerAndControls() {
-      const container = document.createElement('div');
-      container.style.cssText = 'background-color: #333; color: white; padding: 10px; border-radius: 5px; font-family: Arial, sans-serif;';
+      this.container = document.createElement('div');
+      this.container.id = 'voicefaster-player';
+      this.applyContainerStyles();
 
+      const title = this.createTitle();
+      const buttonContainer = this.createButtonContainer();
+      const versionDisplay = this.createVersionDisplay();
+      const queueContainer = this.createQueueContainer();
+
+      this.container.append(title, buttonContainer, queueContainer, versionDisplay);
+      document.body.appendChild(this.container);
+
+      this.makeDraggable(this.container);
+    }
+
+    applyContainerStyles() {
+      Object.assign(this.container.style, {
+        position: 'fixed',
+        right: '20px',
+        bottom: '20px',
+        width: '300px',
+        backgroundColor: '#333',
+        color: 'white',
+        padding: '10px',
+        borderRadius: '5px',
+        fontFamily: 'Arial, sans-serif',
+        zIndex: '1000',
+        boxShadow: '0 0 10px rgba(0,0,0,0.5)'
+      });
+    }
+
+    createTitle() {
       const title = document.createElement('h3');
       title.textContent = 'VoiceFaster Audio Player';
       title.style.margin = '0 0 10px 0';
+      return title;
+    }
 
+    createButtonContainer() {
       const buttonContainer = document.createElement('div');
       buttonContainer.style.display = 'flex';
       buttonContainer.style.justifyContent = 'space-between';
 
       const buttonData = [
-        { text: 'Play', emoji: '▶️' },
-        { text: 'Stop', emoji: '⏹️' },
-        { text: 'Skip', emoji: '⏭️' },
-        { text: 'Clear Queue', emoji: '🗑️' }
+        { text: 'Play', emoji: '▶️', action: () => this.audioPlayer.resumePlayback() },
+        { text: 'Pause', emoji: '⏸️', action: () => this.audioPlayer.pausePlayback() },
+        { text: 'Stop', emoji: '⏹️', action: () => this.audioPlayer.stopPlayback() },
+        { text: 'Clear Queue', emoji: '🗑️', action: () => this.audioPlayer.clearQueue() }
       ];
 
-      const buttons = buttonData.map(({ text, emoji }) => {
-        const button = document.createElement('button');
-        button.innerHTML = `${emoji} ${text}`;
-        button.style.cssText = 'background-color: #4CAF50; border: none; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; border-radius: 5px;';
-        return button;
+      buttonData.forEach(({ text, emoji, action }) => {
+        const button = this.createButton(text, emoji, action);
+        buttonContainer.appendChild(button);
       });
 
-      buttons.forEach(button => buttonContainer.appendChild(button));
+      return buttonContainer;
+    }
 
+    createButton(text, emoji, action) {
+      const button = document.createElement('button');
+      button.innerHTML = ```${emoji} ${text}```;
+      Object.assign(button.style, {
+        backgroundColor: '#4CAF50',
+        border: 'none',
+        color: 'white',
+        padding: '5px 10px',
+        textAlign: 'center',
+        textDecoration: 'none',
+        display: 'inline-block',
+        fontSize: '14px',
+        margin: '2px',
+        cursor: 'pointer',
+        borderRadius: '3px'
+      });
+      button.addEventListener('click', action);
+      return button;
+    }
+
+    createVersionDisplay() {
       const versionDisplay = document.createElement('div');
-      versionDisplay.style.cssText = 'font-size: 10px; text-align: right; margin-top: 5px;';
-      versionDisplay.textContent = `Version: ${this.audioPlayer.version || 'undefined'}`;
+      Object.assign(versionDisplay.style, {
+        fontSize: '10px',
+        textAlign: 'right',
+        marginTop: '5px'
+      });
+      versionDisplay.textContent = ```Version: ${this.audioPlayer.version || 'undefined'}```;
+      return versionDisplay;
+    }
 
-      container.appendChild(title);
-      container.appendChild(buttonContainer);
-      container.appendChild(versionDisplay);
-
-      document.body.appendChild(container);
-
-      // Add event listeners to buttons
-      buttons[0].addEventListener('click', () => this.audioPlayer.play());
-      buttons[1].addEventListener('click', () => this.audioPlayer.stop());
-      buttons[2].addEventListener('click', () => this.audioPlayer.skip());
-      buttons[3].addEventListener('click', () => this.audioPlayer.clearQueue());
+    createQueueContainer() {
+      const queueContainer = document.createElement('div');
+      queueContainer.id = 'queue-visualizer';
+      Object.assign(queueContainer.style, {
+        marginTop: '10px',
+        textAlign: 'center'
+      });
+      this.queueVisualizer.container = queueContainer;
+      return queueContainer;
     }
 
     updateUIState(isPlaying) {
@@ -320,9 +395,6 @@
   const audioPlayer = new AudioPlayer();
   const queueVisualizer = new QueueVisualizer();
   const uiManager = new UIManager(audioPlayer, queueVisualizer);
-
-  // Set the visualizer for the audio player
-  audioPlayer.setVisualizer(uiManager.queueVisualizer);
 
   // Add message listener to be able to play audio streams from the plugin script
   // in comments at the top (called elsewhere)
