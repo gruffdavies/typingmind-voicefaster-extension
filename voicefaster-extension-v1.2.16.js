@@ -1,5 +1,5 @@
 // TypingMind Extension for handling audio streams
-const VOICEFASTER_EXTENSION_VERSION = '1.2.14';
+const VOICEFASTER_EXTENSION_VERSION = '1.2.16';
 
 (function () {
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} loading...`);
@@ -42,7 +42,7 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.14';
     const stopButton = document.createElement('button')
     stopButton.id = 'tm-audio-stop'
     stopButton.innerHTML = '⏹️';  // Stop emoji
-    stopButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px;'
+    stopButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px; display: none;'
 
     const dragHandle = document.createElement('span')
     dragHandle.innerHTML = '↔️';  // Move emoji
@@ -73,9 +73,12 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.14';
   function updateUIState(isPlaying) {
     const playButton = document.getElementById('tm-audio-play');
     const pauseButton = document.getElementById('tm-audio-pause');
+    const stopButton = document.getElementById('tm-audio-stop');
     playButton.style.display = isPlaying ? 'none' : 'inline-block';
     pauseButton.style.display = isPlaying ? 'inline-block' : 'none';
+    stopButton.style.display = isPlaying ? 'inline-block' : 'none';
   }
+
 
   // const audioPlayer = createAudioPlayerAndControls();
   const { audioPlayer, playButton, pauseButton, stopButton } = createAudioPlayerAndControls();
@@ -145,6 +148,66 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.14';
     audioPlayer.pause();
     audioPlayer.currentTime = 0;
   };
+  // Initialize audio queue
+  const audioQueue = []
+
+  // Modified playAudioStream function
+  async function playAudioStream(audioData) {
+    try {
+      const response = await fetch(audioData)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const blob = await response.blob()
+      console.log('Audio blob created')
+      const audioUrl = URL.createObjectURL(blob)
+      console.log('Audio URL created:', audioUrl)
+
+      // Add the audio URL to the queue
+      audioQueue.push(audioUrl)
+
+      // If the audio player is not playing, start playing the first item in the queue
+      if (audioPlayer.paused) {
+        playNextInQueue()
+      }
+    } catch (error) {
+      console.error('Error in playAudioStream:', error)
+    }
+  }
+
+  // Function to play the next audio in the queue
+  function playNextInQueue() {
+    if (audioQueue.length > 0) {
+      const nextAudioUrl = audioQueue.shift()
+      audioPlayer.src = nextAudioUrl
+      console.log('Audio player source set')
+
+      audioPlayer.play().then(() => {
+        console.log('Audio playback started')
+        document.getElementById('tm-audio-play-pause').innerHTML = '⏸️'; // Pause emoji
+      }).catch(error => {
+        console.error('Error starting audio playback:', error)
+      })
+    }
+  }
+
+  // Add event listener for when audio ends
+  audioPlayer.addEventListener('ended', () => {
+    console.log('Audio playback ended')
+    playNextInQueue()
+  })
+
+  // Modify the existing event listener
+  window.addEventListener('message', function (event) {
+    if (event.data.type === 'PLAY_AUDIO_STREAM') {
+      console.log('Received PLAY_AUDIO_STREAM message')
+      playAudioStream(event.data.payload)
+    }
+  }, false)
+
+  // Expose the function to the global scope
+  window.playAudioStream = playAudioStream
 
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} initialized successfully`);
 })();
