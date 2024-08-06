@@ -1,5 +1,5 @@
 // TypingMind Extension for handling audio streams
-const VOICEFASTER_EXTENSION_VERSION = '1.2.10';
+const VOICEFASTER_EXTENSION_VERSION = '1.2.11';
 
 (function() {
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} loading...`);
@@ -70,25 +70,6 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.10';
     return { audioPlayer, playButton, pauseButton, stopButton }
 
     buttonContainer.style.cssText = 'display: flex; align-items: center;';
-
-    // const playPauseButton = document.createElement('button');
-    // playPauseButton.id = 'tm-audio-play-pause';
-    // playPauseButton.innerHTML = '▶️';  // Play emoji
-    // playPauseButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px;';
-
-    // const stopButton = document.createElement('button');
-    // stopButton.id = 'tm-audio-stop';
-    // stopButton.innerHTML = '⏹️';  // Stop emoji
-    // stopButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px;';
-
-    // const dragHandle = document.createElement('span');
-    // dragHandle.innerHTML = '↔️';  // Move emoji
-    // dragHandle.style.cssText = 'font-size: 18px; cursor: move;';
-
-    // // Version display
-    // const versionDisplay = document.createElement('span');
-    // versionDisplay.textContent = `v${VOICEFASTER_EXTENSION_VERSION}`;
-    // versionDisplay.style.cssText = 'font-size: 10px; color: #888; margin-left: 5px;';
 
     buttonContainer.appendChild(playPauseButton);
     buttonContainer.appendChild(stopButton);
@@ -185,9 +166,7 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.10';
 
 function makeDraggable(element) {
   let isDragging = false;
-  let startX, startY;
-
-  let initialLeft, initialTop, initialRight, initialBottom;
+  let startX, startY, initialX, initialY;
 
   element.addEventListener('mousedown', startDragging);
   element.addEventListener('touchstart', startDragging, { passive: true });
@@ -197,63 +176,40 @@ function makeDraggable(element) {
   document.addEventListener('touchend', stopDragging);
 
   function startDragging(e) {
-    e.preventDefault(); // prevent text selection
+    e.preventDefault(); // Prevent text selection or dragging of other elements
     isDragging = true;
-    startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-    startY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+    startX = e.clientX || e.touches[0].clientX;
+    startY = e.clientY || e.touches[0].clientY;
+
+    // Get initial position of the element
     const rect = element.getBoundingClientRect();
-    initialLeft = rect.left;
-    initialTop = rect.top;
-    initialRight = rect.right;
-    initialBottom = rect.bottom;
+    initialX = rect.left;
+    initialY = rect.top;
   }
 
   function drag(e) {
     if (!isDragging) return;
-    const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-    const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
-    let deltaX = clientX - startX;
-    let deltaY = clientY - startY;
 
-    // Get element and viewport dimensions
-    const rect = element.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
+    const clientX = e.clientX || e.touches[0].clientX;
+    const clientY = e.clientY || e.touches[0].clientY;
 
-    // Boundary checking
-    if (initialLeft + deltaX < 0) deltaX = -initialLeft;
-    if (initialTop + deltaY < 0) deltaY = -initialTop;
-    if (initialLeft + deltaX + rect.width > viewportWidth) deltaX = viewportWidth - initialLeft - rect.width;
-    if (initialTop + deltaY + rect.height > viewportHeight) deltaY = viewportHeight - initialTop - rect.height;
+    // Calculate distance moved
+    const deltaX = clientX - startX;
+    const deltaY = clientY - startY;
 
-    element.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-  }
-
-  function handleDrag(e) {
-    const container = document.querySelector('.container');
-    const audio = document.querySelector('.audio-element');
-
-    let newX = e.clientX - container.getBoundingClientRect().left - (audio.offsetWidth / 2);
-    let newY = e.clientY - container.getBoundingClientRect().top - (audio.offsetHeight / 2);
-
-    // Ensure the element stays within the container
-    newX = Math.max(0, Math.min(newX, container.offsetWidth - audio.offsetWidth));
-    newY = Math.max(0, Math.min(newY, container.offsetHeight - audio.offsetHeight));
-
-    audio.style.left = `${newX}px`;
-    audio.style.right = 'auto';
-    audio.style.top = `${newY}px`;
-    audio.style.bottom = 'auto';
+    // Apply translation
+    element.style.left = `${initialX + deltaX}px`;
+    element.style.top = `${initialY + deltaY}px`;
   }
 
   function stopDragging() {
     if (!isDragging) return;
     isDragging = false;
     const rect = element.getBoundingClientRect();
-    element.style.top = `${rect.top}px`;
-    element.style.left = `${rect.left}px`;
-    element.style.right = `${window.innerWidth - rect.right}px`;
-    element.style.transform = 'none';
-  }
 
+    // Set position to absolute after dragging
+    element.style.left = `${rect.left}px`;
+    element.style.top = `${rect.top}px`;
+    element.style.transform = 'none'; // Clear any transform applied during drag
+  }
 }
