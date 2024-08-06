@@ -1,5 +1,5 @@
 // TypingMind Extension for handling audio streams
-const VOICEFASTER_EXTENSION_VERSION = '1.2.3';
+const VOICEFASTER_EXTENSION_VERSION = '1.2.3.1';
 
 (function() {
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} loading...`);
@@ -160,6 +160,5 @@ function makeDraggable(element) {
     document.onmouseup = null;
     document.onmousemove = null;
   }
-}
 
 }
