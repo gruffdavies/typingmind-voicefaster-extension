@@ -49,7 +49,7 @@
 // from the plugin script.
 (() => {
   // TypingMind Extension for handling audio streams
-  const VOICEFASTER_EXTENSION_VERSION = "1.2.32";
+  const VOICEFASTER_EXTENSION_VERSION = "1.2.33";
 
   function generate_uuid(type) {
     // const timestamp = new Date().toISOString().replace(/[-:\.]/g, '');
@@ -548,17 +548,36 @@
 
       this.makeDraggable(this.container);
     }
-
+  //   container.style.cssText = `
+  //   position: absolute;  /* Change to absolute for flexible movement */
+  //   top: 20px;
+  //   left: calc(100% - 140px);
+  //   z-index: 1000;
+  //   background-color: rgba(30, 41, 59, 0.8);
+  //   padding: 5px;
+  //   border-radius: 8px;
+  //   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  //   cursor: move;
+  //   user-select: none;
+  //   width: 150px;  /* Set a fixed width */
+  //   height: 100px; /* Set a fixed height */
+  //   transition: width 0s, height 0s;  /* Prevent resizing transitions */
+  // `;
     applyContainerStyles() {
       Object.assign(this.container.style, {
-        position: "fixed",
-        right: "20px",
-        bottom: "20px",
-        width: "300px",
+        position: "absolute",
+        left: "calc(100% - 400px)",
+//        right: "20px",
+        top: "20px",
+        width: "320px",
+        height: "120px",
+        cursor: "move",
+        "user-select": "none",
+        transition: "width 0s, height 0s",
         backgroundColor: "#333",
         color: "white",
         padding: "10px",
-        borderRadius: "5px",
+        borderRadius: "8px",
         fontFamily: "Arial, sans-serif",
         zIndex: "1000",
         boxShadow: "0 0 10px rgba(0,0,0,0.5)",
@@ -657,7 +676,7 @@
 
     makeDraggable(element) {
       let isDragging = false;
-      let startX, startY, initialX, initialY;
+      let startX, startY, initialX, initialY, divwidth, divheight;
 
       element.addEventListener("mousedown", startDragging);
       element.addEventListener("touchstart", startDragging, { passive: true });
@@ -674,6 +693,8 @@
         const rect = element.getBoundingClientRect();
         initialX = rect.left;
         initialY = rect.top;
+        divwidth = rect.width;
+        divheight = rect.height;
       }
 
       function drag(e) {
@@ -684,6 +705,8 @@
         const deltaY = clientY - startY;
         element.style.left = `${initialX + deltaX}px`;
         element.style.top = `${initialY + deltaY}px`;
+        element.style.right = `${initialX + divwidth}px`;
+        element.style.bottom = `${initialY + divheight}px`;
       }
 
       function stopDragging() {
