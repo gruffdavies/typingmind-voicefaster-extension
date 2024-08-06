@@ -1,5 +1,5 @@
 // TypingMind Extension for handling audio streams
-const VOICEFASTER_EXTENSION_VERSION = '1.2.5';
+const VOICEFASTER_EXTENSION_VERSION = '1.2.6';
 
 (function() {
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} loading...`);
@@ -129,7 +129,8 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.5';
 function makeDraggable(element) {
   let isDragging = false;
   let startX, startY;
-  let initialLeft, initialTop;
+
+  let initialLeft, initialTop, initialRight, initialBottom;
 
   element.addEventListener('mousedown', startDragging);
   element.addEventListener('touchstart', startDragging, { passive: true });
@@ -145,6 +146,8 @@ function makeDraggable(element) {
     const rect = element.getBoundingClientRect();
     initialLeft = rect.left;
     initialTop = rect.top;
+    initialRight = rect.right;
+    initialBottom = rect.bottom;
   }
 
   function drag(e) {
@@ -168,6 +171,22 @@ function makeDraggable(element) {
     element.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
   }
 
+  function handleDrag(e) {
+    const container = document.querySelector('.container');
+    const audio = document.querySelector('.audio-element');
+
+    let newX = e.clientX - container.getBoundingClientRect().left - (audio.offsetWidth / 2);
+    let newY = e.clientY - container.getBoundingClientRect().top - (audio.offsetHeight / 2);
+
+    // Ensure the element stays within the container
+    newX = Math.max(0, Math.min(newX, container.offsetWidth - audio.offsetWidth));
+    newY = Math.max(0, Math.min(newY, container.offsetHeight - audio.offsetHeight));
+
+    audio.style.left = `${newX}px`;
+    audio.style.right = 'auto';
+    audio.style.top = `${newY}px`;
+    audio.style.bottom = 'auto';
+  }
 
   function stopDragging() {
     if (!isDragging) return;
@@ -177,5 +196,7 @@ function makeDraggable(element) {
     element.style.transform = 'none';
     element.style.left = `${initialLeft + matrix.m41}px`;
     element.style.top = `${initialTop + matrix.m42}px`;
+    element.style.right = `${initialRight - matrix.m41}px`;
+    element.style.bottom = `${initialBottom - matrix.m42}px`;
   }
 }
