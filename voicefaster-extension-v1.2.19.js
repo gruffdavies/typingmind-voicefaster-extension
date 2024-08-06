@@ -1,5 +1,5 @@
 // TypingMind Extension for handling audio streams
-const VOICEFASTER_EXTENSION_VERSION = '1.2.18';
+const VOICEFASTER_EXTENSION_VERSION = '1.2.19';
 
 // Add these new classes
 class AudioStream {
@@ -38,10 +38,22 @@ class AudioStreamQueue {
 class QueueVisualizer {
   constructor(queue, containerId) {
     this.queue = queue;
-    this.container = document.getElementById(containerId);
+    this.containerId = containerId;
+    this.ensureContainer();
+  }
+
+  ensureContainer() {
+    this.container = document.getElementById(this.containerId);
+    if (!this.container) {
+      this.container = document.createElement('div');
+      this.container.id = this.containerId;
+      this.container.style.cssText = 'position: fixed; bottom: 10px; left: 10px; z-index: 1000;';
+      document.body.appendChild(this.container);
+    }
   }
 
   render() {
+    this.ensureContainer();
     this.container.innerHTML = '';
     this.queue.streams.forEach(stream => {
       const element = document.createElement('span');
