@@ -1,5 +1,68 @@
 // TypingMind Extension for handling audio streams
-const VOICEFASTER_EXTENSION_VERSION = '1.2.17';
+const VOICEFASTER_EXTENSION_VERSION = '1.2.18';
+
+// Add these new classes
+class AudioStream {
+  constructor(id, url) {
+    this.id = id;
+    this.url = url;
+    this.state = 'queued'; // 'queued', 'playing', 'completed', 'error'
+    this.startTime = null;
+    this.endTime = null;
+  }
+}
+
+class AudioStreamQueue {
+  constructor() {
+    this.streams = [];
+  }
+
+  addStream(stream) {
+    this.streams.push(stream);
+  }
+
+  updateStreamState(id, newState) {
+    const stream = this.streams.find(s => s.id === id);
+    if (stream) {
+      stream.state = newState;
+      if (newState === 'playing') stream.startTime = new Date();
+      if (newState === 'completed' || newState === 'error') stream.endTime = new Date();
+    }
+  }
+
+  getNextStream() {
+    return this.streams.find(s => s.state === 'queued');
+  }
+}
+
+class QueueVisualizer {
+  constructor(queue, containerId) {
+    this.queue = queue;
+    this.container = document.getElementById(containerId);
+  }
+
+  render() {
+    this.container.innerHTML = '';
+    this.queue.streams.forEach(stream => {
+      const element = document.createElement('span');
+      element.id = `stream-${stream.id}`;
+      element.className = `queue-item ${stream.state}`;
+      element.title = `Stream ${stream.id}: ${stream.state}`;
+      this.container.appendChild(element);
+    });
+  }
+
+  updateStreamVisual(id) {
+    const stream = this.queue.streams.find(s => s.id === id);
+    if (stream) {
+      const element = document.getElementById(`stream-${id}`);
+      if (element) {
+        element.className = `queue-item ${stream.state}`;
+        element.title = `Stream ${stream.id}: ${stream.state}`;
+      }
+    }
+  }
+}
 
 (function () {
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} loading...`);
@@ -89,7 +152,10 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.17';
   audioPlayer.addEventListener('pause', () => updateUIState(false));
   audioPlayer.addEventListener('ended', () => updateUIState(false));
 
-  // Function to play audio from a streaming URL
+  const audioStreamQueue = new AudioStreamQueue();
+  const queueVisualizer = new QueueVisualizer(audioStreamQueue, 'tm-queue-visualizer');
+
+  // Modify playAudioStream function
   async function playAudioStream(streamInfo) {
     console.log('playAudioStream called with:', JSON.stringify(streamInfo));
     const { url, method, headers, body } = streamInfo;
@@ -98,6 +164,11 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.17';
       console.error('Invalid URL format');
       return;
     }
+
+    const streamId = Date.now().toString(); // Simple unique ID
+    const audioStream = new AudioStream(streamId, url);
+    audioStreamQueue.addStream(audioStream);
+    queueVisualizer.render();
 
     try {
       console.log('Fetching audio stream...');
@@ -113,32 +184,35 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.17';
       const audioUrl = URL.createObjectURL(blob);
       console.log('Audio URL created:', audioUrl);
 
+      audioStreamQueue.updateStreamState(streamId, 'playing');
+      queueVisualizer.updateStreamVisual(streamId);
+
       audioPlayer.src = audioUrl;
       audioPlayer.play().then(() => {
         console.log('Audio playback started');
       }).catch(error => {
         console.error('Error starting audio playback:', error);
+        audioStreamQueue.updateStreamState(streamId, 'error');
+        queueVisualizer.updateStreamVisual(streamId);
       });
+
+      audioPlayer.onended = () => {
+        audioStreamQueue.updateStreamState(streamId, 'completed');
+        queueVisualizer.updateStreamVisual(streamId);
+        playNextInQueue();
+      };
     } catch (error) {
       console.error('Error in playAudioStream:', error);
+      audioStreamQueue.updateStreamState(streamId, 'error');
+      queueVisualizer.updateStreamVisual(streamId);
     }
   }
 
-  // Initialize audio queue
-  const audioQueue = [];
-
-  // Function to play the next audio in the queue
+  // Modify playNextInQueue function
   function playNextInQueue() {
-    if (audioQueue.length > 0) {
-      const nextAudioUrl = audioQueue.shift();
-      audioPlayer.src = nextAudioUrl;
-      console.log('Audio player source set');
-
-      audioPlayer.play().then(() => {
-        console.log('Audio playback started');
-      }).catch(error => {
-        console.error('Error starting audio playback:', error);
-      });
+    const nextStream = audioStreamQueue.getNextStream();
+    if (nextStream) {
+      playAudioStream({ url: nextStream.url });
     }
   }
 
