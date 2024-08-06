@@ -123,45 +123,42 @@
    * - Clear, descriptive naming and concise logic.
    */
   class AudioStream {
-    #id;
-    #streamInfo;
-    #state;
-    #startTime;
-    #endTime;
-    #addedTime;
-
+    /*
+     * @param {StreamRequestResponse} [streamRequestResponse] - The stream data.
+     */
     constructor(streamRequestResponse) {
-      this.#id = generate_uuid();
-      this.#streamInfo = streamRequestResponse;
-      this.#state = "queued";
-      this.#startTime = null;
-      this.#endTime = null;
-      this.#addedTime = Date.now();
+      this.id = generate_uuid();
+      this.url = streamRequestResponse.url;
+      this.headers = streamRequestResponse.headers;
+      this.method = streamRequestResponse.method;
+      this.body = streamRequestResponse.body;
+
+      this.state = "queued";
+      this.startTime = null;
+      this.endTime = null;
     }
 
-    get id() {
-      return this.#id;
-    }
-    get state() {
-      return this.#state;
-    }
-    get addedTime() {
-      return this.#addedTime;
-    }
-    get streamInfo() {
-      return this.#streamInfo;
+    // figure out if the stream is stale according to maxAge
+    isStale(maxAge) {
+      const currentTime = new Date();
+      const timeSinceStart = currentTime - this.startTime;
+      return timeSinceStart > maxAge;
     }
 
-    // Add a getter for audioUrl
-    get audioUrl() {
-      return this.#streamInfo.url;
+    refreshState(maxAge) {
+      if (this.isStale(maxAge)) {
+        this.updateState("stale");
+      }
     }
 
     updateState(newState) {
-      this.#state = newState;
-      if (newState === "playing") this.#startTime = new Date();
-      if (newState === "completed" || newState === "error")
-        this.#endTime = new Date();
+      this.state = newState;
+      if (newState === "playing") this.startTime = new Date();
+      if (
+        newState === "completed" ||
+        newState === "error" ||
+        newState === "stale"
+      ) { this.endTime = new Date(); }
     }
   }
 
@@ -184,14 +181,15 @@
    */
   class AudioStreamQueue {
     #streams;
-    #order;
+
     #maxSize;
     #maxAge;
     #observers;
 
     constructor(maxSize = 100, maxAge = 3600000) {
-      this.#streams = new Map();
-      this.#order = [];
+
+
+      this.#streams = [];
       this.#maxSize = maxSize;
       this.#maxAge = maxAge;
       this.#observers = [];
@@ -199,57 +197,77 @@
 
     addStream(stream) {
       this.cleanup();
-      if (this.#streams.size >= this.#maxSize) {
+
+      if (this.#streams.length >= this.#maxSize) {
         this.removeOldest();
       }
-      this.#streams.set(stream.id, stream);
-      this.#order.push(stream.id);
+
+
+      this.#streams.push(stream);
       this.notifyObservers();
     }
 
     removeStream(id) {
-      if (this.#streams.delete(id)) {
-        this.#order = this.#order.filter((streamId) => streamId !== id);
+
+
+      const index = this.#streams.findIndex(stream => stream.id === id);
+      if (index !== -1) {
+        this.#streams.splice(index, 1);
         this.notifyObservers();
         return true;
       }
       return false;
     }
 
-    getNextStream() {
+    getNextQueuedStream() {
       this.cleanup();
-      if (this.#order.length > 0) {
-        const nextId = this.#order[0];
-        return this.#streams.get(nextId);
-      }
-      return null;
+
+
+
+
+      return this.#streams.find(stream => stream.state === "queued") || null;
     }
 
     updateStreamState(id, newState) {
-      const stream = this.#streams.get(id);
+
+      const stream = this.#streams.find(stream => stream.id === id);
       if (stream) {
         stream.updateState(newState);
         this.notifyObservers();
       }
     }
 
+
+
     cleanup() {
       const now = Date.now();
-      for (const [id, stream] of this.#streams) {
-        if (stream.state === "completed" || stream.state === "error") {
-          if (now - stream.addedTime > this.#maxAge) {
-            this.removeStream(id);
-          }
-        } else if (now - stream.addedTime > this.#maxAge) {
-          this.removeStream(id);
-        }
-      }
+
+
+
+
+
+
+
+
+
+
+
+
+
+      this.#streams = this.#streams.filter(stream => {
+        stream.updateState(this.#maxAge);
+        return stream.state !== "stale" && now - stream.addedTime <= this.#maxAge;
+      });
+      this.notifyObservers();
     }
 
     removeOldest() {
-      if (this.#order.length > 0) {
-        const oldestId = this.#order[0];
-        this.removeStream(oldestId);
+
+
+
+      if (this.#streams.length > 0) {
+        this.#streams.shift();
+        this.notifyObservers();
       }
     }
 
@@ -263,12 +281,46 @@
       }
     }
 
-    [Symbol.iterator]() {
-      return this.#streams.values();
+    getCurrentPlayingStream() {
+
+
+
+
+
+
+      return this.#streams.find(stream => stream.state === "playing") || null;
     }
 
+
+
+
+
+
+
+
+    [Symbol.iterator]() {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      return this.#streams[Symbol.iterator]();
+    }
+
+
     get size() {
-      return this.#streams.size;
+
+      return this.#streams.length;
     }
   }
 
@@ -290,9 +342,29 @@
    * - Clear method names and focused responsibilities.
    */
   class AudioStreamQueueVisualizer {
-    constructor(containerId, maxDisplayed = 10) {
-      this.container = document.getElementById(containerId);
+    constructor(container, maxDisplayed = 10) {
+      this.container = container;
       this.maxDisplayed = maxDisplayed;
+      this.addStyles();
+    }
+
+    addStyles() {
+      const style = document.createElement("style");
+      style.textContent = `
+        .queue-item {
+          display: inline-block;
+          width: 10px;
+          height: 10px;
+          margin: 0 2px;
+          border-radius: 50%;
+        }
+        .queue-item.queued { background-color: #FFD700; }
+        .queue-item.playing { background-color: #32CD32; }
+        .queue-item.completed { background-color: #4169E1; }
+        .queue-item.error { background-color: #DC143C; }
+        .queue-item.stale { background-color: #808080; }
+      `;
+      document.head.appendChild(style);
     }
 
     update(queue) {
@@ -301,30 +373,20 @@
 
     render(queue) {
       this.container.innerHTML = "";
-      let count = 0;
-      for (const stream of queue) {
-        if (count >= this.maxDisplayed) break;
-        const streamElement = this.createStreamElement(stream);
-        this.container.appendChild(streamElement);
-        count++;
+      if (queue) {
+        for (const stream of queue) {
+          const element = this.#createStreamElement(stream);
+          this.container.appendChild(element);
+        }
       }
     }
 
-    createStreamElement(stream) {
-      const element = document.createElement("div");
-      element.className = `stream-item ${stream.state}`;
-      element.textContent = `Stream ${stream.id}: ${stream.state}`;
+    #createStreamElement(stream) {
+      const element = document.createElement("span");
+      element.id = `stream-${stream.id}`;
+      element.className = `queue-item ${stream.state}`;
+      element.title = `Stream ${stream.id}: ${stream.state}`;
       return element;
-    }
-
-    updateStreamVisual(stream) {
-      const streamElement = this.container.querySelector(
-        `[data-stream-id="${stream.id}"]`
-      );
-      if (streamElement) {
-        streamElement.className = `stream-item ${stream.state}`;
-        streamElement.textContent = `Stream ${stream.id}: ${stream.state}`;
-      }
     }
   }
 
@@ -347,97 +409,99 @@
    * - Utilizes efficient Map-based queue and native JavaScript features.
    */
   class AudioPlayer {
-    #queue;
-    #audioElement;
-    #currentStream;
-    #urlToRevoke;
+    constructor(version, visualizer) {
+      this.version = version;
+      this.audio = new Audio();
+      this.queue = new AudioStreamQueue();
+      this.visualizer = visualizer;
+      this.isPlaying = false;
 
-    /**
-     * @constructor
-     * @param {AudioStreamQueue} queue - The audio stream queue to manage
-     */
-    constructor(queue) {
-      this.#queue = queue;
-      this.#audioElement = new Audio();
-      this.#currentStream = null;
-      this.#urlToRevoke = null;
-
-      this.#audioElement.addEventListener("ended", () => this.#onEnded());
-      this.#audioElement.addEventListener("error", (e) => this.#onError(e));
-    }
-
-    /**
-     * @description Attempts to play the next audio stream in the queue
-     * @returns {Promise<void>}
-     */
-    async play() {
-      if (this.#currentStream) return;
-
-      const stream = this.#queue.getNextStream();
-      if (!stream) return;
-
-      this.#currentStream = stream;
-      this.#queue.updateStreamState(stream.id, "playing");
-
-      try {
-        const response = await fetch(stream.audioUrl);
-        if (!response.ok)
-          throw new Error(`HTTP error! status: ${response.status}`);
-        const blob = await response.blob();
-
-        if (this.#urlToRevoke) {
-          URL.revokeObjectURL(this.#urlToRevoke);
+      this.audio.onended = () => {
+        this.isPlaying = false;
+        const currentStream = this.queue.getCurrentPlayingStream();
+        if (currentStream) {
+          this.queue.updateStreamState(currentStream.id, "completed");
+          this.visualizer.update(this.queue);
         }
+        console.info("Audio playback ended. Calling processNextInQueue()...");
+        this.processNextInQueue();
+      };
+    }
 
-        const url = URL.createObjectURL(blob);
-        this.#urlToRevoke = url;
-        this.#audioElement.src = url;
-        await this.#audioElement.play();
-      } catch (error) {
-        console.error("Error playing audio:", error);
-        this.#queue.updateStreamState(stream.id, "error");
-        this.#currentStream = null;
-        this.play(); // Try to play the next stream
+    async queueAudioStream(streamRequestResponseInfo) {
+      log_object_stringify(
+        "queueAudioStream called with streamRequestResponseInfo:",
+        streamRequestResponseInfo
+      );
+      const streamInfo = new StreamRequestResponse(streamRequestResponseInfo);
+      log_object_stringify("streamInfo object created:", streamInfo);
+
+      if (!streamInfo.url || typeof streamInfo.url !== "string") {
+        console.error("Invalid URL format");
+        return;
+      }
+
+      // const requestedDate = Date.now().toString();
+      const audioStream = new AudioStream(streamInfo);
+      this.queue.addStream(audioStream);
+      this.visualizer.render(this.queue);
+
+      if (!this.isPlaying) {
+        console.info("Enqueue: Audio Player is not currently playing. Calling processNextInQueue()...");
+        this.processNextInQueue();
+      } else {
+        console.info("Enqueue: Audio Player is already playing something. Skipping processNextInQueue().");
       }
     }
 
-    /**
-     * @private
-     * @description Handles the 'ended' event of the audio element
-     */
-    #onEnded() {
-      if (this.#currentStream) {
-        this.#queue.updateStreamState(this.#currentStream.id, "completed");
-        this.#queue.removeStream(this.#currentStream.id);
-        this.#currentStream = null;
+    async processNextInQueue() {
+      const nextStream = this.queue.getNextQueuedStream();
+      if (nextStream) {
+        this.isPlaying = true;
+        try {
+          const response = await fetch(nextStream.url, {
+            method: nextStream.method,
+            headers: nextStream.headers,
+            body: nextStream.body,
+          });
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const blob = await response.blob();
+          const audioUrl = URL.createObjectURL(blob);
+
+          this.queue.updateStreamState(nextStream.id, "playing");
+          this.visualizer.update();
+
+          this.audio.src = audioUrl;
+          await this.audio.play();
+        } catch (error) {
+          console.error("Error in processNextInQueue:", error);
+          this.queue.updateStreamState(nextStream.id, "error");
+          this.visualizer.updateStreamVisual(nextStream);
+          this.isPlaying = false;
+          this.processNextInQueue();
+        }
       }
-      this.play(); // Play the next stream
     }
 
-    /**
-     * @private
-     * @description Handles the 'error' event of the audio element
-     * @param {Event} error - The error event
-     */
-    #onError(error) {
-      console.error("Audio playback error:", error);
-      if (this.#currentStream) {
-        this.#queue.updateStreamState(this.#currentStream.id, "error");
-        this.#queue.removeStream(this.#currentStream.id);
-        this.#currentStream = null;
+    play() {
+      if (!this.isPlaying) {
+        this.audio.play();
+        this.isPlaying = true;
       }
-      this.play(); // Try to play the next stream
     }
 
-    /**
-     * @description Queues a new audio stream from the provided payload
-     * @param {Object} payload - The payload containing audio stream information
-     */
-    queueAudioStream(payload) {
-      const streamRequestResponse = new StreamRequestResponse(payload);
-      const audioStream = new AudioStream(streamRequestResponse);
-      this.#queue.addStream(audioStream);
-      this.play(); // Attempt to play if not already playing
+    pause() {
+      this.audio.pause();
+      this.isPlaying = false;
+    }
+
+    stop() {
+      this.audio.pause();
+      this.audio.currentTime = 0;
+      this.isPlaying = false;
     }
   }
 
@@ -461,85 +525,189 @@
    * - Use descriptive method names and keep methods focused on single tasks
    */
   class UIManager {
-    #container;
-    #audioPlayer;
-    #queue;
-    #visualizer;
-
-    constructor(audioPlayer, queue) {
-      this.#audioPlayer = audioPlayer;
-      this.#queue = queue;
-      this.#createContainer();
-      this.#createVisualizer();
-      this.#makeDraggable();
+    constructor(audioPlayer, queueVisualizer) {
+      this.audioPlayer = audioPlayer;
+      this.queueVisualizer = queueVisualizer;
+      this.container = null;
+      this.createPlayerAndControls();
     }
 
-    #createContainer() {
-      try {
-        this.#container = document.createElement("div");
-        this.#container.id = "voicefaster-container";
-        this.#container.style.cssText = `
-          position: fixed;
-          bottom: 20px;
-          right: 20px;
-          width: 300px;
-          height: 200px;
-          background-color: white;
-          border: 1px solid #ccc;
-          border-radius: 5px;
-          padding: 10px;
-          z-index: 1000;
-        `;
-        document.body.appendChild(this.#container);
-      } catch (error) {
-        console.error("Error creating container:", error);
+    createPlayerAndControls() {
+      this.container = document.createElement("div");
+      this.container.id = "voicefaster-player";
+      this.applyContainerStyles();
+
+      const title = this.createTitle();
+      const buttonContainer = this.createButtonContainer();
+      const versionDisplay = this.createVersionDisplay();
+      const queueContainer = this.createQueueContainer();
+
+      this.container.append(
+        title,
+        buttonContainer,
+        queueContainer,
+        versionDisplay
+      );
+      document.body.appendChild(this.container);
+
+      this.makeDraggable(this.container);
+    }
+
+    applyContainerStyles() {
+      Object.assign(this.container.style, {
+        position: "fixed",
+        right: "20px",
+        bottom: "20px",
+        width: "300px",
+        backgroundColor: "#333",
+        color: "white",
+        padding: "10px",
+        borderRadius: "5px",
+        fontFamily: "Arial, sans-serif",
+        zIndex: "1000",
+        boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+      });
+    }
+
+    createTitle() {
+      const title = document.createElement("h3");
+      title.textContent = "VoiceFaster Audio Player";
+      title.style.margin = "0 0 10px 0";
+      return title;
+    }
+
+    createButtonContainer() {
+      const buttonContainer = document.createElement("div");
+      buttonContainer.style.display = "flex";
+      buttonContainer.style.justifyContent = "space-between";
+
+      const buttonData = [
+        { text: "Play", emoji: "▶️", action: () => this.audioPlayer.play() },
+        { text: "Pause", emoji: "⏸️", action: () => this.audioPlayer.pause() },
+        { text: "Stop", emoji: "⏹️", action: () => this.audioPlayer.stop() },
+        {
+          text: "Clear Queue",
+          emoji: "🗑️",
+          action: () => this.audioPlayer.clearQueue(),
+        },
+      ];
+
+      buttonData.forEach(({ text, emoji, action }) => {
+        const button = this.createButton(text, emoji, action);
+        buttonContainer.appendChild(button);
+      });
+
+      return buttonContainer;
+    }
+
+    createButton(text, emoji, action) {
+      const button = document.createElement("button");
+      button.innerHTML = `${emoji} ${text}`;
+      Object.assign(button.style, {
+        backgroundColor: "#4CAF50",
+        border: "none",
+        color: "white",
+        padding: "5px 10px",
+        textAlign: "center",
+        textDecoration: "none",
+        display: "inline-block",
+        fontSize: "14px",
+        margin: "2px",
+        cursor: "pointer",
+        borderRadius: "3px",
+      });
+      if (typeof action === "function") {
+        button.addEventListener("click", action);
+      } else {
+        console.error(`${text} button's action is not a function:`, action);
+      }
+      return button;
+    }
+
+    createVersionDisplay() {
+      const versionDisplay = document.createElement("div");
+      Object.assign(versionDisplay.style, {
+        fontSize: "10px",
+        textAlign: "right",
+        marginTop: "5px",
+      });
+      versionDisplay.textContent = `Version: ${
+        this.audioPlayer.version || "undefined"
+      }`;
+      return versionDisplay;
+    }
+
+    createQueueContainer() {
+      const queueContainer = document.createElement("div");
+      queueContainer.id = "queue-visualizer";
+      Object.assign(queueContainer.style, {
+        marginTop: "10px",
+        textAlign: "center",
+      });
+      this.queueVisualizer.container = queueContainer;
+      return queueContainer;
+    }
+
+    updateUIState(isPlaying) {
+      const playButton = document.getElementById("tm-audio-play");
+      const pauseButton = document.getElementById("tm-audio-pause");
+      const stopButton = document.getElementById("tm-audio-stop");
+      if (playButton && pauseButton && stopButton) {
+        playButton.style.display = isPlaying ? "none" : "inline-block";
+        pauseButton.style.display = isPlaying ? "inline-block" : "none";
+        stopButton.style.display = isPlaying ? "inline-block" : "none";
       }
     }
 
-    #createVisualizer() {
-      try {
-        const visualizerContainer = document.createElement("div");
-        visualizerContainer.id = "voicefaster-visualizer";
-        this.#container.appendChild(visualizerContainer);
-        this.#visualizer = new AudioStreamQueueVisualizer(visualizerContainer);
-        this.#queue.addObserver(this.#visualizer);
-      } catch (error) {
-        console.error("Error creating visualizer:", error);
+    makeDraggable(element) {
+      let isDragging = false;
+      let startX, startY, initialX, initialY;
+
+      element.addEventListener("mousedown", startDragging);
+      element.addEventListener("touchstart", startDragging, { passive: true });
+      document.addEventListener("mousemove", drag);
+      document.addEventListener("touchmove", drag);
+      document.addEventListener("mouseup", stopDragging);
+      document.addEventListener("touchend", stopDragging);
+
+      function startDragging(e) {
+        e.preventDefault();
+        isDragging = true;
+        startX = e.clientX || e.touches[0].clientX;
+        startY = e.clientY || e.touches[0].clientY;
+        const rect = element.getBoundingClientRect();
+        initialX = rect.left;
+        initialY = rect.top;
       }
-    }
 
-    #makeDraggable() {
-      try {
-        let isDragging = false;
-        let startX, startY;
+      function drag(e) {
+        if (!isDragging) return;
+        const clientX = e.clientX || e.touches[0].clientX;
+        const clientY = e.clientY || e.touches[0].clientY;
+        const deltaX = clientX - startX;
+        const deltaY = clientY - startY;
+        element.style.left = `${initialX + deltaX}px`;
+        element.style.top = `${initialY + deltaY}px`;
+      }
 
-        this.#container.addEventListener("mousedown", (e) => {
-          isDragging = true;
-          startX = e.clientX - this.#container.offsetLeft;
-          startY = e.clientY - this.#container.offsetTop;
-        });
-
-        document.addEventListener("mousemove", (e) => {
-          if (!isDragging) return;
-          const newX = e.clientX - startX;
-          const newY = e.clientY - startY;
-          this.#container.style.left = `${newX}px`;
-          this.#container.style.top = `${newY}px`;
-        });
-
-        document.addEventListener("mouseup", () => {
-          isDragging = false;
-        });
-      } catch (error) {
-        console.error("Error making container draggable:", error);
+      function stopDragging() {
+        if (!isDragging) return;
+        isDragging = false;
+        const rect = element.getBoundingClientRect();
+        element.style.left = `${rect.left}px`;
+        element.style.top = `${rect.top}px`;
+        element.style.transform = "none";
       }
     }
   }
 
-  // Instantiate the AudioStreamQueue, AudioPlayer, and UIManager
-  const audioStreamQueue = new AudioStreamQueue();
-  const audioPlayer = new AudioPlayer(audioStreamQueue);
-  const uiManager = new UIManager(audioPlayer, audioStreamQueue);
+  // Instantiate the AudioPlayer and UIManager
+  const queueVisualizer = new AudioStreamQueueVisualizer();
+  const audioPlayer = new AudioPlayer(
+    VOICEFASTER_EXTENSION_VERSION,
+    queueVisualizer
+  );
+  const uiManager = new UIManager(audioPlayer, queueVisualizer);
 
   // Add message listener to be able to play audio streams from the plugin script
   window.addEventListener("message", (event) => {
@@ -547,5 +715,4 @@
       audioPlayer.queueAudioStream(event.data.payload);
     }
   });
-
 })();
