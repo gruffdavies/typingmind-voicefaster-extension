@@ -2,7 +2,7 @@
 // streams send from the plugin code below which is in a sandboxed iframe.
 // PLUGIN CODE:
 // async function VOICEFASTER_stream_voice_audio(params, userSettings) {
-//   const VOICEFASTER_VERSION = '1.1.6';
+//   const VOICEFASTER_VERSION = '1.1.7';
 //   console.log(`stream_voice_audio v${VOICEFASTER_VERSION} called with:`, params);
 
 //   const { text, voice_id = userSettings.defaultVoiceId || 'LKzEuRvwo37aJ6JFMnxk' } = params;
@@ -31,7 +31,7 @@
 
 //   // Send a message to the parent window
 //   window.parent.postMessage({
-//     type: 'PLAY_AUDIO_STREAM',
+//     type: 'QUEUE_AUDIO_STREAM',
 //     payload: payload
 //   }, '*');
 
@@ -45,7 +45,7 @@
 
 (() => {
   // TypingMind Extension for handling audio streams
-  const VOICEFASTER_EXTENSION_VERSION = '1.2.23';
+  const VOICEFASTER_EXTENSION_VERSION = '1.2.24';
 
   class AudioStream {
     constructor(id, url) {
@@ -142,15 +142,20 @@
     }
   }
 
-  // File: audioPlayer.js
   class AudioPlayer {
     constructor() {
       this.audio = new Audio();
       this.queue = new AudioStreamQueue();
       this.visualizer = new QueueVisualizer('tm-queue-visualizer');
+      this.isPlaying = false;
+
+      this.audio.onended = () => {
+        this.isPlaying = false;
+        this.processNextInQueue();
+      };
     }
 
-    async playStream(streamInfo) {
+    async queueAudioStream(streamInfo) {
       const { url, method, headers, body } = streamInfo;
       if (!url || typeof url !== 'string') {
         console.error('Invalid URL format');
@@ -162,53 +167,62 @@
       this.queue.addStream(audioStream);
       this.visualizer.render(this.queue);
 
-      try {
-        const response = await fetch(url, { method, headers, body });
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const blob = await response.blob();
-        const audioUrl = URL.createObjectURL(blob);
-
-        this.queue.updateStreamState(streamId, 'playing');
-        this.visualizer.updateStreamVisual(audioStream);
-
-        this.audio.src = audioUrl;
-        await this.audio.play();
-
-        this.audio.onended = () => {
-          this.queue.updateStreamState(streamId, 'completed');
-          this.visualizer.updateStreamVisual(audioStream);
-          this.playNext();
-        };
-      } catch (error) {
-        console.error('Error in playStream:', error);
-        this.queue.updateStreamState(streamId, 'error');
-        this.visualizer.updateStreamVisual(audioStream);
+      if (!this.isPlaying) {
+        this.processNextInQueue();
       }
     }
 
-    playNext() {
+    async processNextInQueue() {
       const nextStream = this.queue.getNextStream();
       if (nextStream) {
-        this.playStream({ url: nextStream.url });
+        this.isPlaying = true;
+        try {
+          const response = await fetch(nextStream.url, {
+            method: nextStream.method,
+            headers: nextStream.headers,
+            body: nextStream.body
+          });
+          if (!response.ok) {
+            throw new Error(```HTTP error! status: ${response.status}```);
+          }
+
+          const blob = await response.blob();
+          const audioUrl = URL.createObjectURL(blob);
+
+          this.queue.updateStreamState(nextStream.id, 'playing');
+          this.visualizer.updateStreamVisual(nextStream);
+
+          this.audio.src = audioUrl;
+          await this.audio.play();
+        } catch (error) {
+          console.error('Error in processNextInQueue:', error);
+          this.queue.updateStreamState(nextStream.id, 'error');
+          this.visualizer.updateStreamVisual(nextStream);
+          this.isPlaying = false;
+          this.processNextInQueue();
+        }
       }
     }
 
-    play() {
-      this.audio.play();
+    resumePlayback() {
+      if (!this.isPlaying) {
+        this.audio.play();
+        this.isPlaying = true;
+      }
     }
 
-    pause() {
+    pausePlayback() {
       this.audio.pause();
+      this.isPlaying = false;
     }
 
-    stop() {
+    stopPlayback() {
       this.audio.pause();
       this.audio.currentTime = 0;
+      this.isPlaying = false;
     }
   }
+
 
   // File: uiManager.js
   class UIManager {
@@ -260,17 +274,17 @@
 
     setupEventListeners(playButton, pauseButton, stopButton) {
       playButton.onclick = () => {
-        this.audioPlayer.play();
+        this.audioPlayer.resumePlayback();  // Changed from play() to resumePlayback()
         this.updateUIState(true);
       };
 
       pauseButton.onclick = () => {
-        this.audioPlayer.pause();
+        this.audioPlayer.pausePlayback();  // Already correct
         this.updateUIState(false);
       };
 
       stopButton.onclick = () => {
-        this.audioPlayer.stop();
+        this.audioPlayer.stopPlayback();  // Already correct
         this.updateUIState(false);
       };
 
@@ -339,8 +353,8 @@
   // Add message listener to be able to play audio streams from the plugin script
   // in comments at the top (called elsewhere)
   window.addEventListener('message', (event) => {
-    if (event.data.type === 'PLAY_AUDIO_STREAM') {
-      audioPlayer.playStream(event.data.payload);
+    if (event.data.type === 'QUEUE_AUDIO_STREAM') {
+      audioPlayer.queueAudioStream(event.data.payload);
     }
   });
 
