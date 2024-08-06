@@ -1,6 +1,6 @@
 (() => {
   // TypingMind Extension for handling audio streams
-  const VOICEFASTER_EXTENSION_VERSION = '1.2.21';
+  const VOICEFASTER_EXTENSION_VERSION = '1.2.22';
 
   class AudioStream {
     constructor(id, url) {
