@@ -1,7 +1,7 @@
 // TypingMind Extension for handling audio streams
-const VOICEFASTER_EXTENSION_VERSION = '1.2.12';
+const VOICEFASTER_EXTENSION_VERSION = '1.2.13';
 
-(function() {
+(function () {
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} loading...`);
 
   // Add metadata to the document
@@ -68,23 +68,13 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.12';
 
     console.log('Audio player and controls created')
     return { audioPlayer, playButton, pauseButton, stopButton }
+  }
 
-    buttonContainer.style.cssText = 'display: flex; align-items: center;';
-
-    buttonContainer.appendChild(playPauseButton);
-    buttonContainer.appendChild(stopButton);
-    buttonContainer.appendChild(dragHandle);
-    buttonContainer.appendChild(versionDisplay);
-
-    audioPlayerContainer.appendChild(audioPlayer);
-    audioPlayerContainer.appendChild(buttonContainer);
-
-    document.body.appendChild(audioPlayerContainer);
-
-    makeDraggable(audioPlayerContainer);
-
-    console.log('Audio player and controls created');
-    return audioPlayer;
+  function updateUIState(isPlaying) {
+    const playButton = document.getElementById('tm-audio-play');
+    const pauseButton = document.getElementById('tm-audio-pause');
+    playButton.style.display = isPlaying ? 'none' : 'inline-block';
+    pauseButton.style.display = isPlaying ? 'inline-block' : 'none';
   }
 
   const audioPlayer = createAudioPlayerAndControls();
@@ -121,9 +111,12 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.12';
       console.error('Error in playAudioStream:', error);
     }
   }
+  audioPlayer.addEventListener('play', () => updateUIState(true));
+  audioPlayer.addEventListener('pause', () => updateUIState(false));
+  audioPlayer.addEventListener('ended', () => updateUIState(false));
 
-    // Add this back into the extension code
-  window.addEventListener('message', function(event) {
+  // Add this back into the extension code
+  window.addEventListener('message', function (event) {
     if (event.data.type === 'PLAY_AUDIO_STREAM') {
       console.log('Received PLAY_AUDIO_STREAM message');
       playAudioStream(event.data.payload);
@@ -134,31 +127,20 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.12';
   window.playAudioStream = playAudioStream;
 
   // Set up audio controls
-  document.getElementById('tm-audio-play-pause').onclick = () => {
-    console.log('Play/Pause button clicked');
-    const playButton = document.getElementById('tm-audio-play');
-    const pauseButton = document.getElementById('tm-audio-pause');
-    if (audioPlayer.paused) {
-      audioPlayer.play();
-
-      playButton.style.display = 'none';
-      pauseButton.style.display = 'inline-block';
-    } else {
-      audioPlayer.pause();
-
-      playButton.style.display = 'inline-block';
-      pauseButton.style.display = 'none';
-    }
+  document.getElementById('tm-audio-play').onclick = () => {
+    console.log('Play button clicked');
+    audioPlayer.play();
   };
+
+  document.getElementById('tm-audio-pause').onclick = () => {
+    console.log('Pause button clicked');
+    audioPlayer.pause();
+  };
+
   document.getElementById('tm-audio-stop').onclick = () => {
     console.log('Stop button clicked');
     audioPlayer.pause();
     audioPlayer.currentTime = 0;
-
-    const playButton = document.getElementById('tm-audio-play');
-    const pauseButton = document.getElementById('tm-audio-pause');
-    playButton.style.display = 'inline-block';
-    pauseButton.style.display = 'none';
   };
 
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} initialized successfully`);
