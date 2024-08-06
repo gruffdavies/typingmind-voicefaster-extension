@@ -49,10 +49,12 @@
 // from the plugin script.
 (() => {
   // TypingMind Extension for handling audio streams
-  const VOICEFASTER_EXTENSION_VERSION = "1.2.30";
+  const VOICEFASTER_EXTENSION_VERSION = "1.2.32";
 
   function generate_uuid(type) {
-    return new Date().toISOString();
+    // const timestamp = new Date().toISOString().replace(/[-:\.]/g, '');
+    const timestamp = new Date().getTime().toString(); // toISOString();
+    return `${timestamp}`;
   }
 
   function log_object_stringify(message, object) {
@@ -158,7 +160,9 @@
         newState === "completed" ||
         newState === "error" ||
         newState === "stale"
-      ) { this.endTime = new Date(); }
+      ) {
+        this.endTime = new Date();
+      }
     }
   }
 
@@ -187,8 +191,6 @@
     #observers;
 
     constructor(maxSize = 100, maxAge = 3600000) {
-
-
       this.#streams = [];
       this.#maxSize = maxSize;
       this.#maxAge = maxAge;
@@ -196,21 +198,15 @@
     }
 
     addStream(stream) {
-      this.cleanup();
-
-      if (this.#streams.length >= this.#maxSize) {
-        this.removeOldest();
-      }
-
-
+      console.log(`Adding stream: ${stream.id} to queue of current size: ${this.#streams.length}`);
       this.#streams.push(stream);
+      console.log(`After current size: ${this.#streams.length}`);
+      console.log("Notifying observers. Final size:", this.#streams.length);
       this.notifyObservers();
     }
 
     removeStream(id) {
-
-
-      const index = this.#streams.findIndex(stream => stream.id === id);
+      const index = this.#streams.findIndex((stream) => stream.id === id);
       if (index !== -1) {
         this.#streams.splice(index, 1);
         this.notifyObservers();
@@ -220,51 +216,37 @@
     }
 
     getNextQueuedStream() {
-      this.cleanup();
-
-
-
-
-      return this.#streams.find(stream => stream.state === "queued") || null;
+      console.log(
+        "getNextQueuedStream: Stream states:",
+        this.#streams.map((stream) => `${stream.id}: ${stream.state}`)
+      );
+      return this.#streams.find((stream) => stream.state === "queued") || null;
     }
 
     updateStreamState(id, newState) {
-
-      const stream = this.#streams.find(stream => stream.id === id);
+      const stream = this.#streams.find((stream) => stream.id === id);
       if (stream) {
         stream.updateState(newState);
         this.notifyObservers();
       }
     }
 
-
-
     cleanup() {
-      const now = Date.now();
-
-
-
-
-
-
-
-
-
-
-
-
-
-      this.#streams = this.#streams.filter(stream => {
-        stream.updateState(this.#maxAge);
-        return stream.state !== "stale" && now - stream.addedTime <= this.#maxAge;
-      });
+      // iterate over the streams calling refreshState(this.maxAge)
+      // if stale, remove using the removeStream method
+      // using console log to track what is happening
+      console.log("Cleaning up streams. Current size:", this.#streams.length);
+      for (const stream of this.#streams) {
+        stream.refreshState(this.#maxAge);
+        if (stream.isStale(this.#maxAge)) {
+          console.log("Removing stale stream:", stream.id);
+          this.removeStream(stream.id);
+        }
+      }
       this.notifyObservers();
     }
 
     removeOldest() {
-
-
-
       if (this.#streams.length > 0) {
         this.#streams.shift();
         this.notifyObservers();
@@ -282,44 +264,14 @@
     }
 
     getCurrentPlayingStream() {
-
-
-
-
-
-
-      return this.#streams.find(stream => stream.state === "playing") || null;
+      return this.#streams.find((stream) => stream.state === "playing") || null;
     }
 
-
-
-
-
-
-
-
     [Symbol.iterator]() {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       return this.#streams[Symbol.iterator]();
     }
 
-
     get size() {
-
       return this.#streams.length;
     }
   }
@@ -368,7 +320,22 @@
     }
 
     update(queue) {
-      this.render(queue);
+      if (queue) {
+        // for (const stream of queue) {
+        //   let element = this.container.querySelector(
+        //     `#stream-${stream.id.replace(/[:]/g, "_")}`
+        //   );
+        //   element.id = `stream-${stream.id.replace(/[:]/g, "_")}`;
+
+        //   if (!element) {
+        //     element = this.#createStreamElement(stream);
+        //     this.container.appendChild(element);
+        //   } else {
+        //     element.className = `queue-item ${stream.state}`;
+        //     element.title = `Stream ${stream.id}: ${stream.state}`;
+        //   }
+        // }
+      }
     }
 
     render(queue) {
@@ -383,7 +350,7 @@
 
     #createStreamElement(stream) {
       const element = document.createElement("span");
-      element.id = `stream-${stream.id}`;
+      element.id = `stream-${stream.id.replace(/[:]/g, "_")}`;
       element.className = `queue-item ${stream.state}`;
       element.title = `Stream ${stream.id}: ${stream.state}`;
       return element;
@@ -417,13 +384,20 @@
       this.isPlaying = false;
 
       this.audio.onended = () => {
+        console.log("Debug: Audio onended event triggered");
         this.isPlaying = false;
         const currentStream = this.queue.getCurrentPlayingStream();
+        console.log(`Debug: Current stream ID: ${currentStream?.id}`);
         if (currentStream) {
+          console.log(`Debug: Updating stream state to completed for stream ID: ${currentStream.id}`);
           this.queue.updateStreamState(currentStream.id, "completed");
+          console.log("Debug: Updating visualizer");
           this.visualizer.update(this.queue);
+        } else {
+          console.log("Debug: No current stream to update");
         }
         console.info("Audio playback ended. Calling processNextInQueue()...");
+        console.log("Debug: Calling processNextInQueue");
         this.processNextInQueue();
       };
     }
@@ -447,18 +421,26 @@
       this.visualizer.render(this.queue);
 
       if (!this.isPlaying) {
-        console.info("Enqueue: Audio Player is not currently playing. Calling processNextInQueue()...");
+        console.info(
+          "Enqueue: Audio Player is not currently playing. Calling processNextInQueue()..."
+        );
         this.processNextInQueue();
       } else {
-        console.info("Enqueue: Audio Player is already playing something. Skipping processNextInQueue().");
+        console.info(
+          "Enqueue: Audio Player is already playing something. Skipping processNextInQueue()."
+        );
       }
     }
 
     async processNextInQueue() {
+      console.log("Starting processNextInQueue");
       const nextStream = this.queue.getNextQueuedStream();
       if (nextStream) {
+        console.log("Next stream found:", nextStream);
         this.isPlaying = true;
+        nextStream.state = "requesting";
         try {
+          console.log("Fetching stream from URL:", nextStream.url);
           const response = await fetch(nextStream.url, {
             method: nextStream.method,
             headers: nextStream.headers,
@@ -468,22 +450,36 @@
             throw new Error(`HTTP error! status: ${response.status}`);
           }
 
+          console.log("Fetch successful, creating blob");
           const blob = await response.blob();
           const audioUrl = URL.createObjectURL(blob);
 
-          this.queue.updateStreamState(nextStream.id, "playing");
-          this.visualizer.update();
+          console.log("Updating stream state to playing");
+          nextStream.state = "playing";
+          // this.queue.updateStreamState(nextStream.id, "playing");
+          this.visualizer.update(this.queue);
 
+          console.log("Setting audio source and playing");
           this.audio.src = audioUrl;
           await this.audio.play();
         } catch (error) {
           console.error("Error in processNextInQueue:", error);
-          this.queue.updateStreamState(nextStream.id, "error");
-          this.visualizer.updateStreamVisual(nextStream);
+          console.log("Updating stream state to error");
+          nextStream.state = "error";
+          this.visualizer.update(this.queue);
           this.isPlaying = false;
+          console.log("Error so Recursively calling processNextInQueue");
           this.processNextInQueue();
         }
+      } else {
+        console.log("No next stream in queue");
+        this.visualizer.update(this.queue);
       }
+    }
+
+    clearQueue() {
+      this.queue.clearQueue();
+      this.visualizer.update(this.queue);
     }
 
     play() {

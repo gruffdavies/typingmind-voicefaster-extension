@@ -49,10 +49,12 @@
 // from the plugin script.
 (() => {
   // TypingMind Extension for handling audio streams
-  const VOICEFASTER_EXTENSION_VERSION = "1.2.29";
+  const VOICEFASTER_EXTENSION_VERSION = "1.2.32";
 
   function generate_uuid(type) {
-    return new Date().toISOString();
+    // const timestamp = new Date().toISOString().replace(/[-:\.]/g, '');
+    const timestamp = new Date().getTime().toString(); // toISOString();
+    return `${timestamp}`;
   }
 
   function log_object_stringify(message, object) {
@@ -105,82 +107,196 @@
     }
   }
 
-  // Example usage:
-
-  // Passing a structured object
-  const request1 = new StreamRequestResponse({
-    url: "https://api.example.com",
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-    body: null,
-  });
-
-  console.log(request1);
-  // Output: StreamRequestResponse {
-  //   url: 'https://api.example.com',
-  //   method: 'GET',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: null
-  // }
-
-  // Passing individual parameters
-  const request2 = new StreamRequestResponse(
-    "https://api.example.com",
-    "POST",
-    { "Content-Type": "application/json" },
-    { key: "value" }
-  );
-
-  console.log(request2);
-  // Output: StreamRequestResponse {
-  //   url: 'https://api.example.com',
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: { key: 'value' }
-  // }
-
+  /**
+   * @class AudioStream
+   * @description Represents an audio stream with its current state and timing information.
+   *
+   * ## SOLID Principles
+   * - **S**ingle Responsibility: Handles audio stream state and metadata.
+   * - **O**pen/Closed: Extensible for additional stream properties.
+   * - **L**iskov Substitution: Can be used wherever an audio stream is expected.
+   * - **I**nterface Segregation: Focuses solely on audio stream data.
+   * - **D**ependency Inversion: Depends on StreamRequestResponse abstraction.
+   *
+   * ## DRY Principle
+   * - Reuses StreamRequestResponse for request/response data.
+   *
+   * ## Clean Code Practices
+   * - Clear, descriptive naming and concise logic.
+   */
   class AudioStream {
+    /*
+     * @param {StreamRequestResponse} [streamRequestResponse] - The stream data.
+     */
     constructor(streamRequestResponse) {
       this.id = generate_uuid();
-      this.url = url;
+      this.url = streamRequestResponse.url;
+      this.headers = streamRequestResponse.headers;
+      this.method = streamRequestResponse.method;
+      this.body = streamRequestResponse.body;
+
       this.state = "queued";
       this.startTime = null;
       this.endTime = null;
     }
 
-    updateState(newState) {
-      this.state = newState;
-      if (newState === "playing") this.startTime = new Date();
-      if (newState === "completed" || newState === "error")
-        this.endTime = new Date();
-    }
-  }
-
-  class AudioStreamQueue {
-    constructor() {
-      this.streams = [];
+    // figure out if the stream is stale according to maxAge
+    isStale(maxAge) {
+      const currentTime = new Date();
+      const timeSinceStart = currentTime - this.startTime;
+      return timeSinceStart > maxAge;
     }
 
-    addStream(stream) {
-      this.streams.push(stream);
-    }
-
-    updateStreamState(id, newState) {
-      const stream = this.streams.find((s) => s.id === id);
-      if (stream) {
-        stream.updateState(newState);
+    refreshState(maxAge) {
+      if (this.isStale(maxAge)) {
+        this.updateState("stale");
       }
     }
 
-    getNextStream() {
-      return this.streams.find((s) => s.state === "queued");
+    updateState(newState) {
+      this.state = newState;
+      if (newState === "playing") this.startTime = new Date();
+      if (
+        newState === "completed" ||
+        newState === "error" ||
+        newState === "stale"
+      ) {
+        this.endTime = new Date();
+      }
     }
   }
 
-  // File: queueVisualizer.js
-  class QueueVisualizer {
-    constructor(container) {
+  /**
+   * @class AudioStreamQueue
+   * @description Manages a queue of audio streams with automatic cleanup.
+   *
+   * ## SOLID Principles
+   * - **S**ingle Responsibility: Manages audio stream queue and its limits.
+   * - **O**pen/Closed: Extensible for additional queue management features.
+   * - **L**iskov Substitution: Can be used wherever a queue is expected.
+   * - **I**nterface Segregation: Focuses on queue operations and limit management.
+   * - **D**ependency Inversion: Depends on AudioStream abstraction.
+   *
+   * ## DRY Principle
+   * - Centralizes queue management logic.
+   *
+   * ## Clean Code Practices
+   * - Clear method names and focused responsibilities.
+   */
+  class AudioStreamQueue {
+    #streams;
+
+    #maxSize;
+    #maxAge;
+    #observers;
+
+    constructor(maxSize = 100, maxAge = 3600000) {
+      this.#streams = [];
+      this.#maxSize = maxSize;
+      this.#maxAge = maxAge;
+      this.#observers = [];
+    }
+
+    addStream(stream) {
+      console.log(`Adding stream: ${stream.id} to queue of current size: ${this.#streams.length}`);
+      this.#streams.push(stream);
+      console.log(`After current size: ${this.#streams.length}`);
+      console.log("Notifying observers. Final size:", this.#streams.length);
+      this.notifyObservers();
+    }
+
+    removeStream(id) {
+      const index = this.#streams.findIndex((stream) => stream.id === id);
+      if (index !== -1) {
+        this.#streams.splice(index, 1);
+        this.notifyObservers();
+        return true;
+      }
+      return false;
+    }
+
+    getNextQueuedStream() {
+      console.log(
+        "getNextQueuedStream: Stream states:",
+        this.#streams.map((stream) => `${stream.id}: ${stream.state}`)
+      );
+      return this.#streams.find((stream) => stream.state === "queued") || null;
+    }
+
+    updateStreamState(id, newState) {
+      const stream = this.#streams.find((stream) => stream.id === id);
+      if (stream) {
+        stream.updateState(newState);
+        this.notifyObservers();
+      }
+    }
+
+    cleanup() {
+      // iterate over the streams calling refreshState(this.maxAge)
+      // if stale, remove using the removeStream method
+      // using console log to track what is happening
+      console.log("Cleaning up streams. Current size:", this.#streams.length);
+      for (const stream of this.#streams) {
+        stream.refreshState(this.#maxAge);
+        if (stream.isStale(this.#maxAge)) {
+          console.log("Removing stale stream:", stream.id);
+          this.removeStream(stream.id);
+        }
+      }
+      this.notifyObservers();
+    }
+
+    removeOldest() {
+      if (this.#streams.length > 0) {
+        this.#streams.shift();
+        this.notifyObservers();
+      }
+    }
+
+    addObserver(observer) {
+      this.#observers.push(observer);
+    }
+
+    notifyObservers() {
+      for (const observer of this.#observers) {
+        observer.update(this);
+      }
+    }
+
+    getCurrentPlayingStream() {
+      return this.#streams.find((stream) => stream.state === "playing") || null;
+    }
+
+    [Symbol.iterator]() {
+      return this.#streams[Symbol.iterator]();
+    }
+
+    get size() {
+      return this.#streams.length;
+    }
+  }
+
+  /**
+   * @class AudioStreamQueueVisualizer
+   * @description Visualizes the AudioStreamQueue with limits on displayed items.
+   *
+   * ## SOLID Principles
+   * - **S**ingle Responsibility: Handles visualization of AudioStreamQueue.
+   * - **O**pen/Closed: Extensible for additional visualization features.
+   * - **L**iskov Substitution: Can be used wherever a queue visualizer is expected.
+   * - **I**nterface Segregation: Focuses on visualization operations.
+   * - **D**ependency Inversion: Depends on AudioStreamQueue abstraction.
+   *
+   * ## DRY Principle
+   * - Centralizes visualization logic.
+   *
+   * ## Clean Code Practices
+   * - Clear method names and focused responsibilities.
+   */
+  class AudioStreamQueueVisualizer {
+    constructor(container, maxDisplayed = 10) {
       this.container = container;
+      this.maxDisplayed = maxDisplayed;
       this.addStyles();
     }
 
@@ -198,30 +314,67 @@
         .queue-item.playing { background-color: #32CD32; }
         .queue-item.completed { background-color: #4169E1; }
         .queue-item.error { background-color: #DC143C; }
+        .queue-item.stale { background-color: #808080; }
       `;
       document.head.appendChild(style);
     }
 
-    render(queue) {
-      this.container.innerHTML = "";
-      queue.streams.forEach((stream) => {
-        const element = document.createElement("span");
-        element.id = `stream-${stream.id}`;
-        element.className = `queue-item ${stream.state}`;
-        element.title = `Stream ${stream.id}: ${stream.state}`;
-        this.container.appendChild(element);
-      });
+    update(queue) {
+      if (queue) {
+        // for (const stream of queue) {
+        //   let element = this.container.querySelector(
+        //     `#stream-${stream.id.replace(/[:]/g, "_")}`
+        //   );
+        //   element.id = `stream-${stream.id.replace(/[:]/g, "_")}`;
+
+        //   if (!element) {
+        //     element = this.#createStreamElement(stream);
+        //     this.container.appendChild(element);
+        //   } else {
+        //     element.className = `queue-item ${stream.state}`;
+        //     element.title = `Stream ${stream.id}: ${stream.state}`;
+        //   }
+        // }
+      }
     }
 
-    updateStreamVisual(stream) {
-      const element = document.getElementById(`stream-${stream.id}`);
-      if (element) {
-        element.className = `queue-item ${stream.state}`;
-        element.title = `Stream ${stream.id}: ${stream.state}`;
+    render(queue) {
+      this.container.innerHTML = "";
+      if (queue) {
+        for (const stream of queue) {
+          const element = this.#createStreamElement(stream);
+          this.container.appendChild(element);
+        }
       }
+    }
+
+    #createStreamElement(stream) {
+      const element = document.createElement("span");
+      element.id = `stream-${stream.id.replace(/[:]/g, "_")}`;
+      element.className = `queue-item ${stream.state}`;
+      element.title = `Stream ${stream.id}: ${stream.state}`;
+      return element;
     }
   }
 
+  /**
+   * @class AudioPlayer
+   * @description Manages audio playback and queue with automatic cleanup.
+   *
+   * ## SOLID Principles
+   * - **S**ingle Responsibility: Handles audio playback of queued audio streams
+   * - **O**pen/Closed: Extensible for additional audio features.
+   * - **L**iskov Substitution: Can be used wherever an audio player is expected.
+   * - **I**nterface Segregation: Focuses on audio playback and queue operations.
+   * - **D**ependency Inversion: Depends on AudioStream, StreamRequestResponse, and AudioStreamQueue abstractions.
+   *
+   * ## DRY Principle
+   * - Reuses logic for stream creation and queue management.
+   *
+   * ## Clean Code Practices
+   * - Clear method names and focused responsibilities.
+   * - Utilizes efficient Map-based queue and native JavaScript features.
+   */
   class AudioPlayer {
     constructor(version, visualizer) {
       this.version = version;
@@ -231,7 +384,20 @@
       this.isPlaying = false;
 
       this.audio.onended = () => {
+        console.log("Debug: Audio onended event triggered");
         this.isPlaying = false;
+        const currentStream = this.queue.getCurrentPlayingStream();
+        console.log(`Debug: Current stream ID: ${currentStream?.id}`);
+        if (currentStream) {
+          console.log(`Debug: Updating stream state to completed for stream ID: ${currentStream.id}`);
+          this.queue.updateStreamState(currentStream.id, "completed");
+          console.log("Debug: Updating visualizer");
+          this.visualizer.update(this.queue);
+        } else {
+          console.log("Debug: No current stream to update");
+        }
+        console.info("Audio playback ended. Calling processNextInQueue()...");
+        console.log("Debug: Calling processNextInQueue");
         this.processNextInQueue();
       };
     }
@@ -255,15 +421,26 @@
       this.visualizer.render(this.queue);
 
       if (!this.isPlaying) {
+        console.info(
+          "Enqueue: Audio Player is not currently playing. Calling processNextInQueue()..."
+        );
         this.processNextInQueue();
+      } else {
+        console.info(
+          "Enqueue: Audio Player is already playing something. Skipping processNextInQueue()."
+        );
       }
     }
 
     async processNextInQueue() {
-      const nextStream = this.queue.getNextStream();
+      console.log("Starting processNextInQueue");
+      const nextStream = this.queue.getNextQueuedStream();
       if (nextStream) {
+        console.log("Next stream found:", nextStream);
         this.isPlaying = true;
+        nextStream.state = "requesting";
         try {
+          console.log("Fetching stream from URL:", nextStream.url);
           const response = await fetch(nextStream.url, {
             method: nextStream.method,
             headers: nextStream.headers,
@@ -273,37 +450,51 @@
             throw new Error(`HTTP error! status: ${response.status}`);
           }
 
+          console.log("Fetch successful, creating blob");
           const blob = await response.blob();
           const audioUrl = URL.createObjectURL(blob);
 
-          this.queue.updateStreamState(nextStream.id, "playing");
-          this.visualizer.updateStreamVisual(nextStream);
+          console.log("Updating stream state to playing");
+          nextStream.state = "playing";
+          // this.queue.updateStreamState(nextStream.id, "playing");
+          this.visualizer.update(this.queue);
 
+          console.log("Setting audio source and playing");
           this.audio.src = audioUrl;
           await this.audio.play();
         } catch (error) {
           console.error("Error in processNextInQueue:", error);
-          this.queue.updateStreamState(nextStream.id, "error");
-          this.visualizer.updateStreamVisual(nextStream);
+          console.log("Updating stream state to error");
+          nextStream.state = "error";
+          this.visualizer.update(this.queue);
           this.isPlaying = false;
+          console.log("Error so Recursively calling processNextInQueue");
           this.processNextInQueue();
         }
+      } else {
+        console.log("No next stream in queue");
+        this.visualizer.update(this.queue);
       }
     }
 
-    resumePlayback() {
+    clearQueue() {
+      this.queue.clearQueue();
+      this.visualizer.update(this.queue);
+    }
+
+    play() {
       if (!this.isPlaying) {
         this.audio.play();
         this.isPlaying = true;
       }
     }
 
-    pausePlayback() {
+    pause() {
       this.audio.pause();
       this.isPlaying = false;
     }
 
-    stopPlayback() {
+    stop() {
       this.audio.pause();
       this.audio.currentTime = 0;
       this.isPlaying = false;
@@ -507,7 +698,7 @@
   }
 
   // Instantiate the AudioPlayer and UIManager
-  const queueVisualizer = new QueueVisualizer();
+  const queueVisualizer = new AudioStreamQueueVisualizer();
   const audioPlayer = new AudioPlayer(
     VOICEFASTER_EXTENSION_VERSION,
     queueVisualizer
@@ -515,7 +706,6 @@
   const uiManager = new UIManager(audioPlayer, queueVisualizer);
 
   // Add message listener to be able to play audio streams from the plugin script
-  // in comments at the top (called elsewhere)
   window.addEventListener("message", (event) => {
     if (event.data.type === "QUEUE_AUDIO_STREAM") {
       audioPlayer.queueAudioStream(event.data.payload);
