@@ -1,5 +1,5 @@
 // TypingMind Extension for handling audio streams
-const VOICEFASTER_EXTENSION_VERSION = '1.2.13';
+const VOICEFASTER_EXTENSION_VERSION = '1.2.14';
 
 (function () {
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} loading...`);
@@ -77,7 +77,12 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.13';
     pauseButton.style.display = isPlaying ? 'inline-block' : 'none';
   }
 
-  const audioPlayer = createAudioPlayerAndControls();
+  // const audioPlayer = createAudioPlayerAndControls();
+  const { audioPlayer, playButton, pauseButton, stopButton } = createAudioPlayerAndControls();
+
+  audioPlayer.addEventListener('play', () => updateUIState(true));
+  audioPlayer.addEventListener('pause', () => updateUIState(false));
+  audioPlayer.addEventListener('ended', () => updateUIState(false));
 
   // Function to play audio from a streaming URL
   async function playAudioStream(streamInfo) {
@@ -111,9 +116,7 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.13';
       console.error('Error in playAudioStream:', error);
     }
   }
-  audioPlayer.addEventListener('play', () => updateUIState(true));
-  audioPlayer.addEventListener('pause', () => updateUIState(false));
-  audioPlayer.addEventListener('ended', () => updateUIState(false));
+
 
   // Add this back into the extension code
   window.addEventListener('message', function (event) {
