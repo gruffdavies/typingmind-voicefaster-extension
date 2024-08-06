@@ -1,5 +1,5 @@
 // TypingMind Extension for handling audio streams
-const VOICEFASTER_EXTENSION_VERSION = '1.2.3.1';
+const VOICEFASTER_EXTENSION_VERSION = '1.2.4';
 
 (function() {
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} loading...`);
@@ -65,24 +65,24 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.3.1';
   async function playAudioStream(streamInfo) {
     console.log('playAudioStream called with:', JSON.stringify(streamInfo));
     const { url, method, headers, body } = streamInfo;
-    
+
     try {
       console.log('Fetching audio stream...');
       const response = await fetch(url, { method, headers, body });
       console.log('Fetch response status:', response.status);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const blob = await response.blob();
       console.log('Audio blob created');
       const audioUrl = URL.createObjectURL(blob);
       console.log('Audio URL created:', audioUrl);
-      
+
       audioPlayer.src = audioUrl;
       console.log('Audio player source set');
-      
+
       audioPlayer.play().then(() => {
         console.log('Audio playback started');
         document.getElementById('tm-audio-play-pause').innerHTML = '⏸️'; // Pause emoji
