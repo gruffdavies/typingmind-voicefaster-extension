@@ -127,48 +127,55 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.5';
 })();
 
 function makeDraggable(element) {
-  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-  element.onmousedown = dragMouseDown;
+  let isDragging = false;
+  let startX, startY;
+  let initialLeft, initialTop;
 
-  function dragMouseDown(e) {
-    e = e || window.event;
-    e.preventDefault();
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-    document.onmouseup = closeDragElement;
-    document.onmousemove = elementDrag;
+  element.addEventListener('mousedown', startDragging);
+  element.addEventListener('touchstart', startDragging, { passive: true });
+  document.addEventListener('mousemove', drag);
+  document.addEventListener('touchmove', drag);
+  document.addEventListener('mouseup', stopDragging);
+  document.addEventListener('touchend', stopDragging);
+
+  function startDragging(e) {
+    isDragging = true;
+    startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+    startY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+    const rect = element.getBoundingClientRect();
+    initialLeft = rect.left;
+    initialTop = rect.top;
   }
 
-  function elementDrag(e) {
-    const MIN_POSITION = 0;
+  function drag(e) {
+    if (!isDragging) return;
+    const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+    const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+    let deltaX = clientX - startX;
+    let deltaY = clientY - startY;
 
-    function calculateNewPosition(element, deltaX, deltaY) {
-      const newTop = element.offsetTop - deltaY;
-      const newLeft = element.offsetLeft - deltaX;
+    // Get element and viewport dimensions
+    const rect = element.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
 
-      return {
-        top: Math.max(MIN_POSITION, Math.min(newTop, window.innerHeight - element.offsetHeight)),
-        left: Math.max(MIN_POSITION, Math.min(newLeft, window.innerWidth - element.offsetWidth))
-      };
-    }
+    // Boundary checking
+    if (initialLeft + deltaX < 0) deltaX = -initialLeft;
+    if (initialTop + deltaY < 0) deltaY = -initialTop;
+    if (initialLeft + deltaX + rect.width > viewportWidth) deltaX = viewportWidth - initialLeft - rect.width;
+    if (initialTop + deltaY + rect.height > viewportHeight) deltaY = viewportHeight - initialTop - rect.height;
 
-    function elementDrag(e) {
-      e = e || window.event;
-      e.preventDefault();
-
-      const [deltaX, deltaY] = [pos3 - e.clientX, pos4 - e.clientY];
-      [pos3, pos4] = [e.clientX, e.clientY];
-
-      const newPosition = calculateNewPosition(element, deltaX, deltaY);
-
-      element.style.top = newPosition.top + "px";
-      element.style.left = newPosition.left + "px";
-    }
-
+    element.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
   }
 
-  function closeDragElement() {
-    document.onmouseup = null;
-    document.onmousemove = null;
+
+  function stopDragging() {
+    if (!isDragging) return;
+    isDragging = false;
+    const finalTransform = window.getComputedStyle(element).getPropertyValue('transform');
+    const matrix = new DOMMatrix(finalTransform);
+    element.style.transform = 'none';
+    element.style.left = `${initialLeft + matrix.m41}px`;
+    element.style.top = `${initialTop + matrix.m42}px`;
   }
 }
