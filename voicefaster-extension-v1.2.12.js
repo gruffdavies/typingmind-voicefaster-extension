@@ -1,5 +1,5 @@
 // TypingMind Extension for handling audio streams
-const VOICEFASTER_EXTENSION_VERSION = '1.2.11';
+const VOICEFASTER_EXTENSION_VERSION = '1.2.12';
 
 (function() {
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} loading...`);
@@ -24,11 +24,11 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.11';
     const buttonContainer = document.createElement('div')
     buttonContainer.style.cssText = 'display: flex; align-items: center;'
 
-    const title = document.createElement('span')
+    // Title element
+    const title = document.createElement('span');
+    title.textContent = `Rocket's Voice Player`;
+    title.style.cssText = 'font-size: 14px; color: #fff; font-weight: bold; text-align: center; width: 100%; display: block; margin-bottom: 5px;';
 
-
-    title.textContent = `Rocket's Voice Player`
-    title.style.cssText = 'font-size: 14px; color: #333; font-weight: bold; text-align: center; width: 100%; display: block; margin-bottom: 5px;'
     const playButton = document.createElement('button')
     playButton.id = 'tm-audio-play'
     playButton.innerHTML = '▶️';  // Play emoji
@@ -53,12 +53,12 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.11';
     versionDisplay.textContent = `v${VOICEFASTER_EXTENSION_VERSION}`
     versionDisplay.style.cssText = 'font-size: 10px; color: #888; margin-left: 5px;'
 
-    buttonContainer.appendChild(playButton)
     buttonContainer.appendChild(pauseButton)
     buttonContainer.appendChild(stopButton)
     buttonContainer.appendChild(dragHandle)
     buttonContainer.appendChild(versionDisplay)
 
+    audioPlayerContainer.appendChild(title); // Add the title here    buttonContainer.appendChild(playButton)
     audioPlayerContainer.appendChild(audioPlayer)
     audioPlayerContainer.appendChild(buttonContainer)
 
