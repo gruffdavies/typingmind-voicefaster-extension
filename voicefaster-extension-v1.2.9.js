@@ -21,28 +21,74 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.9';
     const audioPlayer = document.createElement('audio');
     audioPlayer.id = 'tm-audio-player';
     audioPlayer.style.display = 'none';  // Hide the default audio controls
+    const buttonContainer = document.createElement('div')
+    buttonContainer.style.cssText = 'display: flex; align-items: center;'
 
-    const buttonContainer = document.createElement('div');
-    buttonContainer.style.cssText = 'display: flex; align-items: center;';
+    const title = document.createElement('span')
 
-    const playPauseButton = document.createElement('button');
-    playPauseButton.id = 'tm-audio-play-pause';
-    playPauseButton.innerHTML = '▶️';  // Play emoji
-    playPauseButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px;';
 
-    const stopButton = document.createElement('button');
-    stopButton.id = 'tm-audio-stop';
+    title.textContent = `Rocket's Voice Player`
+    title.style.cssText = 'font-size: 14px; color: #333; font-weight: bold; text-align: center; width: 100%; display: block; margin-bottom: 5px;'
+    const playButton = document.createElement('button')
+    playButton.id = 'tm-audio-play'
+    playButton.innerHTML = '▶️';  // Play emoji
+    playButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px;'
+
+    const pauseButton = document.createElement('button')
+    pauseButton.id = 'tm-audio-pause'
+    pauseButton.innerHTML = '⏸️';  // Pause emoji
+    pauseButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px; display: none;'
+
+    const stopButton = document.createElement('button')
+    stopButton.id = 'tm-audio-stop'
     stopButton.innerHTML = '⏹️';  // Stop emoji
-    stopButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px;';
+    stopButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px;'
 
-    const dragHandle = document.createElement('span');
+    const dragHandle = document.createElement('span')
     dragHandle.innerHTML = '↔️';  // Move emoji
-    dragHandle.style.cssText = 'font-size: 18px; cursor: move;';
+    dragHandle.style.cssText = 'font-size: 18px; cursor: move;'
 
     // Version display
-    const versionDisplay = document.createElement('span');
-    versionDisplay.textContent = `v${VOICEFASTER_EXTENSION_VERSION}`;
-    versionDisplay.style.cssText = 'font-size: 10px; color: #888; margin-left: 5px;';
+    const versionDisplay = document.createElement('span')
+    versionDisplay.textContent = `v${VOICEFASTER_EXTENSION_VERSION}`
+    versionDisplay.style.cssText = 'font-size: 10px; color: #888; margin-left: 5px;'
+
+    buttonContainer.appendChild(playButton)
+    buttonContainer.appendChild(pauseButton)
+    buttonContainer.appendChild(stopButton)
+    buttonContainer.appendChild(dragHandle)
+    buttonContainer.appendChild(versionDisplay)
+
+    audioPlayerContainer.appendChild(audioPlayer)
+    audioPlayerContainer.appendChild(buttonContainer)
+
+    document.body.appendChild(audioPlayerContainer)
+
+    makeDraggable(audioPlayerContainer)
+
+    console.log('Audio player and controls created')
+    return { audioPlayer, playButton, pauseButton, stopButton }
+
+    buttonContainer.style.cssText = 'display: flex; align-items: center;';
+
+    // const playPauseButton = document.createElement('button');
+    // playPauseButton.id = 'tm-audio-play-pause';
+    // playPauseButton.innerHTML = '▶️';  // Play emoji
+    // playPauseButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px;';
+
+    // const stopButton = document.createElement('button');
+    // stopButton.id = 'tm-audio-stop';
+    // stopButton.innerHTML = '⏹️';  // Stop emoji
+    // stopButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px;';
+
+    // const dragHandle = document.createElement('span');
+    // dragHandle.innerHTML = '↔️';  // Move emoji
+    // dragHandle.style.cssText = 'font-size: 18px; cursor: move;';
+
+    // // Version display
+    // const versionDisplay = document.createElement('span');
+    // versionDisplay.textContent = `v${VOICEFASTER_EXTENSION_VERSION}`;
+    // versionDisplay.style.cssText = 'font-size: 10px; color: #888; margin-left: 5px;';
 
     buttonContainer.appendChild(playPauseButton);
     buttonContainer.appendChild(stopButton);
@@ -109,19 +155,29 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.9';
   // Set up audio controls
   document.getElementById('tm-audio-play-pause').onclick = () => {
     console.log('Play/Pause button clicked');
+    const playButton = document.getElementById('tm-audio-play');
+    const pauseButton = document.getElementById('tm-audio-pause');
     if (audioPlayer.paused) {
       audioPlayer.play();
-      document.getElementById('tm-audio-play-pause').innerHTML = '⏸️'; // Pause emoji
+
+      playButton.style.display = 'none';
+      pauseButton.style.display = 'inline-block';
     } else {
       audioPlayer.pause();
-      document.getElementById('tm-audio-play-pause').innerHTML = '▶️'; // Play emoji
+
+      playButton.style.display = 'inline-block';
+      pauseButton.style.display = 'none';
     }
   };
   document.getElementById('tm-audio-stop').onclick = () => {
     console.log('Stop button clicked');
     audioPlayer.pause();
     audioPlayer.currentTime = 0;
-    document.getElementById('tm-audio-play-pause').innerHTML = '▶️'; // Play emoji
+
+    const playButton = document.getElementById('tm-audio-play');
+    const pauseButton = document.getElementById('tm-audio-pause');
+    playButton.style.display = 'inline-block';
+    pauseButton.style.display = 'none';
   };
 
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} initialized successfully`);
