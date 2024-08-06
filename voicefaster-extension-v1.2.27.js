@@ -45,12 +45,12 @@
 
 (() => {
   // TypingMind Extension for handling audio streams
-  const VOICEFASTER_EXTENSION_VERSION = '1.2.25';
+  const VOICEFASTER_EXTENSION_VERSION = '1.2.27';
 
   class AudioStream {
     constructor(id, url) {
       this.id = id;
-      this.url = url;
+      this.url = url;C
       this.state = 'queued';
       this.startTime = null;
       this.endTime = null;
@@ -129,12 +129,11 @@
     }
   }
 
-
   class AudioPlayer {
-    constructor() {
+    constructor(version) {
+      this.version = version;
       this.audio = new Audio();
       this.queue = new AudioStreamQueue();
-      this.visualizer = new QueueVisualizer('tm-queue-visualizer');
       this.isPlaying = false;
 
       this.audio.onended = () => {
@@ -213,122 +212,55 @@
 
 
   class UIManager {
-    constructor(audioPlayer, QueueVisualizer) {
+    constructor(audioPlayer, queueVisualizer) {
       this.audioPlayer = audioPlayer;
-      this.createPlayerAndControls(QueueVisualizer);
+      this.audioPlayer = queueVisualizer;
+      this.createPlayerAndControls();
     }
 
-
-    createPlayerAndControls(QueueVisualizer) {
+    createPlayerAndControls() {
       const container = document.createElement('div');
-      container.id = 'tm-audio-player';
-      container.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background-color: #333; color: #fff; padding: 10px; border-radius: 5px; font-family: Arial, sans-serif; z-index: 10000; width: 300px;';
+      container.style.cssText = 'background-color: #333; color: white; padding: 10px; border-radius: 5px; font-family: Arial, sans-serif;';
 
-      const title = document.createElement('div');
+      const title = document.createElement('h3');
       title.textContent = 'VoiceFaster Audio Player';
-      title.style.cssText = 'font-weight: bold; margin-bottom: 10px; cursor: move;';
-
-      // Make the container draggable
-      title.addEventListener('mousedown', (e) => {
-        let isDragging = true;
-        let startX = e.clientX - container.offsetLeft;
-        let startY = e.clientY - container.offsetTop;
-
-        const onMouseMove = (e) => {
-          if (isDragging) {
-            container.style.left = (e.clientX - startX) + 'px';
-            container.style.top = (e.clientY - startY) + 'px';
-            container.style.right = 'auto';
-            container.style.bottom = 'auto';
-          }
-        };
-
-        const onMouseUp = () => {
-          isDragging = false;
-          document.removeEventListener('mousemove', onMouseMove);
-          document.removeEventListener('mouseup', onMouseUp);
-        };
-
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-      });
+      title.style.margin = '0 0 10px 0';
 
       const buttonContainer = document.createElement('div');
-      buttonContainer.style.cssText = 'display: flex; justify-content: space-between; margin-bottom: 10px;';
+      buttonContainer.style.display = 'flex';
+      buttonContainer.style.justifyContent = 'space-between';
 
-      const playPauseButton = document.createElement('button');
-      playPauseButton.textContent = 'Play';
-      playPauseButton.onclick = () => this.audioPlayer.togglePlayPause();
+      const buttonData = [
+        { text: 'Play', emoji: '▶️' },
+        { text: 'Stop', emoji: '⏹️' },
+        { text: 'Skip', emoji: '⏭️' },
+        { text: 'Clear Queue', emoji: '🗑️' }
+      ];
 
-      const stopButton = document.createElement('button');
-      stopButton.textContent = 'Stop';
-      stopButton.onclick = () => this.audioPlayer.stop();
+      const buttons = buttonData.map(({ text, emoji }) => {
+        const button = document.createElement('button');
+        button.innerHTML = `${emoji} ${text}`;
+        button.style.cssText = 'background-color: #4CAF50; border: none; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; border-radius: 5px;';
+        return button;
+      });
 
-      const skipButton = document.createElement('button');
-      skipButton.textContent = 'Skip';
-      skipButton.onclick = () => this.audioPlayer.skip();
-
-      const clearQueueButton = document.createElement('button');
-      clearQueueButton.textContent = 'Clear Queue';
-      clearQueueButton.onclick = () => this.audioPlayer.clearQueue();
-
-      buttonContainer.append(playPauseButton, stopButton, skipButton, clearQueueButton);
-
-      // Create a container for the queue visualizer
-      const queueVisualizerContainer = document.createElement('div');
-      queueVisualizerContainer.id = 'tm-queue-visualizer';
-      queueVisualizerContainer.style.cssText = 'margin-top: 10px; text-align: right; height: 20px;';
+      buttons.forEach(button => buttonContainer.appendChild(button));
 
       const versionDisplay = document.createElement('div');
       versionDisplay.style.cssText = 'font-size: 10px; text-align: right; margin-top: 5px;';
-      versionDisplay.textContent = `Version: ${this.audioPlayer.version}`;
+      versionDisplay.textContent = `Version: ${this.audioPlayer.version || 'undefined'}`;
 
-      // Create the QueueVisualizer instance
-      this.queueVisualizer = new QueueVisualizer(queueVisualizerContainer);
+      container.appendChild(title);
+      container.appendChild(buttonContainer);
+      container.appendChild(versionDisplay);
 
-      container.append(title, buttonContainer, queueVisualizerContainer, versionDisplay);
       document.body.appendChild(container);
 
-      // Update UI elements when audio player state changes
-      this.audioPlayer.onStateChange((state) => {
-        playPauseButton.textContent = state.isPlaying ? 'Pause' : 'Play';
-      });
-
-      // Update UI elements when queue changes
-      this.audioPlayer.onQueueChange((queue) => {
-        this.queueVisualizer.render(queue);
-      });
-    }
-
-
-    // File: uiManager.js (continued)
-    createButton(text, id, display = 'inline-block') {
-      const button = document.createElement('button');
-      button.id = id;
-      button.innerHTML = text;
-      button.style.cssText = `background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px; display: ${display};`;
-      return button;
-    }
-
-    setupEventListeners(playButton, pauseButton, stopButton) {
-      playButton.onclick = () => {
-        this.audioPlayer.resumePlayback();  // Changed from play() to resumePlayback()
-        this.updateUIState(true);
-      };
-
-      pauseButton.onclick = () => {
-        this.audioPlayer.pausePlayback();  // Already correct
-        this.updateUIState(false);
-      };
-
-      stopButton.onclick = () => {
-        this.audioPlayer.stopPlayback();  // Already correct
-        this.updateUIState(false);
-      };
-
-      this.audioPlayer.audio.addEventListener('play', () => this.updateUIState(true));
-      this.audioPlayer.audio.addEventListener('pause', () => this.updateUIState(false));
-      this.audioPlayer.audio.addEventListener('ended', () => this.updateUIState(false));
+      // Add event listeners to buttons
+      buttons[0].addEventListener('click', () => this.audioPlayer.play());
+      buttons[1].addEventListener('click', () => this.audioPlayer.stop());
+      buttons[2].addEventListener('click', () => this.audioPlayer.skip());
+      buttons[3].addEventListener('click', () => this.audioPlayer.clearQueue());
     }
 
     updateUIState(isPlaying) {
@@ -386,7 +318,8 @@
 
   // Instantiate the AudioPlayer and UIManager
   const audioPlayer = new AudioPlayer();
-  const uiManager = new UIManager(audioPlayer, QueueVisualizer);
+  const queueVisualizer = new QueueVisualizer();
+  const uiManager = new UIManager(audioPlayer, queueVisualizer);
 
   // Set the visualizer for the audio player
   audioPlayer.setVisualizer(uiManager.queueVisualizer);
