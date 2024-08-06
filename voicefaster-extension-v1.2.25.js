@@ -45,7 +45,7 @@
 
 (() => {
   // TypingMind Extension for handling audio streams
-  const VOICEFASTER_EXTENSION_VERSION = '1.2.24';
+  const VOICEFASTER_EXTENSION_VERSION = '1.2.25';
 
   class AudioStream {
     constructor(id, url) {
@@ -86,10 +86,8 @@
 
   // File: queueVisualizer.js
   class QueueVisualizer {
-    constructor(containerId) {
-      this.containerId = containerId;
-      this.container = null;
-      this.ensureContainer();
+    constructor(container) {
+      this.container = container;
       this.addStyles();
     }
 
@@ -98,31 +96,20 @@
       style.textContent = `
         .queue-item {
           display: inline-block;
-          width: 20px;
-          height: 20px;
-          margin: 0 5px;
+          width: 10px;
+          height: 10px;
+          margin: 0 2px;
           border-radius: 50%;
         }
-        .queue-item.queued { background-color: yellow; }
-        .queue-item.playing { background-color: green; }
-        .queue-item.completed { background-color: blue; }
-        .queue-item.error { background-color: red; }
+        .queue-item.queued { background-color: #FFD700; }
+        .queue-item.playing { background-color: #32CD32; }
+        .queue-item.completed { background-color: #4169E1; }
+        .queue-item.error { background-color: #DC143C; }
       `;
       document.head.appendChild(style);
     }
 
-    ensureContainer() {
-      this.container = document.getElementById(this.containerId);
-      if (!this.container) {
-        this.container = document.createElement('div');
-        this.container.id = this.containerId;
-        this.container.style.cssText = 'position: fixed; bottom: 10px; left: 10px; z-index: 1000;';
-        document.body.appendChild(this.container);
-      }
-    }
-
     render(queue) {
-      this.ensureContainer();
       this.container.innerHTML = '';
       queue.streams.forEach(stream => {
         const element = document.createElement('span');
@@ -141,6 +128,7 @@
       }
     }
   }
+
 
   class AudioPlayer {
     constructor() {
@@ -224,44 +212,94 @@
   }
 
 
-  // File: uiManager.js
   class UIManager {
-    constructor(audioPlayer) {
+    constructor(audioPlayer, QueueVisualizer) {
       this.audioPlayer = audioPlayer;
-      this.createPlayerAndControls();
+      this.createPlayerAndControls(QueueVisualizer);
     }
 
-    createPlayerAndControls() {
-      const container = document.createElement('div');
-      container.id = 'tm-audio-player-container';
-      container.style.cssText = 'position: fixed; top: 20px; left: calc(100% - 140px); z-index: 1000; background-color: rgba(30, 41, 59, 0.8); padding: 5px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); cursor: move; user-select: none;';
 
-      const title = document.createElement('span');
-      title.textContent = `Rocket's Voice Player`;
-      title.style.cssText = 'font-size: 14px; color: #fff; font-weight: bold; text-align: center; width: 100%; display: block; margin-bottom: 5px;';
+    createPlayerAndControls(QueueVisualizer) {
+      const container = document.createElement('div');
+      container.id = 'tm-audio-player';
+      container.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background-color: #333; color: #fff; padding: 10px; border-radius: 5px; font-family: Arial, sans-serif; z-index: 10000; width: 300px;';
+
+      const title = document.createElement('div');
+      title.textContent = 'VoiceFaster Audio Player';
+      title.style.cssText = 'font-weight: bold; margin-bottom: 10px; cursor: move;';
+
+      // Make the container draggable
+      title.addEventListener('mousedown', (e) => {
+        let isDragging = true;
+        let startX = e.clientX - container.offsetLeft;
+        let startY = e.clientY - container.offsetTop;
+
+        const onMouseMove = (e) => {
+          if (isDragging) {
+            container.style.left = (e.clientX - startX) + 'px';
+            container.style.top = (e.clientY - startY) + 'px';
+            container.style.right = 'auto';
+            container.style.bottom = 'auto';
+          }
+        };
+
+        const onMouseUp = () => {
+          isDragging = false;
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
 
       const buttonContainer = document.createElement('div');
-      buttonContainer.style.cssText = 'display: flex; align-items: center;';
+      buttonContainer.style.cssText = 'display: flex; justify-content: space-between; margin-bottom: 10px;';
 
-      const playButton = this.createButton('▶️', 'tm-audio-play');
-      const pauseButton = this.createButton('⏸️', 'tm-audio-pause', 'none');
-      const stopButton = this.createButton('⏹️', 'tm-audio-stop', 'none');
+      const playPauseButton = document.createElement('button');
+      playPauseButton.textContent = 'Play';
+      playPauseButton.onclick = () => this.audioPlayer.togglePlayPause();
 
-      const dragHandle = document.createElement('span');
-      dragHandle.innerHTML = '↔️';
-      dragHandle.style.cssText = 'font-size: 18px; cursor: move;';
+      const stopButton = document.createElement('button');
+      stopButton.textContent = 'Stop';
+      stopButton.onclick = () => this.audioPlayer.stop();
 
-      const versionDisplay = document.createElement('span');
-      versionDisplay.textContent = `v${VOICEFASTER_EXTENSION_VERSION}`;
-      versionDisplay.style.cssText = 'font-size: 10px; color: #888; margin-left: 5px;';
+      const skipButton = document.createElement('button');
+      skipButton.textContent = 'Skip';
+      skipButton.onclick = () => this.audioPlayer.skip();
 
-      buttonContainer.append(playButton, pauseButton, stopButton, dragHandle, versionDisplay);
-      container.append(title, buttonContainer);
+      const clearQueueButton = document.createElement('button');
+      clearQueueButton.textContent = 'Clear Queue';
+      clearQueueButton.onclick = () => this.audioPlayer.clearQueue();
+
+      buttonContainer.append(playPauseButton, stopButton, skipButton, clearQueueButton);
+
+      // Create a container for the queue visualizer
+      const queueVisualizerContainer = document.createElement('div');
+      queueVisualizerContainer.id = 'tm-queue-visualizer';
+      queueVisualizerContainer.style.cssText = 'margin-top: 10px; text-align: right; height: 20px;';
+
+      const versionDisplay = document.createElement('div');
+      versionDisplay.style.cssText = 'font-size: 10px; text-align: right; margin-top: 5px;';
+      versionDisplay.textContent = `Version: ${this.audioPlayer.version}`;
+
+      // Create the QueueVisualizer instance
+      this.queueVisualizer = new QueueVisualizer(queueVisualizerContainer);
+
+      container.append(title, buttonContainer, queueVisualizerContainer, versionDisplay);
       document.body.appendChild(container);
 
-      this.makeDraggable(container);
-      this.setupEventListeners(playButton, pauseButton, stopButton);
+      // Update UI elements when audio player state changes
+      this.audioPlayer.onStateChange((state) => {
+        playPauseButton.textContent = state.isPlaying ? 'Pause' : 'Play';
+      });
+
+      // Update UI elements when queue changes
+      this.audioPlayer.onQueueChange((queue) => {
+        this.queueVisualizer.render(queue);
+      });
     }
+
 
     // File: uiManager.js (continued)
     createButton(text, id, display = 'inline-block') {
@@ -348,7 +386,10 @@
 
   // Instantiate the AudioPlayer and UIManager
   const audioPlayer = new AudioPlayer();
-  const uiManager = new UIManager(audioPlayer);
+  const uiManager = new UIManager(audioPlayer, QueueVisualizer);
+
+  // Set the visualizer for the audio player
+  audioPlayer.setVisualizer(uiManager.queueVisualizer);
 
   // Add message listener to be able to play audio streams from the plugin script
   // in comments at the top (called elsewhere)
