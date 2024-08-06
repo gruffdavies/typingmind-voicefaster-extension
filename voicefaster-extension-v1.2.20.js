@@ -1,5 +1,5 @@
 // TypingMind Extension for handling audio streams
-const VOICEFASTER_EXTENSION_VERSION = '1.2.19';
+const VOICEFASTER_EXTENSION_VERSION = '1.2.20';
 
 // Add these new classes
 class AudioStream {
@@ -40,6 +40,25 @@ class QueueVisualizer {
     this.queue = queue;
     this.containerId = containerId;
     this.ensureContainer();
+    this.addStyles();
+  }
+
+  addStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+      .queue-item {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        margin: 0 5px;
+        border-radius: 50%;
+      }
+      .queue-item.queued { background-color: yellow; }
+      .queue-item.playing { background-color: green; }
+      .queue-item.completed { background-color: blue; }
+      .queue-item.error { background-color: red; }
+    `;
+    document.head.appendChild(style);
   }
 
   ensureContainer() {
@@ -164,8 +183,10 @@ class QueueVisualizer {
   audioPlayer.addEventListener('pause', () => updateUIState(false));
   audioPlayer.addEventListener('ended', () => updateUIState(false));
 
-  const audioStreamQueue = new AudioStreamQueue();
-  const queueVisualizer = new QueueVisualizer(audioStreamQueue, 'tm-queue-visualizer');
+
+
+  const queueVisualizer = new QueueVisualizer('tm-queue-visualizer');
+  const audioStreamQueue = new AudioStreamQueue(queueVisualizer);
 
   // Modify playAudioStream function
   async function playAudioStream(streamInfo) {
@@ -180,7 +201,7 @@ class QueueVisualizer {
     const streamId = Date.now().toString(); // Simple unique ID
     const audioStream = new AudioStream(streamId, url);
     audioStreamQueue.addStream(audioStream);
-    queueVisualizer.render();
+
 
     try {
       console.log('Fetching audio stream...');
@@ -197,7 +218,7 @@ class QueueVisualizer {
       console.log('Audio URL created:', audioUrl);
 
       audioStreamQueue.updateStreamState(streamId, 'playing');
-      queueVisualizer.updateStreamVisual(streamId);
+
 
       audioPlayer.src = audioUrl;
       audioPlayer.play().then(() => {
@@ -205,18 +226,18 @@ class QueueVisualizer {
       }).catch(error => {
         console.error('Error starting audio playback:', error);
         audioStreamQueue.updateStreamState(streamId, 'error');
-        queueVisualizer.updateStreamVisual(streamId);
+
       });
 
       audioPlayer.onended = () => {
         audioStreamQueue.updateStreamState(streamId, 'completed');
-        queueVisualizer.updateStreamVisual(streamId);
+
         playNextInQueue();
       };
     } catch (error) {
       console.error('Error in playAudioStream:', error);
       audioStreamQueue.updateStreamState(streamId, 'error');
-      queueVisualizer.updateStreamVisual(streamId);
+
     }
   }
 
