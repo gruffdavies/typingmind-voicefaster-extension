@@ -1,5 +1,5 @@
 // TypingMind Extension for handling audio streams
-const VOICEFASTER_EXTENSION_VERSION = '1.2.7';
+const VOICEFASTER_EXTENSION_VERSION = '1.2.8';
 
 (function() {
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} loading...`);
