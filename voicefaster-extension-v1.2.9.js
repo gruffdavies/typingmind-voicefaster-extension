@@ -1,5 +1,5 @@
 // TypingMind Extension for handling audio streams
-const VOICEFASTER_EXTENSION_VERSION = '1.2.8';
+const VOICEFASTER_EXTENSION_VERSION = '1.2.9';
 
 (function() {
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} loading...`);
@@ -16,6 +16,7 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.8';
     const audioPlayerContainer = document.createElement('div');
     audioPlayerContainer.id = 'tm-audio-player-container';
     audioPlayerContainer.style.cssText = 'position: fixed; top: 20px; left: calc(100% - 140px); z-index: 1000; background-color: rgba(30, 41, 59, 0.8); padding: 5px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); cursor: move;';
+    audioPlayerContainer.style.cssText += 'user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;';
 
     const audioPlayer = document.createElement('audio');
     audioPlayer.id = 'tm-audio-player';
@@ -140,6 +141,7 @@ function makeDraggable(element) {
   document.addEventListener('touchend', stopDragging);
 
   function startDragging(e) {
+    e.preventDefault(); // prevent text selection
     isDragging = true;
     startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
     startY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
