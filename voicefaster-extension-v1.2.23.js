@@ -1,6 +1,51 @@
+// The extension is loaded in the browser and must be able to handle
+// streams send from the plugin code below which is in a sandboxed iframe.
+// PLUGIN CODE:
+// async function VOICEFASTER_stream_voice_audio(params, userSettings) {
+//   const VOICEFASTER_VERSION = '1.1.6';
+//   console.log(`stream_voice_audio v${VOICEFASTER_VERSION} called with:`, params);
+
+//   const { text, voice_id = userSettings.defaultVoiceId || 'LKzEuRvwo37aJ6JFMnxk' } = params;
+//   const apiKey = userSettings.elevenLabsApiKey;
+
+//   if (!apiKey) {
+//     throw new Error("Eleven Labs API Key not provided in user settings");
+//   }
+
+//   const payload = {
+//     url: `https://api.elevenlabs.io/v1/text-to-speech/${voice_id}/stream`,
+//     method: "POST",
+//     headers: {
+//       "Accept": "audio/mpeg",
+//       "xi-api-key": apiKey,
+//       "Content-Type": "application/json"
+//     },
+//     body: JSON.stringify({
+//       "text": text,
+//       "model_id": "eleven_monolingual_v1",
+//       "voice_settings": { "stability": 0.5, "similarity_boost": 0.5 }
+//     })
+//   };
+
+//   console.log("Sending message to play audio...");
+
+//   // Send a message to the parent window
+//   window.parent.postMessage({
+//     type: 'PLAY_AUDIO_STREAM',
+//     payload: payload
+//   }, '*');
+
+//   return {
+//     message: "Audio stream request sent. Check console for detailed logs.",
+//     text: text,
+//     voiceId: voice_id,
+//     version: VOICEFASTER_VERSION
+//   };
+// }
+
 (() => {
   // TypingMind Extension for handling audio streams
-  const VOICEFASTER_EXTENSION_VERSION = '1.2.22';
+  const VOICEFASTER_EXTENSION_VERSION = '1.2.23';
 
   class AudioStream {
     constructor(id, url) {
@@ -290,5 +335,13 @@
   // Instantiate the AudioPlayer and UIManager
   const audioPlayer = new AudioPlayer();
   const uiManager = new UIManager(audioPlayer);
+
+  // Add message listener to be able to play audio streams from the plugin script
+  // in comments at the top (called elsewhere)
+  window.addEventListener('message', (event) => {
+    if (event.data.type === 'PLAY_AUDIO_STREAM') {
+      audioPlayer.playStream(event.data.payload);
+    }
+  });
 
 })();
