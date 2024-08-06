@@ -1,5 +1,5 @@
 // TypingMind Extension for handling audio streams
-const VOICEFASTER_EXTENSION_VERSION = '1.2.16';
+const VOICEFASTER_EXTENSION_VERSION = '1.2.17';
 
 (function () {
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} loading...`);
@@ -21,66 +21,68 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.16';
     const audioPlayer = document.createElement('audio');
     audioPlayer.id = 'tm-audio-player';
     audioPlayer.style.display = 'none';  // Hide the default audio controls
-    const buttonContainer = document.createElement('div')
-    buttonContainer.style.cssText = 'display: flex; align-items: center;'
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = 'display: flex; align-items: center;';
 
     // Title element
     const title = document.createElement('span');
     title.textContent = `Rocket's Voice Player`;
     title.style.cssText = 'font-size: 14px; color: #fff; font-weight: bold; text-align: center; width: 100%; display: block; margin-bottom: 5px;';
 
-    const playButton = document.createElement('button')
-    playButton.id = 'tm-audio-play'
+    const playButton = document.createElement('button');
+    playButton.id = 'tm-audio-play';
     playButton.innerHTML = '▶️';  // Play emoji
-    playButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px;'
+    playButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px;';
 
-    const pauseButton = document.createElement('button')
-    pauseButton.id = 'tm-audio-pause'
+    const pauseButton = document.createElement('button');
+    pauseButton.id = 'tm-audio-pause';
     pauseButton.innerHTML = '⏸️';  // Pause emoji
-    pauseButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px; display: none;'
+    pauseButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px; display: none;';
 
-    const stopButton = document.createElement('button')
-    stopButton.id = 'tm-audio-stop'
+    const stopButton = document.createElement('button');
+    stopButton.id = 'tm-audio-stop';
     stopButton.innerHTML = '⏹️';  // Stop emoji
-    stopButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px; display: none;'
+    stopButton.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 5px; display: none;';
 
-    const dragHandle = document.createElement('span')
+    const dragHandle = document.createElement('span');
     dragHandle.innerHTML = '↔️';  // Move emoji
-    dragHandle.style.cssText = 'font-size: 18px; cursor: move;'
+    dragHandle.style.cssText = 'font-size: 18px; cursor: move;';
 
     // Version display
-    const versionDisplay = document.createElement('span')
-    versionDisplay.textContent = `v${VOICEFASTER_EXTENSION_VERSION}`
-    versionDisplay.style.cssText = 'font-size: 10px; color: #888; margin-left: 5px;'
+    const versionDisplay = document.createElement('span');
+    versionDisplay.textContent = `v${VOICEFASTER_EXTENSION_VERSION}`;
+    versionDisplay.style.cssText = 'font-size: 10px; color: #888; margin-left: 5px;';
 
-    buttonContainer.appendChild(pauseButton)
-    buttonContainer.appendChild(stopButton)
-    buttonContainer.appendChild(dragHandle)
-    buttonContainer.appendChild(versionDisplay)
+    buttonContainer.appendChild(playButton);
+    buttonContainer.appendChild(pauseButton);
+    buttonContainer.appendChild(stopButton);
+    buttonContainer.appendChild(dragHandle);
+    buttonContainer.appendChild(versionDisplay);
 
-    audioPlayerContainer.appendChild(title); // Add the title here    buttonContainer.appendChild(playButton)
-    audioPlayerContainer.appendChild(audioPlayer)
-    audioPlayerContainer.appendChild(buttonContainer)
+    audioPlayerContainer.appendChild(title); // Add the title here
+    audioPlayerContainer.appendChild(audioPlayer);
+    audioPlayerContainer.appendChild(buttonContainer);
 
-    document.body.appendChild(audioPlayerContainer)
+    document.body.appendChild(audioPlayerContainer);
 
-    makeDraggable(audioPlayerContainer)
+    makeDraggable(audioPlayerContainer);
 
-    console.log('Audio player and controls created')
-    return { audioPlayer, playButton, pauseButton, stopButton }
+    console.log('Audio player and controls created');
+    return { audioPlayer, playButton, pauseButton, stopButton };
   }
 
   function updateUIState(isPlaying) {
     const playButton = document.getElementById('tm-audio-play');
     const pauseButton = document.getElementById('tm-audio-pause');
     const stopButton = document.getElementById('tm-audio-stop');
-    playButton.style.display = isPlaying ? 'none' : 'inline-block';
-    pauseButton.style.display = isPlaying ? 'inline-block' : 'none';
-    stopButton.style.display = isPlaying ? 'inline-block' : 'none';
+    if (playButton && pauseButton && stopButton) {
+      playButton.style.display = isPlaying ? 'none' : 'inline-block';
+      pauseButton.style.display = isPlaying ? 'inline-block' : 'none';
+      stopButton.style.display = isPlaying ? 'inline-block' : 'none';
+    }
   }
 
-
-  // const audioPlayer = createAudioPlayerAndControls();
   const { audioPlayer, playButton, pauseButton, stopButton } = createAudioPlayerAndControls();
 
   audioPlayer.addEventListener('play', () => updateUIState(true));
@@ -91,6 +93,11 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.16';
   async function playAudioStream(streamInfo) {
     console.log('playAudioStream called with:', JSON.stringify(streamInfo));
     const { url, method, headers, body } = streamInfo;
+
+    if (!url || typeof url !== 'string') {
+      console.error('Invalid URL format');
+      return;
+    }
 
     try {
       console.log('Fetching audio stream...');
@@ -107,11 +114,8 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.16';
       console.log('Audio URL created:', audioUrl);
 
       audioPlayer.src = audioUrl;
-      console.log('Audio player source set');
-
       audioPlayer.play().then(() => {
         console.log('Audio playback started');
-        document.getElementById('tm-audio-play-pause').innerHTML = '⏸️'; // Pause emoji
       }).catch(error => {
         console.error('Error starting audio playback:', error);
       });
@@ -120,8 +124,31 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.16';
     }
   }
 
+  // Initialize audio queue
+  const audioQueue = [];
 
-  // Add this back into the extension code
+  // Function to play the next audio in the queue
+  function playNextInQueue() {
+    if (audioQueue.length > 0) {
+      const nextAudioUrl = audioQueue.shift();
+      audioPlayer.src = nextAudioUrl;
+      console.log('Audio player source set');
+
+      audioPlayer.play().then(() => {
+        console.log('Audio playback started');
+      }).catch(error => {
+        console.error('Error starting audio playback:', error);
+      });
+    }
+  }
+
+  // Event listener for when audio ends
+  audioPlayer.addEventListener('ended', () => {
+    console.log('Audio playback ended');
+    playNextInQueue();
+  });
+
+  // Message listener to handle PLAY_AUDIO_STREAM
   window.addEventListener('message', function (event) {
     if (event.data.type === 'PLAY_AUDIO_STREAM') {
       console.log('Received PLAY_AUDIO_STREAM message');
@@ -132,82 +159,26 @@ const VOICEFASTER_EXTENSION_VERSION = '1.2.16';
   // Expose the function to the global scope
   window.playAudioStream = playAudioStream;
 
-  // Set up audio controls
-  document.getElementById('tm-audio-play').onclick = () => {
-    console.log('Play button clicked');
-    audioPlayer.play();
-  };
+  // Set up audio controls if elements are found
+  if (playButton && pauseButton && stopButton) {
+    playButton.onclick = () => {
+      console.log('Play button clicked');
+      audioPlayer.play();
+    };
 
-  document.getElementById('tm-audio-pause').onclick = () => {
-    console.log('Pause button clicked');
-    audioPlayer.pause();
-  };
+    pauseButton.onclick = () => {
+      console.log('Pause button clicked');
+      audioPlayer.pause();
+    };
 
-  document.getElementById('tm-audio-stop').onclick = () => {
-    console.log('Stop button clicked');
-    audioPlayer.pause();
-    audioPlayer.currentTime = 0;
-  };
-  // Initialize audio queue
-  const audioQueue = []
-
-  // Modified playAudioStream function
-  async function playAudioStream(audioData) {
-    try {
-      const response = await fetch(audioData)
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const blob = await response.blob()
-      console.log('Audio blob created')
-      const audioUrl = URL.createObjectURL(blob)
-      console.log('Audio URL created:', audioUrl)
-
-      // Add the audio URL to the queue
-      audioQueue.push(audioUrl)
-
-      // If the audio player is not playing, start playing the first item in the queue
-      if (audioPlayer.paused) {
-        playNextInQueue()
-      }
-    } catch (error) {
-      console.error('Error in playAudioStream:', error)
-    }
+    stopButton.onclick = () => {
+      console.log('Stop button clicked');
+      audioPlayer.pause();
+      audioPlayer.currentTime = 0;
+    };
+  } else {
+    console.error('Audio control buttons not found in the DOM.');
   }
-
-  // Function to play the next audio in the queue
-  function playNextInQueue() {
-    if (audioQueue.length > 0) {
-      const nextAudioUrl = audioQueue.shift()
-      audioPlayer.src = nextAudioUrl
-      console.log('Audio player source set')
-
-      audioPlayer.play().then(() => {
-        console.log('Audio playback started')
-        document.getElementById('tm-audio-play-pause').innerHTML = '⏸️'; // Pause emoji
-      }).catch(error => {
-        console.error('Error starting audio playback:', error)
-      })
-    }
-  }
-
-  // Add event listener for when audio ends
-  audioPlayer.addEventListener('ended', () => {
-    console.log('Audio playback ended')
-    playNextInQueue()
-  })
-
-  // Modify the existing event listener
-  window.addEventListener('message', function (event) {
-    if (event.data.type === 'PLAY_AUDIO_STREAM') {
-      console.log('Received PLAY_AUDIO_STREAM message')
-      playAudioStream(event.data.payload)
-    }
-  }, false)
-
-  // Expose the function to the global scope
-  window.playAudioStream = playAudioStream
 
   console.log(`VoiceFaster Extension v${VOICEFASTER_EXTENSION_VERSION} initialized successfully`);
 })();
