@@ -675,48 +675,59 @@
     }
 
     makeDraggable(element) {
-      let isDragging = false;
-      let startX, startY, initialX, initialY, divwidth, divheight;
+  let isDragging = false;
+  let startX, startY, initialX, initialY, divwidth, divheight;
 
-      element.addEventListener("mousedown", startDragging);
-      element.addEventListener("touchstart", startDragging, { passive: true });
-      document.addEventListener("mousemove", drag);
-      document.addEventListener("touchmove", drag);
-      document.addEventListener("mouseup", stopDragging);
-      document.addEventListener("touchend", stopDragging);
+  element.addEventListener("mousedown", startDragging);
+  element.addEventListener("touchstart", startDragging, { passive: false });
+  document.addEventListener("mousemove", drag);
+  document.addEventListener("touchmove", drag, { passive: false });
+  document.addEventListener("mouseup", stopDragging);
+  document.addEventListener("touchend", stopDragging);
 
-      function startDragging(e) {
-        e.preventDefault();
-        isDragging = true;
-        startX = e.clientX || e.touches[0].clientX;
-        startY = e.clientY || e.touches[0].clientY;
-        const rect = element.getBoundingClientRect();
-        initialX = rect.left;
-        initialY = rect.top;
-        divwidth = rect.width;
-        divheight = rect.height;
-      }
+  function startDragging(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    isDragging = true;
+    startX = e.clientX || e.touches[0].clientX;
+    startY = e.clientY || e.touches[0].clientY;
+    const rect = element.getBoundingClientRect();
+    initialX = rect.left;
+    initialY = rect.top;
+    divwidth = rect.width;
+    divheight = rect.height;
+  }
 
-      function drag(e) {
-        if (!isDragging) return;
-        const clientX = e.clientX || e.touches[0].clientX;
-        const clientY = e.clientY || e.touches[0].clientY;
-        const deltaX = clientX - startX;
-        const deltaY = clientY - startY;
-        element.style.left = `${initialX + deltaX}px`;
-        element.style.top = `${initialY + deltaY}px`;
-        element.style.right = `${initialX + divwidth}px`;
-        element.style.bottom = `${initialY + divheight}px`;
-      }
+  function drag(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const clientX = e.clientX || e.touches[0].clientX;
+    const clientY = e.clientY || e.touches[0].clientY;
+    const deltaX = clientX - startX;
+    const deltaY = clientY - startY;
 
-      function stopDragging() {
-        if (!isDragging) return;
-        isDragging = false;
-        const rect = element.getBoundingClientRect();
-        element.style.left = `${rect.left}px`;
-        element.style.top = `${rect.top}px`;
-        element.style.transform = "none";
-      }
+    // Ensure dragging stays within the element
+    const newLeft = Math.max(0, Math.min(initialX + deltaX, window.innerWidth - divwidth));
+    const newTop = Math.max(0, Math.min(initialY + deltaY, window.innerHeight - divheight));
+
+    element.style.left = `${newLeft}px`;
+    element.style.top = `${newTop}px`;
+    element.style.right = `${newLeft + divwidth}px`;
+    element.style.bottom = `${newTop + divheight}px`;
+  }
+
+  function stopDragging(e) {
+    if (!isDragging) return;
+    e.stopPropagation();
+    isDragging = false;
+    const rect = element.getBoundingClientRect();
+    element.style.left = `${rect.left}px`;
+    element.style.top = `${rect.top}px`;
+    element.style.transform = "none";
+  }
+}
+
     }
   }
 
