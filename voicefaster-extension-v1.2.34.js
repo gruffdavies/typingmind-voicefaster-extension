@@ -198,7 +198,11 @@
     }
 
     addStream(stream) {
-      console.log(`Adding stream: ${stream.id} to queue of current size: ${this.#streams.length}`);
+      console.log(
+        `Adding stream: ${stream.id} to queue of current size: ${
+          this.#streams.length
+        }`
+      );
       this.#streams.push(stream);
       console.log(`After current size: ${this.#streams.length}`);
       console.log("Notifying observers. Final size:", this.#streams.length);
@@ -326,7 +330,6 @@
         //     `#stream-${stream.id.replace(/[:]/g, "_")}`
         //   );
         //   element.id = `stream-${stream.id.replace(/[:]/g, "_")}`;
-
         //   if (!element) {
         //     element = this.#createStreamElement(stream);
         //     this.container.appendChild(element);
@@ -389,7 +392,9 @@
         const currentStream = this.queue.getCurrentPlayingStream();
         console.log(`Debug: Current stream ID: ${currentStream?.id}`);
         if (currentStream) {
-          console.log(`Debug: Updating stream state to completed for stream ID: ${currentStream.id}`);
+          console.log(
+            `Debug: Updating stream state to completed for stream ID: ${currentStream.id}`
+          );
           this.queue.updateStreamState(currentStream.id, "completed");
           console.log("Debug: Updating visualizer");
           this.visualizer.update(this.queue);
@@ -548,26 +553,26 @@
 
       this.makeDraggable(this.container);
     }
-  //   container.style.cssText = `
-  //   position: absolute;  /* Change to absolute for flexible movement */
-  //   top: 20px;
-  //   left: calc(100% - 140px);
-  //   z-index: 1000;
-  //   background-color: rgba(30, 41, 59, 0.8);
-  //   padding: 5px;
-  //   border-radius: 8px;
-  //   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  //   cursor: move;
-  //   user-select: none;
-  //   width: 150px;  /* Set a fixed width */
-  //   height: 100px; /* Set a fixed height */
-  //   transition: width 0s, height 0s;  /* Prevent resizing transitions */
-  // `;
+    //   container.style.cssText = `
+    //   position: absolute;  /* Change to absolute for flexible movement */
+    //   top: 20px;
+    //   left: calc(100% - 140px);
+    //   z-index: 1000;
+    //   background-color: rgba(30, 41, 59, 0.8);
+    //   padding: 5px;
+    //   border-radius: 8px;
+    //   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    //   cursor: move;
+    //   user-select: none;
+    //   width: 150px;  /* Set a fixed width */
+    //   height: 100px; /* Set a fixed height */
+    //   transition: width 0s, height 0s;  /* Prevent resizing transitions */
+    // `;
     applyContainerStyles() {
       Object.assign(this.container.style, {
         position: "fixed",
         left: "calc(100% - 400px)",
-//        right: "20px",
+        //        right: "20px",
         top: "20px",
         width: "320px",
         height: "120px",
