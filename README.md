@@ -1,10 +1,37 @@
 # Voice Faster Extension and Plugin For TypingMind
 
-Purpose:
+## Purpose
 
-The repo uses GitHub Pages to publish the code in a way that makes it visible publically.
+VoiceFaster is an extension and plugin that work together to provide a faster voice to text experience for TypingMind.
 
-The general form for the URI is : `https://gruffdavies.github.io/typingmind-voicefaster-extension/{path}{filename}`
+The plugin constructs a web request to call ElevenLabs API using the streaming API for the voice.
+The Extension renders an audio player in a sandboxed iFrame in the TypingMind UI (whether chrome or installed as a web app).
+The extension handles making (but not constructing) streaming web requests to the ElevenLabs API and handling the responses.
+It has a queue and receives request payloads from the plugin.
+
+Set the live extension in the menu > settings > Advanced Settings > Extensions
+![alt text](image.png)
+
+
+### Important
+
+- Live Extensions Are Injected Into The Browser and run immediately.
+- Use with extreme caution!
+- This code is an experiment and not written for other users and may change at any time.
+- You are welcome to fork this repo if you find it useful and are strongly advised to use your own fork.
+- Check the code thoroughly before using it.
+- This is 100% unsupported and you use it at your own risk.
+
+The repo uses GitHub Pages to publish the code in a way that makes the raw code visible publically.
+
+## Repo URIs vs raw code URIs
+
+The repo's root web URI is : [https://github.com/gruffdavies/typingmind-voicefaster-extension]
+
+Use this to understand the code and repo structure.
+
+To read or use the raw code, instead use the following URI form:
+`https://gruffdavies.github.io/typingmind-voicefaster-extension/{path}{filename}`
 
 e.g.
 
@@ -19,6 +46,8 @@ e.g.
 
 - Live Extensions Are Injected Into The Browser and run immediately.
 - Use with caution!
+- Currently the live extension and plugin versions are unrelated. See [[Dev]].
+
 
 ## Live URIs
 
