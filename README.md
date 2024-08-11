@@ -25,9 +25,11 @@ URIs for live versions of the extension take the form:
 ## Test Versions
 
 NB: Test versions are also visible publically and can be used to test versions of the extension.
+Note to see the public version of the test files replace `live` with `test` in the .io URI.
 
 ## Dev Versions
 
 The dev version of the extension and plugin code are in the extension and plugin folders respectively.
 They may not work unless the SEMVER version in the URI matches the version in the code (or even then).
 Check the code is the same as the version in the URI to be sure.
+Note to see the public version of the dev files replace `live` with `extension` or `plugin` in the .io URI.
