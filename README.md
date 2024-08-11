@@ -3,6 +3,9 @@
 ## Current Versions
 
 Extension: 1.2.34
+
+(ExtensionLiveURI)[https://gruffdavies.github.io/typingmind-voicefaster-extension/live/voicefaster-extension-v1.2.34.js]
+
 Plugin: 1.1.7
 
 Last updated: 2024-Aug-11 01:43 (UTC) | 2024-Aug-11 02:43 (UK)
@@ -38,16 +41,11 @@ The repo's root web URI is : [https://github.com/gruffdavies/typingmind-voicefas
 Use this to understand the code and repo structure.
 
 To read or use the raw code, instead use the following URI form:
-`https://gruffdavies.github.io/typingmind-voicefaster-extension/{path}{filename}`
+
+`https://gruffdavies.github.io/typingmind-voicefaster-extension/{folder}/voicefaster-extension-v{SEMVER}.js`
 
 e.g.
-
-1. readme [https://gruffdavies.github.io/typingmind-voicefaster-extension/README.md]
-2. live [https://gruffdavies.github.io/typingmind-voicefaster-extension/live/voicefaster-extension-{SEMVER}.js]
-3. test [https://gruffdavies.github.io/typingmind-voicefaster-extension/test/voicefaster-extension-{SEMVER}.js]
-4. dev (extension) [https://gruffdavies.github.io/typingmind-voicefaster-extension/extension/voicefaster-extension.js]
-5. dev (plugin) [https://gruffdavies.github.io/typingmind-voicefaster-extension/plugin/voicefaster-plugin.js]
-
+[https://gruffdavies.github.io/typingmind-voicefaster-extension/live/voicefaster-extension-v1.2.34.js]
 
 ## IMPORTANT
 
