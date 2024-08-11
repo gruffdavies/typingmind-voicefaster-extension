@@ -2,11 +2,12 @@
 // instead it sends the request to the parent window
 // and the VoiceFaster extension makes the call and handles the response
 async function VOICEFASTER_stream_voice_audio(params, userSettings) {
-  const VOICEFASTER_VERSION = '1.1.7';
+  // 2024-Aug-11 - GD - Changed model_id to eleven_turbo_v2_5
+  const VOICEFASTER_VERSION = '1.1.8';
   console.log(`stream_voice_audio v${VOICEFASTER_VERSION} called with:`, params);
 
   // extract the params
-  const { text, voice_id = userSettings.defaultVoiceId || 'LKzEuRvwo37aJ6JFMnxk' } = params;
+  const { text, voice_id = userSettings.defaultVoiceId || '8OkbbOnqTSHzyXrhSToC' } = params;
   const apiKey = userSettings.elevenLabsApiKey;
 
   if (!apiKey) {
@@ -15,7 +16,7 @@ async function VOICEFASTER_stream_voice_audio(params, userSettings) {
 
   const payload_body = JSON.stringify({
     "text": text,
-    "model_id": "eleven_monolingual_v1",
+    "model_id": "eleven_turbo_v2_5",
     "voice_settings": { "stability": 0.5, "similarity_boost": 0.5 }
   });
 
