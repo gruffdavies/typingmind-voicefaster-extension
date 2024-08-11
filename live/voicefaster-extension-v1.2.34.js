@@ -198,7 +198,11 @@
     }
 
     addStream(stream) {
-      console.log(`Adding stream: ${stream.id} to queue of current size: ${this.#streams.length}`);
+      console.log(
+        `Adding stream: ${stream.id} to queue of current size: ${
+          this.#streams.length
+        }`
+      );
       this.#streams.push(stream);
       console.log(`After current size: ${this.#streams.length}`);
       console.log("Notifying observers. Final size:", this.#streams.length);
@@ -326,7 +330,6 @@
         //     `#stream-${stream.id.replace(/[:]/g, "_")}`
         //   );
         //   element.id = `stream-${stream.id.replace(/[:]/g, "_")}`;
-
         //   if (!element) {
         //     element = this.#createStreamElement(stream);
         //     this.container.appendChild(element);
@@ -389,7 +392,9 @@
         const currentStream = this.queue.getCurrentPlayingStream();
         console.log(`Debug: Current stream ID: ${currentStream?.id}`);
         if (currentStream) {
-          console.log(`Debug: Updating stream state to completed for stream ID: ${currentStream.id}`);
+          console.log(
+            `Debug: Updating stream state to completed for stream ID: ${currentStream.id}`
+          );
           this.queue.updateStreamState(currentStream.id, "completed");
           console.log("Debug: Updating visualizer");
           this.visualizer.update(this.queue);
@@ -548,26 +553,26 @@
 
       this.makeDraggable(this.container);
     }
-  //   container.style.cssText = `
-  //   position: absolute;  /* Change to absolute for flexible movement */
-  //   top: 20px;
-  //   left: calc(100% - 140px);
-  //   z-index: 1000;
-  //   background-color: rgba(30, 41, 59, 0.8);
-  //   padding: 5px;
-  //   border-radius: 8px;
-  //   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  //   cursor: move;
-  //   user-select: none;
-  //   width: 150px;  /* Set a fixed width */
-  //   height: 100px; /* Set a fixed height */
-  //   transition: width 0s, height 0s;  /* Prevent resizing transitions */
-  // `;
+    //   container.style.cssText = `
+    //   position: absolute;  /* Change to absolute for flexible movement */
+    //   top: 20px;
+    //   left: calc(100% - 140px);
+    //   z-index: 1000;
+    //   background-color: rgba(30, 41, 59, 0.8);
+    //   padding: 5px;
+    //   border-radius: 8px;
+    //   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    //   cursor: move;
+    //   user-select: none;
+    //   width: 150px;  /* Set a fixed width */
+    //   height: 100px; /* Set a fixed height */
+    //   transition: width 0s, height 0s;  /* Prevent resizing transitions */
+    // `;
     applyContainerStyles() {
       Object.assign(this.container.style, {
         position: "fixed",
         left: "calc(100% - 400px)",
-//        right: "20px",
+        //        right: "20px",
         top: "20px",
         width: "320px",
         height: "120px",
@@ -675,59 +680,48 @@
     }
 
     makeDraggable(element) {
-  let isDragging = false;
-  let startX, startY, initialX, initialY, divwidth, divheight;
+      let isDragging = false;
+      let startX, startY, initialX, initialY, divwidth, divheight;
 
-  element.addEventListener("mousedown", startDragging);
-  element.addEventListener("touchstart", startDragging, { passive: false });
-  document.addEventListener("mousemove", drag);
-  document.addEventListener("touchmove", drag, { passive: false });
-  document.addEventListener("mouseup", stopDragging);
-  document.addEventListener("touchend", stopDragging);
+      element.addEventListener("mousedown", startDragging);
+      element.addEventListener("touchstart", startDragging, { passive: true });
+      document.addEventListener("mousemove", drag);
+      document.addEventListener("touchmove", drag);
+      document.addEventListener("mouseup", stopDragging);
+      document.addEventListener("touchend", stopDragging);
 
-  function startDragging(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    isDragging = true;
-    startX = e.clientX || e.touches[0].clientX;
-    startY = e.clientY || e.touches[0].clientY;
-    const rect = element.getBoundingClientRect();
-    initialX = rect.left;
-    initialY = rect.top;
-    divwidth = rect.width;
-    divheight = rect.height;
-  }
+      function startDragging(e) {
+        e.preventDefault();
+        isDragging = true;
+        startX = e.clientX || e.touches[0].clientX;
+        startY = e.clientY || e.touches[0].clientY;
+        const rect = element.getBoundingClientRect();
+        initialX = rect.left;
+        initialY = rect.top;
+        divwidth = rect.width;
+        divheight = rect.height;
+      }
 
-  function drag(e) {
-    if (!isDragging) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const clientX = e.clientX || e.touches[0].clientX;
-    const clientY = e.clientY || e.touches[0].clientY;
-    const deltaX = clientX - startX;
-    const deltaY = clientY - startY;
+      function drag(e) {
+        if (!isDragging) return;
+        const clientX = e.clientX || e.touches[0].clientX;
+        const clientY = e.clientY || e.touches[0].clientY;
+        const deltaX = clientX - startX;
+        const deltaY = clientY - startY;
+        element.style.left = `${initialX + deltaX}px`;
+        element.style.top = `${initialY + deltaY}px`;
+        element.style.right = `${initialX + divwidth}px`;
+        element.style.bottom = `${initialY + divheight}px`;
+      }
 
-    // Ensure dragging stays within the element
-    const newLeft = Math.max(0, Math.min(initialX + deltaX, window.innerWidth - divwidth));
-    const newTop = Math.max(0, Math.min(initialY + deltaY, window.innerHeight - divheight));
-
-    element.style.left = `${newLeft}px`;
-    element.style.top = `${newTop}px`;
-    element.style.right = `${newLeft + divwidth}px`;
-    element.style.bottom = `${newTop + divheight}px`;
-  }
-
-  function stopDragging(e) {
-    if (!isDragging) return;
-    e.stopPropagation();
-    isDragging = false;
-    const rect = element.getBoundingClientRect();
-    element.style.left = `${rect.left}px`;
-    element.style.top = `${rect.top}px`;
-    element.style.transform = "none";
-  }
-}
-
+      function stopDragging() {
+        if (!isDragging) return;
+        isDragging = false;
+        const rect = element.getBoundingClientRect();
+        element.style.left = `${rect.left}px`;
+        element.style.top = `${rect.top}px`;
+        element.style.transform = "none";
+      }
     }
   }
 

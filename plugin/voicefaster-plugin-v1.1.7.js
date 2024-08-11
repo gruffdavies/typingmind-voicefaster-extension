@@ -39,4 +39,3 @@ async function VOICEFASTER_stream_voice_audio(params, userSettings) {
     version: VOICEFASTER_VERSION
   };
 }
-Is there any thing we can do here?
