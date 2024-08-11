@@ -2,8 +2,6 @@
 
 Purpose:
 
-# Live Versions
-
 The repo uses GitHub Pages to publish the code in a way that makes it visible publically.
 
 ## IMPORTANT
@@ -27,3 +25,9 @@ URIs for live versions of the extension take the form:
 ## Test Versions
 
 NB: Test versions are also visible publically and can be used to test versions of the extension.
+
+## Dev Versions
+
+The dev version of the extension and plugin code are in the extension and plugin folders respectively.
+They may not work unless the SEMVER version in the URI matches the version in the code (or even then).
+Check the code is the same as the version in the URI to be sure.
