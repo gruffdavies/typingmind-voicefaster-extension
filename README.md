@@ -2,7 +2,7 @@
 
 ## Purpose
 
-VoiceFaster is an extension and plugin that work together to provide a faster voice to text experience for TypingMind.
+VoiceFaster is an extension and plugin for [TypingMind](https://docs.typingmind.com/) that work together to provide a faster voice to text experience for TypingMind.
 
 The plugin constructs a web request to call ElevenLabs API using the streaming API for the voice.
 The Extension renders an audio player in a sandboxed iFrame in the TypingMind UI (whether chrome or installed as a web app).
