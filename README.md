@@ -1,5 +1,13 @@
 # Voice Faster Extension and Plugin For TypingMind
 
+## Current Versions
+
+Extension: 1.2.34
+Plugin: 1.1.7
+
+Last updated: 2024-Aug-11 02:34:25
+
+
 ## Purpose
 
 VoiceFaster is an extension and plugin for [TypingMind](https://docs.typingmind.com/) that work together to provide a faster voice to text experience for TypingMind.
@@ -11,7 +19,6 @@ It has a queue and receives request payloads from the plugin.
 
 Set the live extension in the menu > settings > Advanced Settings > Extensions
 ![alt text](image.png)
-
 
 ### Important
 
