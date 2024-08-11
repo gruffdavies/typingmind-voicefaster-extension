@@ -4,17 +4,23 @@ Purpose:
 
 The repo uses GitHub Pages to publish the code in a way that makes it visible publically.
 
+The general form for the URI is : `https://gruffdavies.github.io/typingmind-voicefaster-extension/{path}{filename}`
+
+e.g.
+
+1. readme [https://gruffdavies.github.io/typingmind-voicefaster-extension/README.md]
+2. live [https://gruffdavies.github.io/typingmind-voicefaster-extension/live/voicefaster-extension-{SEMVER}.js]
+3. test [https://gruffdavies.github.io/typingmind-voicefaster-extension/test/voicefaster-extension-{SEMVER}.js]
+4. dev (extension) [https://gruffdavies.github.io/typingmind-voicefaster-extension/extension/voicefaster-extension.js]
+5. dev (plugin) [https://gruffdavies.github.io/typingmind-voicefaster-extension/plugin/voicefaster-plugin.js]
+
+
 ## IMPORTANT
 
 - Live Extensions Are Injected Into The Browser and run immediately.
 - Use with caution!
 
 ## Live URIs
-
-URIs for live versions of the extension take the form:
-
-`https://gruffdavies.github.io/typingmind-voicefaster-extension/live/voicefaster-extension-{SEMVER}.js`
-
 
 1. More than one version of the extension can be live at the same time.
 2. The version number is the semantic version of the extension.
