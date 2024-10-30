@@ -82,6 +82,44 @@
             user-select: none;
         }
 
+        .voicefaster {
+            --surface-floating: rgba(0, 0, 0, 0.1);
+            --surface-raised: rgba(0, 0, 0, 0.2);
+            --primary: rgba(64, 169, 255, 1);
+            --primary-muted: rgba(64, 169, 255, 0.6);
+        }
+
+        .voicefaster-queue-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 4px;
+            background: var(--surface-floating);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .voicefaster-queue-item:hover {
+            background: var(--surface-raised);
+        }
+
+        .voicefaster-progress {
+            position: relative;
+            height: 2px;
+            background: var(--surface-raised);
+            overflow: hidden;
+        }
+
+        .voicefaster-progress-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.1s linear;
+        }
+
         .player-header {
             display: flex;
             align-items: center;
@@ -162,6 +200,7 @@
             gap: 8px;
             margin-top: 8px;
         }
+
         .transcript-controls button {
             padding: 6px 12px;
             border: none;
@@ -196,6 +235,7 @@
         #clear-transcript {
             background: var(--surface-deep);
         }
+
         /* Status Indicator */
         #status-indicator {
             font-size: 12px;
@@ -267,6 +307,7 @@
         <button onclick="visualizer.setMode('speaking')">Speaking</button>
     </div>
 
+    <script src="secrets.js" type="text/javascript"></script>
     <script>
         // Font Awesome classes
         const ICONS = {
@@ -275,9 +316,65 @@
             settings: 'fas fa-cog'
         };
 
+        class AudioStream {
+            constructor(streamRequestResponse) {
+                this.id = generate_uuid();
+                this.url = streamRequestResponse.url;
+                this.headers = streamRequestResponse.headers;
+                this.method = streamRequestResponse.method;
+                this.body = streamRequestResponse.body;
 
+                // Parse the text from the body
+                try {
+                    const bodyJson = JSON.parse(this.body);
+                    this.text = bodyJson.text || '';
+                } catch (e) {
+                    this.text = '';
+                }
+
+                this.state = "queued";
+                this.startTime = null;
+                this.endTime = null;
+                this.progress = 0; // Add progress tracking
+            }
+        }
+
+        class QueueManager {
+            constructor(audioPlayer, visualizer) {
+                this.audioPlayer = audioPlayer;
+                this.visualizer = visualizer;
+                this.expanded = false;
+            }
+
+            toggleExpansion() {
+                this.expanded = !this.expanded;
+                if (this.expanded) {
+                    this.visualizer.expandWithQueue();
+                } else {
+                    this.visualizer.shrink();
+                }
+            }
+
+            jumpToItem(id) {
+                const stream = this.audioPlayer.queue.find(stream => stream.id === id);
+                if (stream) {
+                    this.audioPlayer.stop();
+                    this.audioPlayer.playStream(stream);
+                }
+            }
+
+            updateProgress(id, progress) {
+                const stream = this.audioPlayer.queue.find(stream => stream.id === id);
+                if (stream) {
+                    stream.progress = progress;
+                    this.visualizer.updateProgress(id, progress);
+                }
+            }
+        }
         class AudioVisualizer {
             constructor(container, config = {}) {
+                this.finalTranscript = '';
+                this.interimTranscript = '';
                 this.events = new Map();
                 this.config = {
                     fftSize: config.fftSize || 256,
@@ -296,18 +393,56 @@
 
                 // Audio analysis setup
                 this.audioContext = null;
-                    this.audioContext = null;
                 this.analyser = null;
                 this.bufferLength = null;
                 this.dataArray = null;
-
 
                 // For speaking mode
                 this.playbackAnalyser = null;
                 this.playbackDataArray = null;
 
                 this.isMuted = false;
+
+                const DEEPGRAM_API_KEY = secrets.deepgramApiKey;
+                console.log("DEEPGRAM_API_KEY", DEEPGRAM_API_KEY);
+
+                this.ws = new WebSocket("wss://api.deepgram.com/v1/listen", [
+                    "token",
+                    secrets.deepgramApiKey
+                ]);
+                this.ws.onopen = () => {
+                    this.ws.send(JSON.stringify({
+                        type: "Authorization",
+                        token: secrets.deepgramApiKey
+                    }));
+                };
+
+                // Add WebSocket handlers
+                this.ws.onmessage = (event) => {
+                    const response = JSON.parse(event.data);
+                    if (response.type === "Results") {
+                        const transcript = response.channel.alternatives[0].transcript;
+                        if (response.is_final) {
+                            this.finalTranscript += transcript + ' ';
+                            this.interimTranscript = '';
+                        } else {
+                            this.interimTranscript = transcript;
+                        }
+                        this.updateTranscript(this.finalTranscript + this.interimTranscript);
+                    }
+                };
             }
+
+            // Add to AudioVisualizer class
+            cleanup() {
+                if (this.ws) {
+                    this.ws.close();
+                }
+                if (this.currentStream) {
+                    this.currentStream.getTracks().forEach(track => track.stop());
+                }
+            }
+
 
             async setupRecording() {
                 try {
@@ -330,12 +465,25 @@
                     const source = this.audioContext.createMediaStreamSource(stream);
                     source.connect(this.analyser);
 
+                    // Add Deepgram streaming
+                    const mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0 && this.ws.readyState === 1) {
+                            event.data.arrayBuffer().then(buffer => {
+                                this.ws.send(buffer);
+                            });
+                        }
+                    };
+                    mediaRecorder.start(250);
+
                     return stream;
                 } catch (err) {
                     console.error("Error accessing microphone:", err);
                     return null;
                 }
-            }            on(event, callback) {
+            }
+
+            on(event, callback) {
                 this.events.set(event, callback);
             }
 
@@ -546,8 +694,8 @@
                 }
 
                 this.mode = mode;
-
                 if (mode === "idle") {
+                    this.ws.close();
                     this.shrinkCanvas();
                     this.hideTranscript();
                 } else if (mode === "listening") {
@@ -823,31 +971,31 @@
         }
 
         // For demo purposes, add some sample transcript updates
-        function simulateTranscript() {
-            if (visualizer.mode === "listening") {
-                const words = [
-                    "Hello",
-                    "this",
-                    "is",
-                    "a",
-                    "test",
-                    "transcript",
-                    "being",
-                    "generated",
-                    "in",
-                    "real",
-                    "time"
-                ];
-                const currentContent = document.getElementById("transcript-content")
-                    .textContent;
-                const newWord = words[Math.floor(Math.random() * words.length)];
-                visualizer.updateTranscript(currentContent + " " + newWord);
-            }
-        }
-
-        // Simulate transcript updates every second when in listening mode
-        setInterval(simulateTranscript, 1000);
-
+//        function simulateTranscript() {
+//            if (visualizer.mode === "listening") {
+//                const words = [
+//                    "Hello",
+//                    "this",
+//                    "is",
+//                    "a",
+//                    "test",
+//                    "transcript",
+//                    "being",
+//                    "generated",
+//                    "in",
+//                    "real",
+//                    "time"
+//                ];
+//                const currentContent = document.getElementById("transcript-content")
+//                    .textContent;
+//                const newWord = words[Math.floor(Math.random() * words.length)];
+//                visualizer.updateTranscript(currentContent + " " + newWord);
+//            }
+//        }
+//
+//        // Simulate transcript updates every second when in listening mode
+//        setInterval(simulateTranscript, 1000);
+//
         // Initialize everything when the document is loaded
         document.addEventListener("DOMContentLoaded", initializeUI);
 
@@ -855,5 +1003,3 @@
 </body>
 
 </html>
-
-
