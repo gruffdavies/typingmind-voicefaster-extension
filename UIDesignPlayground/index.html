@@ -22,6 +22,8 @@
             --vis-idle-glow: var(--primary-subtle);
             --vis-idle-pulse: var(--primary-faint);
             --vis-listening: rgba(120, 255, 100, 0.6);
+            --vis-listening-secondary: rgba(120, 255, 100, 0.3);
+
             --vis-speaking: rgba(0, 215, 255, 0.8);
             --state-active: rgba(255, 64, 64, 0.3);
             --state-idle: var(--primary-ghost);
@@ -33,6 +35,7 @@
             --text-secondary: var(--primary-muted);
             --text-status: var(--primary-muted);
             --text-transcript: var(--vis-listening);
+            --text-transcript-interim: var(--vis-listening-secondary);
 
             /* Visual elements */
             --glow-core: var(--primary-subtle);
@@ -406,7 +409,21 @@
                 const DEEPGRAM_API_KEY = secrets.deepgramApiKey;
                 console.log("DEEPGRAM_API_KEY", DEEPGRAM_API_KEY);
 
-                this.ws = new WebSocket("wss://api.deepgram.com/v1/listen", [
+                const deepgramBaseURL = "wss://api.deepgram.com/v1/listen";
+                const deepgramOptions = {
+                    model: "nova-2",
+                    language: "en-GB",
+                    smart_format: true,
+                    interim_results: true,
+                    vad_events: true,
+                    endpointing: 300
+                };
+                const keywords = ["keywords=KwizIQ:2"].join('&');
+
+                const deepgramUrl = `${deepgramBaseURL}?${new URLSearchParams(deepgramOptions)}&${keywords}`;
+                console.log("deepgramUrl", deepgramUrl);
+
+                this.ws = new WebSocket(deepgramUrl, [
                     "token",
                     secrets.deepgramApiKey
                 ]);
@@ -421,6 +438,7 @@
                 this.ws.onmessage = (event) => {
                     const response = JSON.parse(event.data);
                     if (response.type === "Results") {
+                        console.log("Received results:", response);
                         const transcript = response.channel.alternatives[0].transcript;
                         if (response.is_final) {
                             this.finalTranscript += transcript + ' ';
@@ -731,10 +749,27 @@
             updateTranscript(text) {
                 const transcriptArea = document.getElementById("transcript-content");
                 if (transcriptArea) {
-                    transcriptArea.textContent = text;
+                    // Clear existing content
+                    transcriptArea.innerHTML = '';
+
+                    // Add final transcript with default color
+                    const finalSpan = document.createElement('span');
+                    finalSpan.textContent = this.finalTranscript;
+                    transcriptArea.appendChild(finalSpan);
+
+                    // Add interim transcript with different color
+                    if (this.interimTranscript) {
+                        const interimSpan = document.createElement('span');
+                        interimSpan.textContent = this.interimTranscript;
+                        interimSpan.style.color = getComputedStyle(document.documentElement)
+                            .getPropertyValue('--text-transcript-interim').trim();
+                        transcriptArea.appendChild(interimSpan);
+                    }
+
                     transcriptArea.scrollTop = transcriptArea.scrollHeight;
                 }
             }
+
 
             startAnimation() {
                 let animationFrameId;
@@ -971,31 +1006,31 @@
         }
 
         // For demo purposes, add some sample transcript updates
-//        function simulateTranscript() {
-//            if (visualizer.mode === "listening") {
-//                const words = [
-//                    "Hello",
-//                    "this",
-//                    "is",
-//                    "a",
-//                    "test",
-//                    "transcript",
-//                    "being",
-//                    "generated",
-//                    "in",
-//                    "real",
-//                    "time"
-//                ];
-//                const currentContent = document.getElementById("transcript-content")
-//                    .textContent;
-//                const newWord = words[Math.floor(Math.random() * words.length)];
-//                visualizer.updateTranscript(currentContent + " " + newWord);
-//            }
-//        }
-//
-//        // Simulate transcript updates every second when in listening mode
-//        setInterval(simulateTranscript, 1000);
-//
+        //        function simulateTranscript() {
+        //            if (visualizer.mode === "listening") {
+        //                const words = [
+        //                    "Hello",
+        //                    "this",
+        //                    "is",
+        //                    "a",
+        //                    "test",
+        //                    "transcript",
+        //                    "being",
+        //                    "generated",
+        //                    "in",
+        //                    "real",
+        //                    "time"
+        //                ];
+        //                const currentContent = document.getElementById("transcript-content")
+        //                    .textContent;
+        //                const newWord = words[Math.floor(Math.random() * words.length)];
+        //                visualizer.updateTranscript(currentContent + " " + newWord);
+        //            }
+        //        }
+        //
+        //        // Simulate transcript updates every second when in listening mode
+        //        setInterval(simulateTranscript, 1000);
+        //
         // Initialize everything when the document is loaded
         document.addEventListener("DOMContentLoaded", initializeUI);
 
