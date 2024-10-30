@@ -21,7 +21,7 @@
     <h1>Test Audio Stream</h1>
     <button id="playAudioButton">Play Function Call</button>
     <script src="secrets.js" type="text/javascript">//API Key loaded into config.apiKey here</script>
-    <script src="voicefaster-extension.js" crossorigin="anonymous" type="text/javascript">//inject extension</script>
+    <script src="extension/voicefaster-extension.js" crossorigin="anonymous" type="text/javascript">//inject extension</script>
 
     <script>
         // Check if window.playAudioStream is defined
@@ -62,7 +62,7 @@
                 },
                 body: JSON.stringify({
                     "text": "This is a test message. Can you hear me now?",
-                    "model_id": "eleven_monolingual_v1",
+                    "model_id": "eleven_turbo_v2_5",
                     "voice_settings": {"stability":0.5,"similarity_boost":0.5}
                 })
             });
