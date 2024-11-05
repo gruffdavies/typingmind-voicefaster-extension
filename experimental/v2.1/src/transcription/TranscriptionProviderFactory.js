@@ -106,11 +106,11 @@ export class TranscriptionProviderFactory {
             // Check if the provider is available
             const available = await provider.isAvailable();
             if (available) {
-                console.log(`🎯 Using ${type} provider`);
+                console.debug(`🎯 Using ${type} provider`);
                 return provider;
             }
 
-            console.log(`⚠️ ${type} provider not available`);
+            console.debug(`⚠️ ${type} provider not available`);
             return null;
 
         } catch (error) {
