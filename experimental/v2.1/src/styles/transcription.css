@@ -1,9 +1,9 @@
 :root {
     /* Core colors and brand identity */
     --primary: rgba(64, 169, 255, 1);
-    --primary-bright: rgba(64, 169, 255, 0.8);
-    --primary-muted: rgba(64, 169, 255, 0.6);
-    --primary-subtle: rgba(64, 169, 255, 0.4);
+    --primary-bright: rgba(64, 169, 255, 1);
+    --primary-muted: rgba(64, 169, 255, 0.8);
+    --primary-subtle: rgba(64, 169, 255, 0.5);
     --primary-faint: rgba(64, 169, 255, 0.3);
     --primary-ghost: rgba(64, 169, 255, 0.2);
 
@@ -100,12 +100,18 @@ body {
 
 /* Controls */
 .voicefaster__controls {
-    display: flex;
+    display: grid;
+    grid-template-areas:
+        "mic viz"
+        "select viz";
+    grid-template-columns: auto 1fr;
     gap: 0.5rem;
     align-items: center;
+    padding: 0.5rem;
 }
 
 .voicefaster__mic-button {
+    grid-area: mic;
     width: 2.5rem;
     height: 2.5rem;
     padding: 0;
@@ -118,7 +124,6 @@ body {
     color: var(--text-primary);
     cursor: pointer;
     transition: var(--transition-standard);
-    font-size: 1.2rem;
 }
 
 .voicefaster__mic-button:hover {
@@ -136,22 +141,19 @@ body {
     gap: 0.5rem;
 }
 
+
 .voicefaster__select {
+    grid-area: select;
+    width: 100%;
+    height: 1.2rem;
+    width: 5rem;
+    font-size: 0.5rem;    cursor: pointer;
+    padding: 0.25rem 0.25rem 0.25rem 0.5rem;
     background: var(--surface-raised);
     color: var(--text-primary);
-    border: none;
-    border-radius: 0.5rem;
-    padding: 0.25rem 2rem 0.25rem 0.5rem;
-    height: 2rem;
-    width: 120px;
-    font-size: 0.875rem;
-    cursor: pointer;
+    border: 0;
+    border-radius: 0.3rem;
     transition: var(--transition-standard);
-    appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(64, 169, 255, 0.8)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 0.75rem center;
-    background-size: 1em;
 }
 
 /* Transcript Area */
@@ -238,8 +240,9 @@ body {
 
 /* Visualization */
 .visualization {
+    grid-area: viz;
     width: 2.5rem;
-    height: 2.5rem;
+    height: 3.5rem;
     border-radius: 0.5rem;
     background: var(--surface-floating);
     transition: var(--transition-standard);
@@ -271,6 +274,12 @@ body {
         min-width: unset;
         width: auto;
         max-width: calc(100vw - 20px);
+    }
+    .voicefaster__controls {
+        grid-template-areas:
+            "mic select"
+            "viz viz";
+        grid-template-columns: auto 1fr;
     }
 
     .voicefaster:not(.voicefaster--minimized) {

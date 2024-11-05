@@ -1,12 +1,12 @@
 // src/ui/TranscriptionController.js
 
-import { TranscriptionVisualizer } from "../visualization/TranscriptionVisualizer.js";
+import { TranscriptionSpeechVisualizer } from "../visualization/TranscriptionSpeechVisualizer.js";
 import { TranscriptionProviderFactory } from "../transcription/TranscriptionProviderFactory.js";
 
 export class TranscriptionController {
     constructor(transcriptionProvider, options = {}) {
         this.provider = transcriptionProvider;
-        this.visualizer = new TranscriptionVisualizer();
+        this.visualizer = new TranscriptionSpeechVisualizer();
         this.isRecording = false;
         this.isMinimized = false;
         this.options = {
@@ -21,100 +21,174 @@ export class TranscriptionController {
     initialize() {
         this.initializeUI();
         this.setupProviderHandlers();
-        this.initializeVisualizer();
     }
 
-    async initializeUI() {
-        // Create main container with BEM class naming
-        this.container = document.createElement('div');
-        this.container.className = 'voicefaster';
+    // async initializeUI() {
+    //     // Create main container with BEM class naming
+    //     this.container = document.createElement('div');
+    //     this.container.className = 'voicefaster';
 
-        // Set position via class instead of inline styles
-        if (this.options.floatingPosition) {
-            this.container.classList.add('voicefaster--floating');
-            this.container.dataset.posX = this.options.floatingPosition.x;
-            this.container.dataset.posY = this.options.floatingPosition.y;
-        }
+    //     // Set position via class instead of inline styles
+    //     if (this.options.floatingPosition) {
+    //         this.container.classList.add('voicefaster--floating');
+    //         this.container.dataset.posX = this.options.floatingPosition.x;
+    //         this.container.dataset.posY = this.options.floatingPosition.y;
+    //     }
 
-        // Create header
-        const header = document.createElement('div');
-        header.className = 'voicefaster__header';
+    //     // Create header
+    //     const header = document.createElement('div');
+    //     header.className = 'voicefaster__header';
 
-        // Create controls
-        const controls = document.createElement('div');
-        controls.className = 'voicefaster__controls';
+    //     // Create controls
+    //     const controls = document.createElement('div');
+    //     controls.className = 'voicefaster__controls';
 
-        // Create mic button
-        const voiceButton = document.createElement('button');
-        voiceButton.className = 'voicefaster__mic-button';
-        voiceButton.innerHTML = '<i class="bi bi-mic-fill"></i>';
-        voiceButton.addEventListener('click', () => this.toggleRecording());
+    //     // Create mic button
+    //     const voiceButton = document.createElement('button');
+    //     voiceButton.className = 'voicefaster__mic-button';
+    //     voiceButton.innerHTML = '<i class="bi bi-mic-fill"></i>';
+    //     voiceButton.addEventListener('click', () => this.toggleRecording());
 
-        // Create provider selection
-        const providerBlock = document.createElement('div');
-        providerBlock.className = 'voicefaster__provider';
+    //     // Create provider selection
+    //     const providerBlock = document.createElement('div');
+    //     providerBlock.className = 'voicefaster__provider';
 
-        const select = document.createElement('select');
-        select.className = 'voicefaster__select';
-        select.id = 'voicefaster-provider-select';
-        await this.populateProviderSelect(select);
+    //     const select = document.createElement('select');
+    //     select.className = 'voicefaster__select';
+    //     select.id = 'voicefaster-provider-select';
+    //     await this.populateProviderSelect(select);
 
-        select.addEventListener('change', async (e) => {
-            if (this.isRecording) {
-                await this.stopRecording();
-            }
-            const newProvider = await TranscriptionProviderFactory.createProvider(e.target.value);
-            if (newProvider) {
-                this.provider = newProvider;
-                this.setupProviderHandlers();
-            }
-        });
+    //     select.addEventListener('change', async (e) => {
+    //         if (this.isRecording) {
+    //             await this.stopRecording();
+    //         }
+    //         const newProvider = await TranscriptionProviderFactory.createProvider(e.target.value);
+    //         if (newProvider) {
+    //             this.provider = newProvider;
+    //             this.setupProviderHandlers();
+    //         }
+    //     });
 
-        providerBlock.appendChild(select);
-        controls.appendChild(voiceButton);
-        controls.appendChild(providerBlock);
-        header.appendChild(controls);
+    //     providerBlock.appendChild(select);
+    //     controls.appendChild(voiceButton);
+    //     controls.appendChild(providerBlock);
+    //     header.appendChild(controls);
+    //     header.appendChild(this.visualizer.container);
 
-        this.container.appendChild(header);
+    //     this.container.appendChild(header);
 
-        // Create transcript area if needed
-        if (this.options.showTranscriptArea && !this.options.targetElement) {
-            const transcriptArea = document.createElement('div');
-            transcriptArea.className = 'transcript-area';
+    //     // Create transcript area if needed
+    //     if (this.options.showTranscriptArea && !this.options.targetElement) {
+    //         const transcriptArea = document.createElement('div');
+    //         transcriptArea.className = 'transcript-area';
 
-            const contentWrapper = document.createElement('div');
-            contentWrapper.className = 'content-wrapper';
+    //         const contentWrapper = document.createElement('div');
+    //         contentWrapper.className = 'content-wrapper';
 
-            const transcriptContent = document.createElement('div');
-            transcriptContent.id = 'transcript-content';
-            transcriptContent.className = 'transcript-content';
+    //         const transcriptContent = document.createElement('div');
+    //         transcriptContent.id = 'transcript-content';
+    //         transcriptContent.className = 'transcript-content';
 
-            const transcriptControls = document.createElement('div');
-            transcriptControls.className = 'transcript-controls';
+    //         const transcriptControls = document.createElement('div');
+    //         transcriptControls.className = 'transcript-controls';
 
-            const sendButton = document.createElement('button');
-            sendButton.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Send';
-            sendButton.onclick = () => this.sendTranscript();
+    //         const sendButton = document.createElement('button');
+    //         sendButton.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Send';
+    //         sendButton.onclick = () => this.sendTranscript();
 
-            const clearButton = document.createElement('button');
-            clearButton.innerHTML = '<i class="bi bi-trash"></i> Clear';
-            clearButton.onclick = () => this.clearTranscript();
+    //         const clearButton = document.createElement('button');
+    //         clearButton.innerHTML = '<i class="bi bi-trash"></i> Clear';
+    //         clearButton.onclick = () => this.clearTranscript();
 
-            transcriptControls.appendChild(sendButton);
-            transcriptControls.appendChild(clearButton);
+    //         transcriptControls.appendChild(sendButton);
+    //         transcriptControls.appendChild(clearButton);
 
-            contentWrapper.appendChild(transcriptContent);
-            contentWrapper.appendChild(transcriptControls);
-            transcriptArea.appendChild(contentWrapper);
-            this.container.appendChild(transcriptArea);
-        }
+    //         contentWrapper.appendChild(transcriptContent);
+    //         contentWrapper.appendChild(transcriptControls);
+    //         transcriptArea.appendChild(contentWrapper);
+    //         this.container.appendChild(transcriptArea);
+    //     }
 
-        document.body.appendChild(this.container);
+    //     document.body.appendChild(this.container);
 
-        if (this.options.floatingPosition) {
-            this.setupDraggable();
-        }
+    //     if (this.options.floatingPosition) {
+    //         this.setupDraggable();
+    //     }
+    // }
+    // Simplified initializeUI()
+async initializeUI() {
+    this.container = document.createElement('div');
+    this.container.className = 'voicefaster';
+
+    if (this.options.floatingPosition) {
+        this.container.classList.add('voicefaster--floating');
     }
+
+    const header = document.createElement('div');
+    header.className = 'voicefaster__header';
+
+    const controls = document.createElement('div');
+    controls.className = 'voicefaster__controls';
+
+    const voiceButton = document.createElement('button');
+    voiceButton.className = 'voicefaster__mic-button';
+    voiceButton.innerHTML = '<i class="bi bi-mic-fill"></i>';
+    voiceButton.addEventListener('click', () => this.toggleRecording());
+
+    const select = document.createElement('select');
+    select.className = 'voicefaster__select';
+    select.id = 'voicefaster-provider-select';
+    await this.populateProviderSelect(select);
+    select.addEventListener('change', async (e) => {
+        if (this.isRecording) {
+            await this.stopRecording();
+        }
+        const newProvider = await TranscriptionProviderFactory.createProvider(e.target.value);
+        if (newProvider) {
+            this.provider = newProvider;
+            this.setupProviderHandlers();
+        }
+    });
+
+    controls.appendChild(voiceButton);
+    controls.appendChild(select);
+    controls.appendChild(this.visualizer.container);
+    header.appendChild(controls);
+    this.container.appendChild(header);
+
+    // Add transcript area if needed
+    if (this.options.showTranscriptArea && !this.options.targetElement) {
+        const transcriptArea = document.createElement('div');
+        transcriptArea.className = 'transcript-area';
+
+        const contentWrapper = document.createElement('div');
+        contentWrapper.className = 'content-wrapper';
+
+        const transcriptContent = document.createElement('div');
+        transcriptContent.id = 'transcript-content';
+        transcriptContent.className = 'transcript-content';
+
+        const transcriptControls = document.createElement('div');
+        transcriptControls.className = 'transcript-controls';
+
+        transcriptControls.innerHTML = `
+            <button><i class="bi bi-arrow-right-circle"></i> Send</button>
+            <button><i class="bi bi-trash"></i> Clear</button>
+        `;
+
+        contentWrapper.appendChild(transcriptContent);
+        contentWrapper.appendChild(transcriptControls);
+        transcriptArea.appendChild(contentWrapper);
+        this.container.appendChild(transcriptArea);
+    }
+
+    document.body.appendChild(this.container);
+
+    if (this.options.floatingPosition) {
+        this.setupDraggable();
+    }
+}
+
 
     async populateProviderSelect(select) {
         const availableProviders = await TranscriptionProviderFactory.getAvailableProviders();
@@ -146,15 +220,7 @@ export class TranscriptionController {
         };
     }
 
-    initializeVisualizer() {
-        // Add visualizer to the header section
-        const header = this.container.querySelector('.player-header');
-        if (header) {
-            this.visualizer.container.className = 'visualization';
-            this.visualizer.canvas.className = 'visualization__canvas';
-            header.insertBefore(this.visualizer.container, header.firstChild);
-        }
-    }
+
 
     setupDraggable() {
         let isDragging = false;

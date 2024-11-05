@@ -1,6 +1,6 @@
 // src/visualization/TranscriptionVisualizer.js
 
-export class TranscriptionVisualizer {
+export class TranscriptionSpeechVisualizer {
   constructor(container, config = {}) {
       this.config = {
           fftSize: config.fftSize || 256,
