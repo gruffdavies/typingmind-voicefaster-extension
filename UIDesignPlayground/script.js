@@ -233,7 +233,7 @@ class AudioVisualizer {
         Object.assign(this.canvas.style, {
             borderRadius: "50%",
             backgroundColor: this.getColor("--surface-raised"),
-            transition: "all 0.3s ease"
+            transition: "var(--transition-standard);"
         });
     }
 
@@ -568,6 +568,7 @@ function initializeUI() {
     // Create transcript area
     const transcriptArea = document.createElement("div");
     transcriptArea.id = "transcript-area";
+    transcriptArea.className = "transcript-area";
     transcriptArea.innerHTML = `
 <div id="transcript-content"></div>
 <div class="transcript-controls">
