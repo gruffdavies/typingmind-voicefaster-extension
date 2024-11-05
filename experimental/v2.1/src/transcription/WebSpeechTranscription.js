@@ -16,6 +16,12 @@ class WebSpeechTranscription {
         this.setupHandlers();
     }
 
+    async isAvailable() {
+        // Check if the Web Speech API is available
+        return 'webkitSpeechRecognition' in window ||
+               'SpeechRecognition' in window;
+    }
+
     setupHandlers() {
         this.recognition.onstart = () => {
             this.isRecognizing = true;
@@ -95,3 +101,4 @@ class WebSpeechTranscription {
         }
     }
 }
+export { WebSpeechTranscription };

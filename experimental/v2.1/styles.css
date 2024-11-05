@@ -1,0 +1,13 @@
+/* demo in top left corner white text */
+#demo-version {
+    position: fixed;
+    top: 1.25rem;
+    left: 1.25rem;
+    padding: 0.5rem;
+    border-radius: 0.75rem;
+    background: rgba(0, 0, 0, 0.1);
+
+    color: rgba(64, 169, 255, 0.6);
+}
+
+
