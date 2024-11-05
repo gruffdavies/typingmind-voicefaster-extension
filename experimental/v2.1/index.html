@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -7,8 +8,9 @@
     <link rel="stylesheet" href="src/styles/transcription.css">
     <title>Voice Transcription Demo</title>
 </head>
+
 <body>
-    <div id="demo-version"></div>
+    <div id="demo-version" class="demo-version"></div>
 
     <div class="transcription-container">
         <div class="transcription-area">
@@ -20,14 +22,15 @@
         </div>
 
         <div class="input-area">
-            <button id="voice-input-button">
-                <i class="bi bi-mic-fill"></i>
-            </button>
-            <textarea id="text-input"
-                      placeholder="Type a message or use voice input..."
-                      rows="1"></textarea>
+            <div class="voice-controls">
+                <button id="voice-input-button">
+                    <i class="bi bi-mic-fill"></i>
+                </button>
+            </div>
+            <textarea id="text-input" placeholder="Type a message or use voice input..." rows="1"></textarea>
         </div>
     </div>
+
 
     <!-- Debug Controls -->
     <div class="debug-controls">
@@ -61,4 +64,5 @@
         });
     </script>
 </body>
+
 </html>

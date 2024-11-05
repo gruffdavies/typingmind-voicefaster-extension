@@ -1,4 +1,4 @@
-class DeepGramTranscription {
+export class DeepGramTranscription {
     constructor(config = {}) {
         this.config = {
             model: "nova-2",
@@ -7,56 +7,67 @@ class DeepGramTranscription {
             interim_results: true,
             vad_events: true,
             endpointing: 300,
-            ...config
+            ...config,
         };
 
         this.ws = null;
-        this.finalTranscript = '';
-        this.interimTranscript = '';
+        this.finalTranscript = "";
+        this.interimTranscript = "";
         this.isRecognizing = false;
         this.handlers = {};
     }
 
     async isAvailable() {
         try {
-            // Check internet connectivity and DeepGram service
-            const response = await fetch('https://api.deepgram.com/v1/ping');
-            return response.ok;
+            // Add no-cors mode and handle opaque response
+            const response = await fetch("https://api.deepgram.com/v1/ping", {
+                mode: "no-cors",
+                method: "HEAD", // Lighter than GET
+            });
+
+            // With no-cors, we can't read the response
+            // Instead, check if we have the API key
+            return Boolean(secrets?.deepgramApiKey);
         } catch (e) {
+            console.warn("DeepGram availability check failed:", e);
             return false;
         }
     }
 
     connect() {
-        console.log('🌐 Connecting DeepGram WebSocket...');
+        console.log("🌐 Connecting DeepGram WebSocket...");
         const deepgramBaseURL = "wss://api.deepgram.com/v1/listen";
-        const keywords = ["keywords=KwizIQ:2"].join('&');
-        const deepgramUrl = `${deepgramBaseURL}?${new URLSearchParams(this.config)}&${keywords}`;
+        const keywords = ["keywords=KwizIQ:2"].join("&");
+        const deepgramUrl = `${deepgramBaseURL}?${new URLSearchParams(
+            this.config
+        )}&${keywords}`;
 
         this.ws = new WebSocket(deepgramUrl, ["token", secrets.deepgramApiKey]);
 
         this.ws.onopen = () => {
-            console.log('🌐 WebSocket State: Connected');
-            this.ws.send(JSON.stringify({
-                type: "Authorization",
-                token: secrets.deepgramApiKey
-            }));
-            this.emit('stateChange', 'connected');
+            console.log("🌐 WebSocket State: Connected");
+            this.ws.send(
+                JSON.stringify({
+                    type: "Authorization",
+                    token: secrets.deepgramApiKey,
+                })
+            );
+            this.emit("stateChange", "connected");
         };
 
         this.ws.onclose = (event) => {
-            console.log('🌐 WebSocket State: Closed', {
+            console.log("🌐 WebSocket State: Closed", {
                 code: event.code,
                 reason: event.reason,
-                wasClean: event.wasClean
+                wasClean: event.wasClean,
             });
             this.isRecognizing = false;
-            this.emit('stateChange', 'disconnected');
+            this.emit("stateChange", "disconnected");
         };
 
         this.ws.onerror = (error) => {
-            console.error('🌐 WebSocket Error:', error);
-            this.emit('error', error);
+            console.error("🌐 WebSocket Error:", error);
+            this.emit("error", error);
         };
 
         this.ws.onmessage = this._handleMessage.bind(this);
@@ -64,23 +75,23 @@ class DeepGramTranscription {
 
     _handleMessage(event) {
         const response = JSON.parse(event.data);
-        console.log('📝 Deepgram Response:', response);
+        console.log("📝 Deepgram Response:", response);
 
         if (response.type === "Results") {
             const transcript = response.channel.alternatives[0].transcript;
 
             if (response.is_final) {
-                this.finalTranscript += transcript + ' ';
-                this.interimTranscript = '';
+                this.finalTranscript += transcript + " ";
+                this.interimTranscript = "";
             } else {
                 this.interimTranscript = transcript;
             }
 
-            this.emit('transcriptUpdate', {
+            this.emit("transcriptUpdate", {
                 final: this.finalTranscript,
                 interim: this.interimTranscript,
                 isFinal: response.is_final,
-                confidence: response.channel.alternatives[0].confidence
+                confidence: response.channel.alternatives[0].confidence,
             });
         }
     }
@@ -90,8 +101,8 @@ class DeepGramTranscription {
             this.stop();
             return;
         }
-        this.finalTranscript = '';
-        this.interimTranscript = '';
+        this.finalTranscript = "";
+        this.interimTranscript = "";
         this.isRecognizing = true;
         this.connect();
     }
@@ -109,5 +120,3 @@ class DeepGramTranscription {
         }
     }
 }
-
-export { DeepGramTranscription };

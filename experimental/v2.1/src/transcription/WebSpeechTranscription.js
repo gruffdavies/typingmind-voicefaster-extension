@@ -1,4 +1,4 @@
-class WebSpeechTranscription {
+export class WebSpeechTranscription {
     constructor() {
         if (!('webkitSpeechRecognition' in window)) {
             throw new Error('Web Speech API not supported');
@@ -101,4 +101,3 @@ class WebSpeechTranscription {
         }
     }
 }
-export { WebSpeechTranscription };
