@@ -62,7 +62,7 @@ export class TranscriptionController {
             if (this.isRecording) {
                 await this.stopRecording();
             }
-            const newProvider = await TranscrationProviderFactory.createProvider(e.target.value);
+            const newProvider = await TranscriptionProviderFactory.createProvider(e.target.value);
             if (newProvider) {
                 this.provider = newProvider;
                 this.setupProviderHandlers();

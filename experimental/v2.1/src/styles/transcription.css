@@ -65,8 +65,8 @@ body {
 
 /* Positioning & States */
 .voicefaster--floating {
-    top: 1.25rem;
-    right: 1.25rem;
+    top: 3rem;
+    right: 3rem;
 }
 
 .voicefaster--minimized {
@@ -86,15 +86,7 @@ body {
     opacity: 0.9;
 }
 
-.voicefaster--floating[data-pos-x="left"] {
-    left: 1.25rem;
-    right: auto;
-}
 
-.voicefaster--floating[data-pos-y="bottom"] {
-    bottom: 1.25rem;
-    top: auto;
-}
 
 /* Header */
 .voicefaster__header {
