@@ -136,8 +136,12 @@ class AudioVisualizer {
                 this.updateTranscript(this.finalTranscript + this.interimTranscript);
             }
         };
-    }
 
+        this.ws.onerror = (error) => {
+            console.error('WebSocket Error:', error);
+            this.emit('error', error);
+        };
+    }
     // Add to AudioVisualizer class
     cleanup() {
         if (this.ws) {
