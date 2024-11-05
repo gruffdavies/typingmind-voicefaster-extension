@@ -570,7 +570,7 @@ function initializeUI() {
     transcriptArea.id = "transcript-area";
     transcriptArea.className = "transcript-area";
     transcriptArea.innerHTML = `
-<div id="transcript-content"></div>
+<div id="transcript-content" class="transcript-content"></div>
 <div class="transcript-controls">
     <button id="send-transcript">Send</button>
     <button id="clear-transcript">Clear</button>

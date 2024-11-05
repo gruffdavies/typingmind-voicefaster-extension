@@ -408,3 +408,19 @@ body {
   #voice-input-button:hover {
     background: #0056b3;
   }
+
+.transcript-content {
+    width: 0;
+    height: 0;
+    opacity: 0;
+    visibility: hidden;
+    margin-left: auto;
+    transition: var(--transition-standard);
+}
+
+.transcript-area.active .transcript-content {
+    width: 100%;
+    height: auto;
+    opacity: 1;
+    visibility: visible;
+}
