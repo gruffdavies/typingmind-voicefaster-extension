@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="demo-version"></div>
+    <!-- Sample text to demonstrate overlay -->
+
+
+    <div class="chat-container">
+        <!-- Chat Messages Area -->
+        <div class="messages-area">
+            <div class="message ai">
+                <div>
+                    Hello! How can I help you today?
+                </div>
+            </div>
+            <div class="message user">
+                <div>
+                    Testing the speech-to-text functionality
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-area">
+            <button onclick="startRecording()" id="voice-input-button">
+                🎤
+            </button>
+            <textarea id="chat-input-textbox" placeholder="Type a message or use voice input..." rows="1"></textarea>
+        </div>
+    </div>
+
+    <!-- Demo controls -->
+    <div id="demo-controls">
+        <button onclick="visualizer.setMode('idle')">Idle</button>
+        <button onclick="visualizer.setMode('listening')">Listening</button>
+        <button onclick="visualizer.setMode('speaking')">Speaking</button>
+    </div>
+
+    <script src="secrets.js" type="text/javascript"></script>
+    <script src="version.js" type="text/javascript"></script>
+    <script src="script.js" type="text/javascript"></script>
+    <!-- Load our modules -->
+    <script type="module">
+        import { TranscriptionController } from './ui/TranscriptionController.js';
+        import { AudioVisualizer } from './visualization/AudioVisualizer.js';
+        import { TranscriptionProviderFactory } from './transcription/TranscriptionProviderFactory.js';
+
+        // Initialize on DOM load
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const container = document.querySelector('.chat-container');
+                const visualizer = new AudioVisualizer(container);
+
+                // Create transcription provider
+                const provider = await TranscriptionProviderFactory.createProvider();
+
+                // Create and initialize controller
+                const controller = new TranscriptionController(provider, visualizer);
+
+                // Initialize UI elements
+                controller.initializeUI();
+
+                // Set version
+                document.getElementById('demo-version').textContent = `v${version.version}`;
+
+            } catch (error) {
+                console.error('Initialization failed:', error);
+                // Show error in UI
+            }
+        });
+    </script>
+
+</body>
+
+</html>
