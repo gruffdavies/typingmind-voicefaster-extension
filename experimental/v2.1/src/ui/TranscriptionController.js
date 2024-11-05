@@ -263,29 +263,85 @@ export class TranscriptionController {
 
     async startRecording() {
         try {
+            console.log("🎯 StartRecording: Beginning recording process");
+            console.log("🎯 Provider type:", this.provider.constructor.name);
+            console.log("🎯 Provider requires audio:", this.provider.requiresAudioStream());
+
             await this.provider.start();
+            console.log("🎯 Provider.start() completed");
+
             this.isRecording = true;
             this.updateUI("listening");
+            console.log("🎯 UI updated to listening state");
 
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            await this.visualizer.setMode("listening", stream);
+            console.log("🎯 Got media stream:", stream.active ? "active" : "inactive");
 
-            // Show transcript area if we have one
+            await this.visualizer.setMode("listening", stream);
+            console.log("🎯 Visualizer mode set to listening");
+
+            // Set up MediaRecorder if provider requires audio stream
+            if (this.provider.requiresAudioStream()) {
+                console.log("🎯 Setting up MediaRecorder for provider");
+                const mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    // console.log("🎯 MediaRecorder data available:", {
+                    //     size: event.data.size,
+                    //     type: event.data.type
+                    // });
+
+                    if (event.data.size > 0) {
+                        event.data.arrayBuffer().then((buffer) => {
+                            console.log("🎯 Sending audio buffer to provider, size:", buffer.byteLength);
+                            this.provider.processAudioData(buffer);
+                        });
+                    }
+                };
+
+                mediaRecorder.onerror = (error) => {
+                    console.error("🔴 MediaRecorder error:", error);
+                };
+
+                mediaRecorder.onstart = () => {
+                    console.log("🎯 MediaRecorder started");
+                };
+
+                mediaRecorder.onstop = () => {
+                    console.log("🎯 MediaRecorder stopped");
+                };
+
+                mediaRecorder.start(250);
+                this.mediaRecorder = mediaRecorder;
+                console.log("🎯 MediaRecorder setup complete");
+            }
+
             const transcriptArea = this.container.querySelector('.transcript-area');
             if (transcriptArea) {
                 transcriptArea.classList.add('active');
+                console.log("🎯 Transcript area activated");
             }
         } catch (error) {
-            console.error("Failed to start recording:", error);
+            console.error("🔴 Failed to start recording:", error);
             this.handleError(error);
         }
     }
+
+
+
+
 
     async stopRecording() {
         try {
             await this.provider.stop();
             this.isRecording = false;
             this.updateUI("idle");
+
+            if (this.mediaRecorder) {
+                this.mediaRecorder.stop();
+                this.mediaRecorder = null;
+            }
+
             await this.visualizer.setMode("idle");
         } catch (error) {
             console.error("Failed to stop recording:", error);

@@ -1,5 +1,8 @@
-export class WebSpeechTranscription {
+import { BaseTranscriptionProvider } from "./BaseTranscriptionProvider.js";
+
+export class WebSpeechTranscription extends BaseTranscriptionProvider {
     constructor() {
+        super();  
         if (!('webkitSpeechRecognition' in window)) {
             throw new Error('Web Speech API not supported');
         }
@@ -14,6 +17,14 @@ export class WebSpeechTranscription {
         this.recognition.lang = 'en-GB'; // Can be made configurable
 
         this.setupHandlers();
+    }
+
+    requiresAudioStream() {
+        return false;  // Web Speech API handles its own audio
+    }
+
+    processAudioData(audioData) {
+        // No-op: Web Speech API handles audio internally
     }
 
     async isAvailable() {
