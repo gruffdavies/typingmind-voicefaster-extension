@@ -15,14 +15,24 @@ export class TranscriptionController {
             transcribeToStagingArea: true,  // Whether to show and use own transcript area with send/clear buttons
             ...options
         };
+        this.transcribeTarget = null;
         this.initialize();
     }
 
-    initialize() {
-        this.initializeUI();
+    async initialize() {
+        await this.initializeUI();
+        this.setTranscribeTarget();
         this.setupProviderHandlers();
     }
 
+    setTranscribeTarget() {
+        if (this.options.targetElement && !this.options.transcribeToStagingArea) {
+            this.transcribeTarget = this.options.targetElement;
+        } else {
+            this.transcribeTarget = this.stagingArea;
+        }
+        console.debug("Transcribe target set to:", this.transcribeTarget);
+    }
     // Simplified initializeUI()
     async initializeUI() {
         this.container = document.createElement('div');
@@ -99,9 +109,13 @@ export class TranscriptionController {
             contentWrapper.appendChild(transcriptControls);
             transcriptArea.appendChild(contentWrapper);
             this.container.appendChild(transcriptArea);
+            this.stagingArea = transcriptContent;
+
         }
 
         document.body.appendChild(this.container);
+
+        console.debug("initializeUI() this.stagingArea is set to:", this.stagingArea);
 
         if (this.options.floatingPosition) {
             this.setupDraggable();
@@ -354,13 +368,13 @@ export class TranscriptionController {
 
 
     handleTranscriptUpdate(data) {
-        if (this.options.targetElement) {
-            // Write to supplied element
-            this.options.targetElement.value = data.final +
-                (data.interim ? ' ' + data.interim : '');
-        } else {
-            // Write to our transcript area
-            const content = this.getTranscriptContentDiv();
+        console.log("Transcript target:", this.transcribeTarget);
+        if (!this.transcribeTarget) {
+            console.error("Transcript target not set");
+            return;
+        }
+        // if (this.options.transcribeToStagingArea) {
+            const content = this.transcribeTarget;
             if (content) {
                 content.innerHTML = '';
                 if (data.final) {
@@ -376,7 +390,7 @@ export class TranscriptionController {
                     content.appendChild(interimSpan);
                 }
             }
-        }
+        // }
     }
 
     handleStateChange(state) {
