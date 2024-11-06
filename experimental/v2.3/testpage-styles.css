@@ -1,5 +1,4 @@
 /* demo in top left corner white text */
-
 /* Base styles */
 body {
   margin: 0;
@@ -21,8 +20,6 @@ body {
 
     color: rgba(64, 169, 255, 0.6);
 }
-
-
 
 .chat-container {
    position: fixed;

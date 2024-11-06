@@ -1,4 +1,3 @@
-// in fact, this didn't get used in v2.1 in the end
 export class EventEmitter {
     constructor() {
         this.events = new Map();
