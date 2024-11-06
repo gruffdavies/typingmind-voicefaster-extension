@@ -417,19 +417,32 @@ export class TranscriptionController {
         }
     }
 
-    sendTranscript() {
+    async sendTranscript() {
         const content = this.getTranscriptContentDiv();
         if (content && this.options.targetElement) {
-            this.options.targetElement.value = content.textContent;
-            this.clearTranscript();
+            // Get the current value from the target, ensuring we handle null/undefined
+            const currentValue = this.options.targetElement.value || '';
+
+            // Add a space if there's existing content and it doesn't end with a space
+            const spacer = currentValue && !currentValue.endsWith(' ') ? ' ' : '';
+
+            // Append the new text to existing content
+            this.options.targetElement.value = currentValue + spacer + content.textContent;
+
+            // Use the modified clearTranscript which handles provider reset
+            await this.clearTranscript();
         }
     }
 
-    clearTranscript() {
+    async clearTranscript() {
         const content = this.getTranscriptContentDiv();
         if (content) {
             console.debug("Clearing transcript content");
             content.innerHTML = '';
+            // Stop and restart the provider if we're recording
+            if (this.isRecording) {
+                await this.stopRecording();
+            }
         } else { console.error("Transcript content area not found"); }
     }
 

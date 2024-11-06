@@ -148,7 +148,7 @@ export class DeepGramTranscription extends BaseTranscriptionProvider {
             this.ws.onmessage = (event) => {
                 try {
                     const response = JSON.parse(event.data);
-                    console.debug("🎯 DeepGram message received:", response);
+                    console.log("🎯 DeepGram message received:", response);
 
                     if (response.type === "Results") {
                         const transcript = response.channel.alternatives[0].transcript;
