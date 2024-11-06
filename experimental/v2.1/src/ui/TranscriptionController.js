@@ -159,93 +159,55 @@ export class TranscriptionController {
 
     setupDraggable() {
         let isDragging = false;
-        let startX, startY;
-        let offsetX, offsetY;
+        let startX, startY, initialX, initialY;
 
         const dragStart = (e) => {
-            // Check for the new class name
             const header = e.target.closest('.voicefaster__header');
             if (!header) return;
 
             isDragging = true;
             this.container.classList.add('voicefaster--dragging');
 
-            // Calculate the offset from the mouse position to the container's top-left corner
+            // Record the initial mouse/touch position and container offset
             const rect = this.container.getBoundingClientRect();
-            if (e.type === "touchstart") {
-                offsetX = e.touches[0].clientX - rect.left;
-                offsetY = e.touches[0].clientY - rect.top;
-            } else {
-                offsetX = e.clientX - rect.left;
-                offsetY = e.clientY - rect.top;
-            }
+            initialX = rect.left;
+            initialY = rect.top;
+            startX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
+            startY = e.type === "touchstart" ? e.touches[0].clientY : e.clientY;
+
+            // Ensure absolute positioning
+            this.container.style.position = 'absolute';
+            this.container.style.left = `${initialX}px`;
+            this.container.style.top = `${initialY}px`;
         };
 
         const drag = (e) => {
             if (!isDragging) return;
             e.preventDefault();
 
-            // Get current cursor/touch position
-            let clientX, clientY;
-            if (e.type === "touchmove") {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
-            } else {
-                clientX = e.clientX;
-                clientY = e.clientY;
-            }
+            // Calculate the difference between start and current position
+            const currentX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
+            const currentY = e.type === "touchmove" ? e.touches[0].clientY : e.clientY;
+            const deltaX = currentX - startX;
+            const deltaY = currentY - startY;
 
-            // Calculate new position
-            let newX = clientX - offsetX;
-            let newY = clientY - offsetY;
-
-            // Get viewport and element dimensions
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            const rect = this.container.getBoundingClientRect();
-
-            // Constrain to viewport bounds with padding
-            const padding = 10;
-            newX = Math.max(padding, Math.min(viewportWidth - rect.width - padding, newX));
-            newY = Math.max(padding, Math.min(viewportHeight - rect.height - padding, newY));
-
-            // Apply new position
-            this.container.style.left = `${newX}px`;
-            this.container.style.top = `${newY}px`;
-
-            // Remove any bottom/right positioning that might interfere
-            this.container.style.bottom = 'auto';
-            this.container.style.right = 'auto';
+            // Apply the calculated new position
+            this.container.style.left = `${initialX + deltaX}px`;
+            this.container.style.top = `${initialY + deltaY}px`;
         };
 
         const dragEnd = () => {
-            if (!isDragging) return;
             isDragging = false;
             this.container.classList.remove('voicefaster--dragging');
-
-            // Re-enable transitions
-            this.container.style.transition = 'var(--transition-standard)';
         };
 
-        // Mouse events
+        // Event listeners
         this.container.addEventListener('mousedown', dragStart);
         document.addEventListener('mousemove', drag);
         document.addEventListener('mouseup', dragEnd);
-
-        // Touch events
-        this.container.addEventListener('touchstart', dragStart);
-        document.addEventListener('touchmove', drag, { passive: false });
+        this.container.addEventListener('touchstart', dragStart, { passive: true });
+        document.addEventListener('touchmove', drag, { passive: true });
         document.addEventListener('touchend', dragEnd);
-
-        // Cleanup function
-        const cleanup = () => {
-            document.removeEventListener('mousemove', drag);
-            document.removeEventListener('mouseup', dragEnd);
-            document.removeEventListener('touchmove', drag);
-            document.removeEventListener('touchend', dragEnd);
-        };
-
-        this.cleanupDraggable = cleanup;
     }
 
 

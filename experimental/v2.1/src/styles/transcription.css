@@ -90,7 +90,34 @@ body {
     padding: 0.25rem;
     border-bottom: 1px solid var(--surface-deep);
     cursor: grab;
+    user-select: none;
 }
+
+/* Position classes */
+.voicefaster--top-right {
+    top: var(--padding-standard);
+    right: var(--padding-standard);
+}
+
+.voicefaster--top-left {
+    top: var(--padding-standard);
+    left: var(--padding-standard);
+}
+
+.voicefaster--bottom-right {
+    bottom: var(--padding-standard);
+    right: var(--padding-standard);
+}
+
+.voicefaster--bottom-left {
+    bottom: var(--padding-standard);
+    left: var(--padding-standard);
+}
+
+
+
+
+
 
 .voicefaster__body {
     display: grid;
@@ -260,11 +287,11 @@ body {
     display: none;
 }
 
-.voicefaster--dragging {
-    transition: none !important;
-    cursor: grabbing;
-    opacity: 0.9;
+.voicefaster--dragging .voicefaster__header {
+    cursor: grabbing; /* Change to grabbing during drag */
+    opacity : 0.6;
 }
+
 
 /* Error Message */
 .voicefaster__error {
