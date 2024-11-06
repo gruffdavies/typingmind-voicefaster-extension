@@ -75,7 +75,7 @@ export class TranscriptionController {
         this.container.appendChild(header);
 
         // Add transcript area if needed
-        if (this.options.transcribeToStagingArea ) {
+        if (this.options.transcribeToStagingArea) {
             const transcriptArea = document.createElement('div');
             transcriptArea.className = 'transcript-area';
 
@@ -89,10 +89,10 @@ export class TranscriptionController {
             const transcriptControls = document.createElement('div');
             transcriptControls.className = 'transcript-controls';
 
-        //     transcriptControls.innerHTML = `
-        //     <button><i class="bi bi-arrow-right-circle"></i> Send</button>
-        //     <button><i class="bi bi-trash"></i> Clear</button>
-        // `;
+            //     transcriptControls.innerHTML = `
+            //     <button><i class="bi bi-arrow-right-circle"></i> Send</button>
+            //     <button><i class="bi bi-trash"></i> Clear</button>
+            // `;
 
             const sendButton = document.createElement('button');
             sendButton.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Send';
@@ -373,24 +373,24 @@ export class TranscriptionController {
             console.error("Transcript target not set");
             return;
         }
-        // if (this.options.transcribeToStagingArea) {
-            const content = this.transcribeTarget;
-            if (content) {
-                content.innerHTML = '';
-                if (data.final) {
-                    const finalSpan = document.createElement('span');
-                    finalSpan.className = 'final';
-                    finalSpan.textContent = data.final;
-                    content.appendChild(finalSpan);
-                }
-                if (data.interim) {
-                    const interimSpan = document.createElement('span');
-                    interimSpan.className = 'interim';
-                    interimSpan.textContent = data.interim;
-                    content.appendChild(interimSpan);
-                }
+
+        const content = this.transcribeTarget;
+        if (content) {
+            content.innerHTML = '';
+            if (data.final) {
+                const finalSpan = document.createElement('span');
+                finalSpan.className = 'final';
+                finalSpan.textContent = data.final;
+                content.appendChild(finalSpan);
             }
-        // }
+            if (data.interim) {
+                const interimSpan = document.createElement('span');
+                interimSpan.className = 'interim';
+                interimSpan.textContent = data.interim;
+                content.appendChild(interimSpan);
+            }
+        }
+
     }
 
     handleStateChange(state) {
@@ -428,6 +428,8 @@ export class TranscriptionController {
 
             // Append the new text to existing content
             this.options.targetElement.value = currentValue + spacer + content.textContent;
+            // trigger it's change event
+            this.options.targetElement.dispatchEvent(new Event('change'));
 
             // Use the modified clearTranscript which handles provider reset
             await this.clearTranscript();
