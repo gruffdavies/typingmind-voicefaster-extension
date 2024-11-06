@@ -12,25 +12,48 @@
     --surface-raised: rgba(0, 0, 0, 0.2);
     --surface-deep: rgba(0, 0, 0, 0.3);
 
-    /* Visualization states */
-    --vis-listening: rgba(120, 255, 100, 0.6);
-    --vis-listening-secondary: rgba(120, 255, 100, 0.3);
-    --glow-core: var(--primary-subtle);
-    --glow-outer: var(--primary-faint);
+    /* Glows and shadows */
+    --glow-core          : var(--primary-subtle);
+    --glow-outer         : var(--primary-faint);
+    --shadow-standard    : 0 4px 12px rgba(0, 0, 0, 0.2);
+    --glow-inner         : inset 0 0 20px rgba(64, 169, 255, 0.1);
+    --glow-outer-bright  : 0 0 15px rgba(64, 169, 255, 0.2);
+    --background-gradient: linear-gradient(135deg, rgba(64, 169, 255, 0.1), rgba(0, 0, 0, 0.2));
 
     /* States */
     --state-active: rgba(255, 64, 64, 0.3);
     --state-idle: var(--primary-ghost);
     --state-listening: var(--state-active);
 
+    /* Visualization colors */
+    --vis-listening: rgba(120, 255, 100, 0.6);
+    --vis-listening-secondary: rgba(120, 255, 100, 0.3);
+
     /* Text colors */
     --text-primary: var(--primary-bright);
     --text-secondary: var(--primary-muted);
-    --text-transcript: var(--vis-listening);
-    --text-transcript-interim: var(--vis-listening-secondary);
 
-    /* Transitions */
+    --text-transcript-final: var(--vis-listening);
+    --text-transcript-interim: var(--vis-listening-secondary);
+    /* Layout */
+    --border-radius-standard: 1rem;
+    --padding-standard: 1rem;
+    --gap-standard: 1rem;
     --transition-standard: all 0.3s ease;
+
+    /* Backdrop */
+    --backdrop-blur: blur(0.3rem);
+
+    /* Component sizes */
+    --transcript-width: 280px;
+    --transcript-min-height: 6.25rem;
+    --transcript-max-height: 12.5rem;
+
+    /* Combined effects */
+    --box-shadow-combined:
+        var(--shadow-standard),
+        var(--glow-inner),
+        var(--glow-outer-bright);
 }
 
 /* Base styles */
@@ -57,7 +80,8 @@ body {
     z-index: 1000;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     transition: var(--transition-standard);
-    min-width: 30px;
+    min-width: 10rem;
+    max-width: 30rem;
     max-height: calc(100vh - 2.5rem);
     user-select: none;
     touch-action: none;
@@ -164,7 +188,7 @@ body {
     border-radius: 0.5rem;
     padding: 0;
     background: var(--surface-raised);
-    color: var(--text-transcript);
+    /* color: var(--text-transcript); */
     font-size: 0.875rem;
     line-height: 1.4;
     display: grid;
@@ -194,6 +218,10 @@ body {
 
 .transcript-content .interim {
     color: var(--text-transcript-interim);
+    font-style: italic;
+}
+.transcript-content .final {
+    color: var(--text-transcript-final);
     font-style: italic;
 }
 

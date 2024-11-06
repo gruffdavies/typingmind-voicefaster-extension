@@ -93,9 +93,8 @@ export class TranscriptionSpeechVisualizer {
           centerX, centerY, 0,
           centerX, centerY, radius * 0.7
       );
-      gradient.addColorStop(0, this.getColor("--glow-core"));
-      gradient.addColorStop(1, "transparent");
-      this.ctx.fillStyle = gradient;
+      gradient.addColorStop(0, this.getColor("--glow-core") || 'rgba(255, 255, 255, 0.8)');
+      gradient.addColorStop(1, "transparent");      this.ctx.fillStyle = gradient;
       this.ctx.fill();
   }
 
