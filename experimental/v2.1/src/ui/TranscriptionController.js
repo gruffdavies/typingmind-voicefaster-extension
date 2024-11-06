@@ -12,7 +12,7 @@ export class TranscriptionController {
         this.options = {
             targetElement: null,  // Optional element to write transcript to
             floatingPosition: { x: 'right', y: 'bottom' }, // or specific pixels
-            showTranscriptArea: true,  // Whether to show own transcript area
+            transcribeToStagingArea: true,  // Whether to show and use own transcript area with send/clear buttons
             ...options
         };
         this.initialize();
@@ -65,7 +65,7 @@ export class TranscriptionController {
         this.container.appendChild(header);
 
         // Add transcript area if needed
-        if (this.options.showTranscriptArea && !this.options.targetElement) {
+        if (this.options.transcribeToStagingArea ) {
             const transcriptArea = document.createElement('div');
             transcriptArea.className = 'transcript-area';
 

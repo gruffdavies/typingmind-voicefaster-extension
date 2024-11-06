@@ -46,10 +46,12 @@
         import { TranscriptionController } from './src/ui/TranscriptionController.js';
         import { TranscriptionProviderFactory } from './src/transcription/TranscriptionProviderFactory.js';
 
+        const textArea = document.querySelector('#chat-input-textbox');  // or any target element
+
         document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const provider = await TranscriptionProviderFactory.createProvider();
-                const controller = new TranscriptionController(provider);
+                const controller = new TranscriptionController(provider, {targetElement: textArea, transcribeToStagingArea: true });
 
                 document.getElementById('demo-version').textContent =
                     `Voice Transcription v${version.version}`;
