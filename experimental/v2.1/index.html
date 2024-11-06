@@ -46,7 +46,35 @@
         import { TranscriptionController } from './src/ui/TranscriptionController.js';
         import { TranscriptionProviderFactory } from './src/transcription/TranscriptionProviderFactory.js';
 
-        const textArea = document.querySelector('#chat-input-textbox');  // or any target element
+        const textArea = document.querySelector('#chat-input-textbox');  //
+
+        // Function to auto-resize the textarea
+        function autoResize() {
+            // Reset height to auto to get the correct scrollHeight
+            textArea.style.height = 'auto';
+
+            // Calculate new height based on scrollHeight
+            const newHeight = Math.min(
+                Math.max(textArea.scrollHeight, 40), // 40px = 2.5rem (min-height)
+                120  // 7.5rem (max-height)
+            );
+
+            // Apply the new height
+            textArea.style.height = `${newHeight}px`;
+        }
+
+        // Add event listeners
+        textArea.addEventListener('input', autoResize);
+        // For programmatic changes
+        textArea.addEventListener('change', autoResize);
+
+        // Optional: Handle programmatic content changes
+        const observer = new MutationObserver(autoResize);
+        observer.observe(textArea, {
+            childList: true,
+            characterData: true,
+            subtree: true
+        });
 
         document.addEventListener('DOMContentLoaded', async () => {
             try {
