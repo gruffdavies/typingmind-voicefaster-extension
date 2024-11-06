@@ -97,10 +97,13 @@ body {
     grid-template-rows: 0fr;
     transition: var(--transition-standard);
     overflow: hidden;
+    height: 0;
+    /* opacity: 0; */
 }
 
 .voicefaster--listening .voicefaster__body {
     grid-template-rows: 1fr;
+    height:auto;
 }
 
 /* Controls */
@@ -243,8 +246,8 @@ body {
 
 /* States */
 .voicefaster--floating {
-    top: 3rem;
-    right: 3rem;
+    position: fixed;
+    z-index: 1000;
 }
 
 .voicefaster--minimized {
@@ -273,25 +276,26 @@ body {
 /* Responsive Adjustments */
 @media (max-width: 768px) {
     .voicefaster {
-        right: 10px;
-        top: 10px;
-        min-width: unset;
-        width: auto;
-        max-width: calc(100vw - 20px);
+        position: relative;
+        right: min(initial, calc(100vw - 100%));
+        top: 1rem;
+        /* min-width: unset; */
+        /* width: auto; */
+        /* max-width: calc(100vw - 20px); */
     }
 
-    .voicefaster__controls {
+    /* .voicefaster__controls {
         grid-template-areas:
-            "mic select"
-            "viz viz";
+            "mic viz"
+            "select viz";
         grid-template-columns: auto 1fr;
     }
 
     .voicefaster:not(.voicefaster--minimized) {
-        min-width: 280px;
+        min-width: 30rem;
     }
 
     .visualization {
         width: 100%;
-    }
+    } */
 }

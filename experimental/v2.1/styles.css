@@ -13,10 +13,11 @@
 
 
 .chat-container {
+   position: fixed;
     width: 90%;
     max-width: 50rem;
-    height: 37.5rem;
-    margin: 1.25rem auto;
+    height: 80%;
+    margin: 6rem 2rem 2rem 2rem;
     display: flex;
     flex-direction: column;
     border-radius: 0.75rem;

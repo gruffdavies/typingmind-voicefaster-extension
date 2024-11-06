@@ -13,11 +13,48 @@ export class TranscriptionController {
             targetElement: null,  // Optional element to write transcript to
             floatingPosition: { x: 'right', y: 'bottom' }, // or specific pixels
             transcribeToStagingArea: true,  // Whether to show and use own transcript area with send/clear buttons
+            padding: 1.25, // in rem
             ...options
         };
         this.transcribeTarget = null;
         this.initialize();
     }
+
+    remToPx(rem) {
+        return rem * parseFloat(getComputedStyle(document.documentElement).fontSize);
+    }
+
+    pxToRem(px) {
+        return px / parseFloat(getComputedStyle(document.documentElement).fontSize);
+    }
+
+    getViewportConstraints() {
+        const rect = this.container.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const paddingPx = this.remToPx(this.options.padding);
+
+        return {
+            minX: paddingPx,
+            maxX: viewportWidth - rect.width - paddingPx,
+            minY: paddingPx,
+            maxY: viewportHeight - rect.height - paddingPx,
+            width: viewportWidth,
+            height: viewportHeight,
+            elementWidth: rect.width,
+            elementHeight: rect.height,
+            paddingPx
+        };
+    }
+
+    constrainPosition(x, y) {
+        const constraints = this.getViewportConstraints();
+        return {
+            x: Math.max(constraints.minX, Math.min(constraints.maxX, x)),
+            y: Math.max(constraints.minY, Math.min(constraints.maxY, y))
+        };
+    }
+
 
     async initialize() {
         await this.initializeUI();
@@ -33,6 +70,40 @@ export class TranscriptionController {
         }
         console.debug("Transcribe target set to:", this.transcribeTarget);
     }
+
+    setupViewportContainment() {
+        const checkBounds = () => {
+            const rect = this.container.getBoundingClientRect();
+            const currentLeft = parseInt(this.container.style.left) || 0;
+            const currentTop = parseInt(this.container.style.top) || 0;
+
+            const { x: newX, y: newY } = this.constrainPosition(currentLeft, currentTop);
+
+            if (newX !== currentLeft || newY !== currentTop) {
+                this.container.style.left = `${this.pxToRem(newX)}rem`;
+                this.container.style.top = `${this.pxToRem(newY)}rem`;
+                this.container.style.bottom = 'auto';
+                this.container.style.right = 'auto';
+            }
+        };
+
+        const resizeObserver = new ResizeObserver(() => {
+            requestAnimationFrame(checkBounds);
+        });
+
+        resizeObserver.observe(document.body);
+        resizeObserver.observe(this.container);
+
+        this.resizeObserver = resizeObserver;
+        window.addEventListener('resize', checkBounds);
+        checkBounds();
+
+        this.cleanupViewportContainment = () => {
+            resizeObserver.disconnect();
+            window.removeEventListener('resize', checkBounds);
+        };
+    }
+
     // Simplified initializeUI()
     async initializeUI() {
         this.container = document.createElement('div');
@@ -40,7 +111,34 @@ export class TranscriptionController {
 
         if (this.options.floatingPosition) {
             this.container.classList.add('voicefaster--floating');
+
+            // Set initial position
+            const paddingRem = 1.25; // default padding in rem
+            const position = this.options.floatingPosition;
+
+            if (position.x === 'right') {
+                this.container.style.right = `${paddingRem}rem`;
+                this.container.style.left = 'auto';
+            } else {
+                this.container.style.left = `${paddingRem}rem`;
+                this.container.style.right = 'auto';
+            }
+
+            if (position.y === 'bottom') {
+                this.container.style.bottom = `${paddingRem}rem`;
+                this.container.style.top = 'auto';
+            } else {
+                this.container.style.top = `${paddingRem}rem`;
+                this.container.style.bottom = 'auto';
+            }
+
+            // Setup draggable first
+            this.setupDraggable();
+
+            // Then setup viewport containment
+            this.setupViewportContainment();
         }
+
 
         const header = document.createElement('div');
         header.className = 'voicefaster__header';
@@ -119,9 +217,9 @@ export class TranscriptionController {
 
         console.debug("initializeUI() this.stagingArea is set to:", this.stagingArea);
 
-        if (this.options.floatingPosition) {
-            this.setupDraggable();
-        }
+        // if (this.options.floatingPosition) {
+        //     this.setupDraggable();
+        // }
     }
 
 
@@ -183,9 +281,8 @@ export class TranscriptionController {
 
         const drag = (e) => {
             if (!isDragging) return;
-            e.preventDefault();
+            e.preventDefault(); // We need this for drag functionality
 
-            // Get current cursor/touch position
             let clientX, clientY;
             if (e.type === "touchmove") {
                 clientX = e.touches[0].clientX;
@@ -195,25 +292,13 @@ export class TranscriptionController {
                 clientY = e.clientY;
             }
 
-            // Calculate new position
             let newX = clientX - offsetX;
             let newY = clientY - offsetY;
 
-            // Get viewport and element dimensions
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            const rect = this.container.getBoundingClientRect();
+            const { x: constrainedX, y: constrainedY } = this.constrainPosition(newX, newY);
 
-            // Constrain to viewport bounds with padding
-            const padding = 10;
-            newX = Math.max(padding, Math.min(viewportWidth - rect.width - padding, newX));
-            newY = Math.max(padding, Math.min(viewportHeight - rect.height - padding, newY));
-
-            // Apply new position
-            this.container.style.left = `${newX}px`;
-            this.container.style.top = `${newY}px`;
-
-            // Remove any bottom/right positioning that might interfere
+            this.container.style.left = `${this.pxToRem(constrainedX)}rem`;
+            this.container.style.top = `${this.pxToRem(constrainedY)}rem`;
             this.container.style.bottom = 'auto';
             this.container.style.right = 'auto';
         };
@@ -222,8 +307,6 @@ export class TranscriptionController {
             if (!isDragging) return;
             isDragging = false;
             this.container.classList.remove('voicefaster--dragging');
-
-            // Re-enable transitions
             this.container.style.transition = 'var(--transition-standard)';
         };
 
@@ -232,10 +315,10 @@ export class TranscriptionController {
         document.addEventListener('mousemove', drag);
         document.addEventListener('mouseup', dragEnd);
 
-        // Touch events
-        this.container.addEventListener('touchstart', dragStart);
-        document.addEventListener('touchmove', drag, { passive: false });
-        document.addEventListener('touchend', dragEnd);
+        // Touch events - note the passive option
+        this.container.addEventListener('touchstart', dragStart, { passive: true });
+        document.addEventListener('touchmove', drag, { passive: false }); // needs to be non-passive for preventDefault()
+        document.addEventListener('touchend', dragEnd, { passive: true });
 
         // Cleanup function
         const cleanup = () => {
@@ -243,10 +326,13 @@ export class TranscriptionController {
             document.removeEventListener('mouseup', dragEnd);
             document.removeEventListener('touchmove', drag);
             document.removeEventListener('touchend', dragEnd);
+            this.container.removeEventListener('mousedown', dragStart);
+            this.container.removeEventListener('touchstart', dragStart);
         };
 
         this.cleanupDraggable = cleanup;
     }
+
 
 
 
@@ -473,6 +559,18 @@ export class TranscriptionController {
         if (this.provider) {
             this.provider.stop();
         }
+        if (this.cleanupViewportContainment) {
+            this.cleanupViewportContainment();
+        }
+        if (this.cleanupDraggable) {
+            this.cleanupDraggable();
+        }
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+        }
         this.container.remove();
     }
+
+
+
 }
