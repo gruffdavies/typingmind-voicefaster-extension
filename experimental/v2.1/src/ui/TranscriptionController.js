@@ -72,7 +72,10 @@ export class TranscriptionController {
         controls.appendChild(select);
         controls.appendChild(this.visualizer.container);
         header.appendChild(controls);
-        this.container.appendChild(header);
+
+        // Create body section
+        const body = document.createElement('div');
+        body.className = 'voicefaster__body';
 
         // Add transcript area if needed
         if (this.options.transcribeToStagingArea) {
@@ -89,11 +92,6 @@ export class TranscriptionController {
             const transcriptControls = document.createElement('div');
             transcriptControls.className = 'transcript-controls';
 
-            //     transcriptControls.innerHTML = `
-            //     <button><i class="bi bi-arrow-right-circle"></i> Send</button>
-            //     <button><i class="bi bi-trash"></i> Clear</button>
-            // `;
-
             const sendButton = document.createElement('button');
             sendButton.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Send';
             sendButton.onclick = () => this.sendTranscript();
@@ -108,10 +106,14 @@ export class TranscriptionController {
             contentWrapper.appendChild(transcriptContent);
             contentWrapper.appendChild(transcriptControls);
             transcriptArea.appendChild(contentWrapper);
-            this.container.appendChild(transcriptArea);
+            body.appendChild(transcriptArea);
             this.stagingArea = transcriptContent;
 
         }
+
+                // Add header and body to container
+        this.container.appendChild(header);
+        this.container.appendChild(body);
 
         document.body.appendChild(this.container);
 

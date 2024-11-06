@@ -1,196 +1,152 @@
 // src/visualization/TranscriptionVisualizer.js
 
 export class TranscriptionSpeechVisualizer {
-  constructor(container, config = {}) {
-      this.config = {
-          fftSize: config.fftSize || 256,
-          idleSize: config.idleSize || 48,
-          expandedWidth: config.expandedWidth || 200,
-          expandedHeight: config.expandedHeight || 60,
-          barCount: config.barCount || 20,
-          ...config,
-      };
+    constructor(config = {}) {
+        this.config = {
+            fftSize: config.fftSize || 256,
+            barCount: config.barCount || 20,
+            ...config,
+        };
 
-      // Create container with BEM class
-      this.container = document.createElement("div");
-      this.container.className = "visualization";
+        this.container = this.createContainer();
+        this.canvas = this.createCanvas();
+        this.ctx = this.canvas.getContext("2d");
+        this.container.appendChild(this.canvas);
 
-      // Create canvas with BEM class
-      this.canvas = document.createElement("canvas");
-      this.canvas.className = "visualization__canvas";
-      this.ctx = this.canvas.getContext("2d");
+        this.mode = "idle";
+        this.styles = getComputedStyle(document.documentElement);
+        this.audioContext = null;
+        this.analyser = null;
+        this.dataArray = null;
 
-      this.container.appendChild(this.canvas);
+        this.initializeCanvas();
+        this.idleBarHeights = this.calculateIdleBarHeights();
+        this.startAnimation();
+    }
 
-      this.mode = "idle";
-      this.styles = getComputedStyle(document.documentElement);
+    createContainer() {
+        const container = document.createElement("div");
+        container.className = "visualization";
+        return container;
+    }
 
-      // Audio analysis setup
-      this.audioContext = null;
-      this.analyser = null;
-      this.dataArray = null;
+    createCanvas() {
+        const canvas = document.createElement("canvas");
+        canvas.className = "visualization__canvas";
+        return canvas;
+    }
 
-      this.setupCanvas();
-      this.startAnimation();
-  }
+    initializeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const baseWidth = 200;
+        const baseHeight = 56;
 
-  setupCanvas() {
-      const dpr = window.devicePixelRatio || 1;
-      const size = this.config.idleSize;
+        this.canvas.width = baseWidth * dpr;
+        this.canvas.height = baseHeight * dpr;
+        this.ctx.scale(dpr, dpr);
+        this.canvasWidth = baseWidth;
+        this.canvasHeight = baseHeight;
+    }
 
-      this.canvas.width = size * dpr;
-      this.canvas.height = size * dpr;
-      this.ctx.scale(dpr, dpr);
-      this.canvas.style.width = `${size}px`;
-      this.canvas.style.height = `${size}px`;
-      this.canvasWidth = size;
-      this.canvasHeight = size;
-  }
 
-  async setupAudioAnalysis(stream) {
-      try {
-          if (!this.audioContext) {
-              this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-              this.analyser = this.audioContext.createAnalyser();
-              this.analyser.fftSize = this.config.fftSize;
-              this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-          }
+    async setupAudioAnalysis(stream) {
+        try {
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                this.analyser = this.audioContext.createAnalyser();
+                this.analyser.fftSize = this.config.fftSize;
+                this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+            }
 
-          if (this.audioContext.state === "suspended") {
-              await this.audioContext.resume();
-          }
+            if (this.audioContext.state === "suspended") {
+                await this.audioContext.resume();
+            }
 
-          const source = this.audioContext.createMediaStreamSource(stream);
-          source.connect(this.analyser);
-          return true;
-      } catch (err) {
-          console.error("Error setting up audio analysis:", err);
-          return false;
-      }
-  }
+            const source = this.audioContext.createMediaStreamSource(stream);
+            source.connect(this.analyser);
+            return true;
+        } catch (err) {
+            console.error("Error setting up audio analysis:", err);
+            return false;
+        }
+    }
 
-  getColor(varName) {
-      return this.styles.getPropertyValue(varName).trim();
-  }
+    calculateIdleBarHeights() {
+        const heights = [];
+        for (let i = 0; i < this.config.barCount; i++) {
+            const normalizedI = i / (this.config.barCount - 1);
+            var decay = (this.config.barCount - i)/this.config.barCount;
+            const amplitude = 0.3 + decay*0.75*Math.pow(Math.sin(normalizedI * Math.PI * 2), 2);
+            heights.push(amplitude);
+        }
+        return heights;
+    }
 
-  drawIdle() {
-      const centerX = this.canvasWidth / 2;
-      const centerY = this.canvasHeight / 2;
-      const radius = this.canvasWidth * 0.3;
-      const time = Date.now() / 1000;
+    drawBars(heights, color) {
+        const centerY = this.canvasHeight / 2;
+        const barWidth = 4;
+        const spacing = 6;
+        const maxHeight = this.canvasHeight * 0.8;
+        const startX = 4;
 
-      this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+        this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+        this.ctx.fillStyle = this.getColor(color);
 
-      // Outer ring with pulse
-      this.ctx.beginPath();
-      this.ctx.strokeStyle = this.getColor("--glow-outer");
-      this.ctx.lineWidth = 2;
-      this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-      this.ctx.stroke();
+        heights.forEach((height, i) => {
+            const barHeight = maxHeight * height;
+            const x = startX + i * (barWidth + spacing);
+            const y = centerY - barHeight / 2;
+            this.ctx.fillRect(x, y, barWidth, barHeight);
+        });
+    }
 
-      // Inner core with glow
-      const gradient = this.ctx.createRadialGradient(
-          centerX, centerY, 0,
-          centerX, centerY, radius * 0.7
-      );
-      gradient.addColorStop(0, this.getColor("--glow-core") || 'rgba(255, 255, 255, 0.8)');
-      gradient.addColorStop(1, "transparent");      this.ctx.fillStyle = gradient;
-      this.ctx.fill();
-  }
+    drawIdle() {
+        this.drawBars(this.idleBarHeights, "--primary-ghost");
+    }
 
-  drawListening() {
-      const centerY = this.canvasHeight / 2;
-      this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+    drawListening() {
+        if (!this.analyser) return;
 
-      if (!this.analyser) return;
+        this.analyser.getByteFrequencyData(this.dataArray);
+        const heights = Array.from(this.dataArray)
+            .slice(0, this.config.barCount)
+            .map(value => value / 255);
 
-      this.analyser.getByteFrequencyData(this.dataArray);
+        this.drawBars(heights, "--vis-listening");
+    }
 
-      const bars = this.config.barCount;
-      const barWidth = 4;
-      const spacing = 6;
-      const maxHeight = this.canvasHeight * 0.8;
+    async setMode(mode, stream = null) {
+        if (mode === this.mode) return;
 
-      this.ctx.fillStyle = this.getColor("--vis-listening");
+        if (this.mode === "listening" && this.audioContext) {
+            await this.audioContext.close();
+            this.audioContext = null;
+            this.analyser = null;
+        }
 
-      for (let i = 0; i < bars; i++) {
-          const dataIndex = Math.floor((i / bars) * this.analyser.frequencyBinCount);
-          const value = this.dataArray[dataIndex];
-          const height = (value / 255) * maxHeight;
+        this.mode = mode;
+        this.container.classList.toggle("visualization--expanded", mode === "listening");
 
-          const x = (this.canvasWidth - bars * (barWidth + spacing)) / 2 + i * (barWidth + spacing);
-          const y = centerY - height / 2;
+        if (mode === "listening" && stream) {
+            await this.setupAudioAnalysis(stream);
+        }
+    }
 
-          this.ctx.fillRect(x, y, barWidth, height);
-      }
-  }
+    getColor(varName) {
+        return this.styles.getPropertyValue(varName).trim();
+    }
 
-  expandCanvas() {
-      const dpr = window.devicePixelRatio || 1;
-      const { expandedWidth, expandedHeight } = this.config;
+    startAnimation() {
+        const animate = () => {
+            this.mode === "idle" ? this.drawIdle() : this.drawListening();
+            requestAnimationFrame(animate);
+        };
+        animate();
+    }
 
-      this.canvas.width = expandedWidth * dpr;
-      this.canvas.height = expandedHeight * dpr;
-      this.ctx.scale(dpr, dpr);
-      this.canvas.style.width = `${expandedWidth}px`;
-      this.canvas.style.height = `${expandedHeight}px`;
-      this.canvasWidth = expandedWidth;
-      this.canvasHeight = expandedHeight;
-
-      this.container.classList.add("visualization--expanded");
-  }
-
-  shrinkCanvas() {
-      const dpr = window.devicePixelRatio || 1;
-      const size = this.config.idleSize;
-
-      this.canvas.width = size * dpr;
-      this.canvas.height = size * dpr;
-      this.ctx.scale(dpr, dpr);
-      this.canvas.style.width = `${size}px`;
-      this.canvas.style.height = `${size}px`;
-      this.canvasWidth = size;
-      this.canvasHeight = size;
-
-      this.container.classList.remove("visualization--expanded");
-  }
-
-  async setMode(mode, stream = null) {
-      if (mode === this.mode) return;
-
-      if (this.mode === "listening") {
-          if (this.audioContext) {
-              await this.audioContext.close();
-              this.audioContext = null;
-              this.analyser = null;
-          }
-      }
-
-      this.mode = mode;
-
-      if (mode === "idle") {
-          this.shrinkCanvas();
-      } else if (mode === "listening" && stream) {
-          await this.setupAudioAnalysis(stream);
-          this.expandCanvas();
-      }
-  }
-
-  startAnimation() {
-      const animate = () => {
-          if (this.mode === "idle") {
-              this.drawIdle();
-          } else if (this.mode === "listening") {
-              this.drawListening();
-          }
-          requestAnimationFrame(animate);
-      };
-      animate();
-  }
-
-  cleanup() {
-      if (this.audioContext) {
-          this.audioContext.close();
-      }
-  }
+    cleanup() {
+        if (this.audioContext) {
+            this.audioContext.close();
+        }
+    }
 }

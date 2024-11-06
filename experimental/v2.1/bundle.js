@@ -9,5 +9,5 @@ export * from './src/utils/EventEmitter.js';
 export * from './src/transcription/TranscriptionProviderFactory.js';
 export * from './src/transcription/DeepGramTranscription.js';
 export * from './src/transcription/WebSpeechTranscription.js';
-export * from './src/visualization/TranscriptionVisualizer.js';
+export * from './src/visualization/TranscriptionSpeechVisualizer.js';
 export * from './src/ui/TranscriptionController.js';
