@@ -1,0 +1,1 @@
+Let's test human speech. The bubbles and visualization serve different purposes - bubbles for state/control, visualization for audio feedback.

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceFaster UI</title>
+    <link rel="stylesheet" href="voicefaster-core.css">
+    <link rel="stylesheet" href="voicefaster-theme.css">
+</head>
+
+<body>
+    <div class="voice-faster" data-state="idle">
+        <!-- Area 1: Control Bar -->
+        <div class="control-bar">
+            <button class="mic-button" aria-label="Toggle microphone">
+                <i class="mic-icon">🎤</i>
+            </button>
+            <div class="speech-bubbles">
+                <div class="bubble" data-state="queued">1</div>
+                <div class="bubble" data-state="playing">2</div>
+                <div class="bubble" data-state="completed">3</div>
+            </div>
+        </div>
+
+        <!-- Area 2: Provider Bar -->
+        <div class="provider-bar">
+            <div class="stt-provider">
+                <select class="provider-select">
+                    <option value="deepgram">DeepGram</option>
+                    <option value="webspeech">WebSpeech</option>
+                </select>
+            </div>
+            <div class="tts-provider">ElevenLabs</div>
+        </div>
+
+        <!-- Area 3: Visualizer -->
+        <div class="visualizer" aria-label="Audio visualization">
+            <!-- Canvas will be dynamically inserted here by SpeechAudioVisualizer.mount() -->
+        </div>
+
+        <!-- Area 4: Transcript -->
+        <div class="transcript" aria-live="polite">
+            <div class="transcript-content" contenteditable="true"></div>
+        </div>
+
+        <!-- Area 5: Actions -->
+        <div class="actions">
+            <button class="action-button send-button">Send</button>
+            <button class="action-button clear-button">Clear</button>
+        </div>
+    </div>
+
+    </div>
+    <script src="mock.js"></script>
+    <script>
+        // Initialize after DOM loads
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                // Create and mount visualizer
+                const container = document.querySelector('.visualizer');
+                window.mockVisualizer = new MockVisualizer().mount(container);
+
+                // Initialize mocks with visualizer instance
+                window.mockSTT = new MockSTT(window.mockVisualizer);
+                window.mockTTS = new MockTTS(window.mockVisualizer);
+
+               addTestControls();
+            } catch (err) {
+                console.error('Error initializing VoiceFaster:', err);
+            }
+        });
+    </script>
+</body>
+
+</html>
