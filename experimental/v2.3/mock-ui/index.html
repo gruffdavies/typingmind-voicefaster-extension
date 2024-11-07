@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>VoiceFaster 2.3 Prototype</title>
+    <style>
+        body {
+            background: #2c2c2c;
+            margin: 0;
+            padding: 20px;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+    </style>
+    <link rel="stylesheet" href="v2.3-mock-voicefaster-styles.css">
+</head>
+<body>
+    <div class="voicefaster voicefaster--top-right">
+        <div class="voicefaster__header">
+            VoiceFaster 2.3
+        </div>
+
+        <div class="voicefaster__controls">
+            <button class="voicefaster__mic-button" aria-label="Toggle microphone">🎤</button>
+            <select class="voicefaster__select" aria-label="Select speech provider">
+                <option value="deepgram">DeepGram</option>
+                <option value="webspeech">Web Speech</option>
+            </select>
+
+            <div class="visualization">
+                <canvas class="visualization__canvas"></canvas>
+            </div>
+        </div>
+
+        <div class="voicefaster__body">
+            <div class="transcript-area">
+                <div class="content-wrapper">
+                    <div class="transcript-content"></div>
+                    <div class="transcript-controls">
+                        <button class="clear-transcript">Clear</button>
+                        <button class="send-transcript">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+   <script src="v2.3-mock-voicefaster.js"></script>
+</body>
+</html>

@@ -1,0 +1,292 @@
+:root {
+  /* Core colors and brand identity */
+  --primary: rgba(64, 169, 255, 1);
+  --primary-bright: rgba(64, 169, 255, 1);
+  --primary-muted: rgba(64, 169, 255, 0.8);
+  --primary-subtle: rgba(64, 169, 255, 0.5);
+  --primary-faint: rgba(64, 169, 255, 0.3);
+  --primary-ghost: rgba(64, 169, 255, 0.2);
+
+  /* Interface surfaces */
+  --surface-floating: rgba(0, 0, 0, 0.3);
+  --surface-raised: rgba(0, 0, 0, 0.4);
+  --surface-deep: rgba(0, 0, 0, 0.5);
+
+  /* Glows and shadows */
+  --glow-core: var(--primary-subtle);
+  --glow-outer: var(--primary-faint);
+  --background-gradient: linear-gradient(135deg, rgba(64, 169, 255, 0.1), rgba(0, 0, 0, 0.2));
+  --shadow-standard: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --glow-inner: inset 0 0 20px rgba(64, 169, 255, 0.2);
+  --glow-outer-bright: 0 0 15px rgba(64, 169, 255, 0.3);
+
+  /* States */
+  --state-active: rgba(255, 64, 64, 0.3);
+  --state-idle: var(--primary-ghost);
+  --state-listening: var(--state-active);
+
+  /* Layout */
+  --border-radius-standard: 1rem;
+  --padding-standard: 1rem;
+  --gap-standard: 1rem;
+  --transition-standard: all 0.3s ease;
+  --backdrop-blur: blur(0.3rem);
+
+  /* Combined effects */
+  --box-shadow-combined:
+    var(--shadow-standard),
+    var(--glow-inner),
+    var(--glow-outer-bright);
+}
+
+/* Main Container */
+.voicefaster {
+  position: fixed;
+  min-width: 240px;
+  background: var(--surface-deep);
+  backdrop-filter: var(--backdrop-blur);
+  border-radius: var(--border-radius-standard);
+  padding: 0.5rem;
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  z-index: 1000;
+  box-shadow: var(--box-shadow-combined);
+  user-select: none;
+}
+
+.voicefaster--top-right {
+  top: var(--padding-standard);
+  right: var(--padding-standard);
+}
+
+/* Header */
+.voicefaster__header {
+  padding: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--surface-deep);
+  cursor: grab;
+}
+
+/* Controls Grid */
+.voicefaster__controls {
+  display: grid;
+  grid-template-areas:
+      "mic viz controls"
+      "select viz controls";
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: var(--surface-floating);
+  border-radius: 0.375rem;
+  margin-top: 0.5rem;
+  position: relative;
+}
+
+/* Mic Button */
+.voicefaster__mic-button {
+  grid-area: mic;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: var(--state-idle);
+  border: none;
+  color: var(--text-primary);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: var(--transition-standard);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.voicefaster__mic-button:hover {
+  background: var(--primary-faint);
+}
+
+/* Provider Select */
+.voicefaster__select {
+  grid-area: select;
+  background: var(--surface-deep);
+  color: var(--text-primary);
+  border: none;
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  width: 2.5rem;
+}
+
+.voicefaster__select:focus {
+  outline: 1px solid var(--primary-faint);
+}
+
+/* Visualization */
+.visualization {
+  grid-area: viz;
+  background: var(--surface-deep);
+  border-radius: 0.375rem;
+  height: 100%;
+  min-height: 2.5rem;
+}
+
+.visualization__canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* Controls Group */
+.controls-group {
+  grid-area: controls;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.controls-group button {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: var(--surface-deep);
+  border: none;
+  color: var(--text-primary);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: var(--transition-standard);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Transcript Area */
+.voicefaster__body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: var(--transition-standard);
+  overflow: hidden;
+}
+
+.voicefaster--listening .voicefaster__body {
+  grid-template-rows: 1fr;
+}
+
+.transcript-area {
+  background: var(--surface-raised);
+  border-radius: 0.375rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+}
+
+.transcript-content {
+  background: var(--surface-floating);
+  border-radius: 0.375rem;
+  min-height: 5rem;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.transcript-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.transcript-controls button {
+  padding: 0.5rem 1rem;
+  background: var(--surface-deep);
+  border: none;
+  color: var(--text-primary);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: var(--transition-standard);
+}
+
+/* Queue Bubbles */
+.queue-bubble-tray {
+  position: absolute;
+  top: -0.5rem;
+  left: 0;
+  right: 0;
+  height: 1rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.125rem;
+}
+
+.queue-item {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  border: 1px solid var(--primary-muted);
+  cursor: help;
+  transition: var(--transition-standard);
+}
+
+.queue-item.requesting {
+  background-color: var(--primary-ghost);
+  border-color: var(--primary);
+  animation: pulse 1s infinite;
+}
+
+.queue-item.queued {
+  background-color: var(--primary-ghost);
+  border-color: var(--primary);
+}
+
+.queue-item.playing {
+  background-color: var(--primary-bright);
+  box-shadow: 0 0 8px var(--primary-bright);
+  border-color: #fff;
+  animation: playingGlow 1.5s infinite;
+  width: 0.625rem;
+  height: 0.625rem;
+  transform: translateY(-1px);
+}
+
+.queue-item.completed {
+  background-color: var(--primary-bright);
+  border-color: var(--primary-faint);
+  opacity: 0.7;
+}
+
+.queue-item.error {
+  background-color: var(--state-active);
+  border-color: var(--state-active);
+}
+
+.queue-item.stale {
+  background-color: var(--surface-deep);
+  border-color: var(--primary-faint);
+  opacity: 0.5;
+}
+
+/* Animations */
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes playingGlow {
+  0% { box-shadow: 0 0 5px var(--primary-bright); border-color: #fff; }
+  50% { box-shadow: 0 0 12px var(--primary-bright), 0 0 20px var(--primary); border-color: var(--primary-bright); }
+  100% { box-shadow: 0 0 5px var(--primary-bright); border-color: #fff; }
+}
+
+/* Bubble Tooltip */
+.bubble-info {
+  position: absolute;
+  background: var(--surface-deep);
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 1001;
+  box-shadow: var(--box-shadow-combined);
+  margin-bottom: 0.5rem;
+}
