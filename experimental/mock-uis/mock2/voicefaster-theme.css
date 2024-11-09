@@ -58,17 +58,11 @@
     /* State Colors */
     /* Bubble State Colors */
     --vf-state-requesting: white;
-    /* yellow */
     --vf-state-queued: yellow;
-    /* green */
     --vf-state-playing: blue;
-    /* cyan */
     --vf-state-completed: green;
-    /* blue */
     --vf-state-error: #ff0000;
-    /* red */
     --vf-state-stale: #9e9e9e;
-    /* grey */
 }
 
 /* Container Theme */

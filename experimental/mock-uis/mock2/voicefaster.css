@@ -1,0 +1,249 @@
+/* Base Container */
+.vf-container {
+    display: grid;
+    grid-template-areas:
+        'header'
+        'body'
+        'footer';
+    grid-template-rows: auto 1fr auto;
+    min-width: 18.75rem;
+    max-width: 37.5rem;
+    overflow: hidden;
+    background: var(--vf-surface);
+    border-radius: 0.5rem;
+    box-shadow: var(--vf-shadow);
+}
+
+/* Header Section */
+.vf-header {
+    grid-area: header;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+}
+
+.vf-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.vf-record-button {
+    background: none;
+    border: none;
+    color: var(--vf-text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.vf-record-button .vf-mic-icon {
+    font-size: 1.5rem;
+}
+
+.vf-tts-bubbles {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.vf-tts-bubble {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+/* Bubble States */
+.vf-tts-bubble[data-state="requesting"] {
+    background: var(--vf-state-requesting);
+    box-shadow: var(--vf-glow-accent);
+}
+
+.vf-tts-bubble[data-state="queued"] {
+    background: var(--vf-state-queued);
+}
+
+.vf-tts-bubble[data-state="playing"] {
+    background: var(--vf-state-playing);
+    box-shadow: var(--vf-glow-accent);
+}
+
+.vf-tts-bubble[data-state="completed"] {
+    background: var(--vf-state-completed);
+}
+
+.vf-tts-bubble[data-state="error"] {
+    background: var(--vf-state-error);
+}
+
+.vf-tts-bubble[data-state="stale"] {
+    background: var(--vf-state-stale);
+}
+
+.vf-config {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25rem 0;
+}
+
+.vf-stt-provider {
+    display: flex;
+    align-items: center;
+}
+
+.vf-stt-provider-select {
+    background: var(--vf-surface-raised);
+    color: var(--vf-text);
+    border: none;
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Body Section */
+.vf-body {
+    grid-area: body;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+}
+
+.vf-visualizer {
+    aspect-ratio: 16/5;
+    background: var(--vf-surface-deep);
+    border-radius: 0.25rem;
+    overflow: hidden;
+    position: relative;
+}
+
+.vf-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    backdrop-filter: var(--vf-backdrop-blur);
+}
+
+.vf-canvas--human {
+    box-shadow: var(--vf-glow-human);
+}
+
+.vf-canvas--agent {
+    box-shadow: var(--vf-glow-agent);
+}
+
+.vf-transcript {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.vf-transcript-content {
+    background: var(--vf-surface-raised);
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    min-height: 2.5rem;
+}
+
+.vf-text--interim {
+    color: var(--vf-text-muted);
+}
+
+.vf-text--final {
+    color: var(--vf-text);
+}
+
+.vf-transcript-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+/* Footer Section */
+.vf-footer {
+    grid-area: footer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    color: var(--vf-text-ghost);
+    font-size: 0.75rem;
+}
+
+/* Buttons */
+.vf-button--send {
+    background: var(--vf-cta-bg);
+    color: var(--vf-cta-text);
+    border: none;
+    border-radius: 0.25rem;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.vf-button--send:hover {
+    background: var(--vf-cta-hover);
+}
+
+.vf-button--send:active {
+    background: var(--vf-cta-active);
+}
+
+.vf-button--clear {
+    background: var(--vf-secondary-bg);
+    color: var(--vf-secondary-text);
+    border: none;
+    border-radius: 0.25rem;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.vf-button--clear:hover {
+    background: var(--vf-secondary-hover);
+}
+
+.vf-button--clear:active {
+    background: var(--vf-secondary-active);
+}
+
+/* Widget States */
+.vf-container[data-state="recording"] .vf-record-button {
+    color: var(--vf-human);
+    animation: pulse 2s infinite;
+}
+
+.vf-container[data-state="playing"] .vf-canvas--agent {
+    opacity: 1;
+}
+
+.vf-container[data-state="error"] {
+    border-color: var(--vf-destructive-bg);
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 25rem) {
+    .vf-container {
+        min-width: 100%;
+    }
+
+    .vf-config {
+        font-size: 0.875rem;
+    }
+}

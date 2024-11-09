@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceFaster UI</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="testpage.css">
+    <link rel="stylesheet" href="vf-colours.css">
+    <link rel="stylesheet" href="vf-classes.css">
+</head>
+
+<body>
+    <div class="voicefaster" data-state="idle">
+        <!-- Header Section -->
+        <div class="vf-header">
+            <div class="vf-controls">
+                <button class="vf-record-button"><i class="bi bi-mic-fill"></i></button>
+                <div class="vf-tts-bubbles">
+                    <!-- Bubbles will be dynamically inserted here -->
+                </div>
+            </div>
+
+            <div class="vf-config">
+                <div class="vf-stt-provider">TTS:&nbsp;
+                    <select class="vf-stt-provider-select">
+                        <option value="deepgram">DeepGram</option>
+                        <option value="webspeech">WebSpeech</option>
+                    </select>
+                </div>
+                <div class="vf-tts-provider">STT: ElevenLabs</div>
+            </div>
+        </div>
+
+        <!-- Body Section -->
+        <div class="vf-body">
+            <div class="vf-visualizer">
+                <!-- Canvas elements will be dynamically inserted here -->
+                <!-- Human speech canvas -->
+                <!-- Agent speech canvas -->
+            </div>
+
+            <div class="vf-transcript">
+                <div class="vf-transcript-content">
+                    <!-- Dynamic content -->
+                    <span class="vf-text--final">This text has finalised. </span>
+                    <span class="vf-text--interim">This is interim...</span>
+                </div>
+
+                <div class="vf-transcript-actions">
+                    <button class="vf-button--send">Send</button>
+                    <button class="vf-button--clear">Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Section -->
+        <div class="vf-footer">
+            <span>VoiceFaster</span>
+            <span>v1.0.0β</span>
+        </div>
+    </div>
+
+    <script src="mock.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const container = document.querySelector('.vf-visualizer');
+                console.log(container);
+                window.mockVisualizer = new MockVisualizer().mount(container);
+                window.mockSTT = new MockSTT(window.mockVisualizer);
+                window.mockTTS = new MockTTS(window.mockVisualizer);
+                addTestControls();
+            } catch (err) {
+                console.error('Error initializing VoiceFaster:', err);
+            }
+        });
+    </script>
+</body>
+
+</html>

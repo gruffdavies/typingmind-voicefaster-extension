@@ -15,24 +15,19 @@ class MockVisualizer {
             fftSize: config.fftSize || 256,
             barCount: config.barCount || 64,
             className: config.className || '',
-            color: config.color || '--vf-primary',
-            xOffset: config.xOffset || 0, // Add x-offset to config
+            color: config.color || '--vf-accent',
+            xOffset: config.xOffset || 0,
             ...config
         };
 
-        // Initialize properties but don't create DOM elements yet
         this.container = null;
         this.canvas = null;
         this.ctx = null;
         this.mode = 'idle';
         this.styles = getComputedStyle(document.documentElement);
-
-        // Audio context setup
         this.audioContext = null;
         this.analyser = null;
         this.dataArray = null;
-
-        // Animation state
         this.animationFrame = null;
         this.isInitialized = false;
         this.connectedSources = new Map();
@@ -40,7 +35,7 @@ class MockVisualizer {
 
     createCanvas() {
         const canvas = document.createElement("canvas");
-        canvas.className = `visualization__canvas ${this.config.className}`;
+        canvas.className = `vf-canvas ${this.config.className === 'human-speech' ? 'vf-canvas--human' : 'vf-canvas--agent'}`;
         canvas.style.position = 'absolute';
         canvas.style.top = '0';
         canvas.style.left = '0';
@@ -250,27 +245,26 @@ class MockSTT {
     constructor() {
         this.visualizer = new MockVisualizer({
             className: 'human-speech',
-            color: '--vf-primary',
+            color: '--vf-human',
             xOffset: 0
         });
         this.isRecording = false;
-        this.transcriptArea = document.querySelector('.transcript-content');
-        this.micButton = document.querySelector('.mic-button');
-        this.voiceFaster = document.querySelector('.voice-faster');
+        this.transcriptInterim = document.querySelector('.vf-text--interim');
+        this.transcriptFinal = document.querySelector('.vf-text--final');
+        this.recordButton = document.querySelector('.vf-record-button');
+        this.container = document.querySelector('.voicefaster');
 
-        // Audio and text content
         this.humanAudio = new Audio('mockaudio/human1.mp3');
         this.transcriptText = '';
         this.transcriptIndex = 0;
         this.transcriptInterval = null;
 
-        // Mount the visualizer
-        const container = document.querySelector('.visualizer');
+        const container = document.querySelector('.vf-visualizer');
         this.visualizer.mount(container);
     }
 
     simulateInterimResults() {
-        const quality = document.getElementById('sttQuality').value;
+        const quality = document.querySelector('.vf-stt-provider-select').value;
         const phrases = {
             good: ["Testing one two three", "Testing one two three four"],
             medium: ["Testing won too three", "Testing one too three four"],
@@ -284,10 +278,13 @@ class MockSTT {
 
         this.transcriptInterval = setInterval(() => {
             if (index < phrases[quality].length) {
-                this.transcriptArea.textContent = phrases[quality][index];
+                this.transcriptInterim.textContent = phrases[quality][index];
                 index++;
             } else {
                 clearInterval(this.transcriptInterval);
+                // Move last interim result to final
+                this.transcriptFinal.textContent = this.transcriptInterim.textContent;
+                this.transcriptInterim.textContent = '';
             }
         }, 1000);
     }
@@ -305,9 +302,9 @@ class MockSTT {
     async startRecording() {
         await this.loadTranscriptText();
         this.isRecording = true;
-        this.voiceFaster.dataset.state = 'recording';
-        this.micButton.classList.add('active');
-        this.transcriptArea.parentElement.classList.add('active');
+        this.container.dataset.state = 'recording';
+        this.recordButton.classList.add('active');
+        this.transcriptInterim.parentElement.classList.add('active');
 
         this.humanAudio.currentTime = 0;
         await this.humanAudio.play();
@@ -327,18 +324,21 @@ class MockSTT {
         this.transcriptInterval = setInterval(() => {
             if (this.transcriptIndex < words.length) {
                 const currentText = words.slice(0, this.transcriptIndex + 1).join(' ');
-                this.transcriptArea.textContent = currentText;
+                this.transcriptInterim.textContent = currentText;
                 this.transcriptIndex++;
             } else {
                 clearInterval(this.transcriptInterval);
+                // Move completed transcription to final
+                this.transcriptFinal.textContent = this.transcriptInterim.textContent;
+                this.transcriptInterim.textContent = '';
             }
         }, 400);
     }
 
     async stopRecording() {
         this.isRecording = false;
-        this.voiceFaster.dataset.state = 'idle';
-        this.micButton.classList.remove('active');
+        this.container.dataset.state = 'idle';
+        this.recordButton.classList.remove('active');
 
         this.humanAudio.pause();
         this.humanAudio.currentTime = 0;
@@ -347,42 +347,41 @@ class MockSTT {
         }
 
         await this.visualizer.setMode('idle');
-
-        document.querySelector('.actions').classList.add('active');
+        document.querySelector('.vf-transcript-actions').classList.add('active');
     }
 }
+
 
 class MockTTS {
     constructor() {
         this.visualizer = new MockVisualizer({
             className: 'agent-speech',
-            color: '--vf-secondary',
+            color: '--vf-agent',
             xOffset: 0.5
         });
         this.queue = [];
         this.bubbles = [];
         this.agentAudio = new Audio('mockaudio/agent1.mp3');
         this.agentText = '';
-
-        // Mount the visualizer
-        const container = document.querySelector('.visualizer');
-        this.visualizer.mount(container);
-
         this.stateTransitionTimers = [];
-        this.bubbleContainer = document.querySelector('.speech-bubbles');
-        this.items = []; // Track items and their states
+        this.bubbleContainer = document.querySelector('.vf-tts-bubbles');
+        this.items = [];
+
+        const container = document.querySelector('.vf-visualizer');
+        this.visualizer.mount(container);
+    }
+
+    createBubble() {
+        const bubble = document.createElement('div');
+        bubble.className = 'vf-tts-bubble';
+        this.bubbleContainer.appendChild(bubble);
+        return bubble;
     }
     clearStateTimers() {
         this.stateTransitionTimers.forEach(timer => clearTimeout(timer));
         this.stateTransitionTimers = [];
     }
 
-    createBubble() {
-        const bubble = document.createElement('div');
-        bubble.className = 'bubble';
-        this.bubbleContainer.appendChild(bubble);
-        return bubble;
-    }
     async queueNormal() {
         const bubble = this.createBubble();
         bubble.dataset.state = 'requesting';
@@ -528,15 +527,15 @@ class MockTTS {
 
 function addTestControls() {
     const panel = document.createElement('div');
-    panel.className = 'test-panel';
+    panel.className = 'vf-test-panel';
     panel.innerHTML = `
         <h3>Test Controls</h3>
-        <div class="test-section">
+        <div class="vf-test-section">
             <h4>Speech-to-Text Simulation</h4>
             <button onclick="mockSTT.startRecording()">Start Recording</button>
             <button onclick="mockSTT.stopRecording()">Stop Recording</button>
         </div>
-        <div class="test-section">
+        <div class="vf-test-section">
             <h4>Text-to-Speech Simulation</h4>
             <button onclick="mockTTS.queueNormal()">Queue Normal</button>
             <button onclick="mockTTS.queueFail()">Queue Fail</button>

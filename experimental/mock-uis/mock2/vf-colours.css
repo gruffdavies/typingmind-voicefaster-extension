@@ -1,0 +1,83 @@
+:root {
+  /* Core Theme Colors - Only these need to be set */
+  --vf-accent: #40A9FF;
+  /* Primary blue - text, icons, UI elements */
+  --vf-human: #78FF64;
+  /* Green for human voice/text */
+  --vf-agent: #FF4040;
+  /* Red for agent voice */
+
+  /* Derived UI colors */
+  --vf-text: var(--vf-accent);
+  --vf-text-muted: color-mix(in srgb, var(--vf-accent) 80%, transparent);
+  --vf-text-subtle: color-mix(in srgb, var(--vf-accent) 60%, transparent);
+  --vf-text-ghost: color-mix(in srgb, var(--vf-accent) 40%, transparent);
+
+  /* Surface colors - intentionally not derived from accent for theme compatibility */
+  --vf-surface: rgb(0 0 0 / 0.3);
+  --vf-surface-raised: rgb(0 0 0 / 0.4);
+  --vf-surface-deep: rgb(0 0 0 / 0.5);
+
+  /* Action colors */
+  --vf-primary-bg: var(--vf-accent);
+  --vf-primary-hover: color-mix(in srgb, var(--vf-accent) 90%, white);
+  --vf-primary-active: color-mix(in srgb, var(--vf-accent) 90%, black);
+  --vf-primary-text: white;
+
+  --vf-secondary-bg: color-mix(in srgb, var(--vf-accent) 30%, transparent);
+  --vf-secondary-hover: color-mix(in srgb, var(--vf-accent) 40%, transparent);
+  --vf-secondary-active: color-mix(in srgb, var(--vf-accent) 50%, transparent);
+  --vf-secondary-text: var(--vf-text);
+
+  --vf-destructive-bg: rgb(255 64 64);
+  --vf-destructive-hover: color-mix(in srgb, var(--vf-destructive-bg) 90%, white);
+  --vf-destructive-active: color-mix(in srgb, var(--vf-destructive-bg) 90%, black);
+  --vf-destructive-text: white;
+
+  /* Human voice/text derivatives */
+  --vf-human-bright: var(--vf-human);
+  --vf-human-muted: color-mix(in srgb, var(--vf-human) 60%, transparent);
+  --vf-human-subtle: color-mix(in srgb, var(--vf-human) 40%, transparent);
+  --vf-human-ghost: color-mix(in srgb, var(--vf-human) 20%, transparent);
+
+  /* Agent voice derivatives */
+  --vf-agent-bright: var(--vf-agent);
+  --vf-agent-muted: color-mix(in srgb, var(--vf-agent) 60%, transparent);
+  --vf-agent-subtle: color-mix(in srgb, var(--vf-agent) 40%, transparent);
+  --vf-agent-ghost: color-mix(in srgb, var(--vf-agent) 20%, transparent);
+
+  /* Effects */
+  --vf-shadow: 0 0.25rem 0.75rem rgb(0 0 0 / 0.4);
+  --vf-glow-accent: 0 0 0.9375rem color-mix(in srgb, var(--vf-accent) 30%, transparent);
+  --vf-glow-inner: inset 0 0 20px color-mix(in srgb, var(--vf-accent) 30%, transparent);
+  --vf-glow-outer-bright: 0 0 15px color-mix(in srgb, var(--vf-accent) 80%, transparent);
+  --vf-glow-human: 0 0 0.9375rem color-mix(in srgb, var(--vf-human) 30%, transparent);
+  --vf-glow-agent: 0 0 0.9375rem color-mix(in srgb, var(--vf-agent) 30%, transparent);
+  --vf-backdrop-blur: blur(0.3rem);
+
+  --vf-box-shadow-combined:
+      var(--vf-shadow),
+      var(--vf-glow-inner),
+      var(--vf-glow-outer-bright);
+
+  /* Layout */
+  --vf-border-radius-standard: 1rem;
+  --vf-padding-standard: 1rem;
+  --vf-gap-standard: 1rem;
+  --vf-transition-standard: all 0.3s ease;
+
+  /* Bubble State Colors */
+    --vf-state-requesting: white;
+    --vf-state-queued: yellow;
+    --vf-state-playing: blue;
+    --vf-state-completed: green;
+    --vf-state-error: #ff0000;
+    --vf-state-stale: #9e9e9e;
+
+    --vf-state-active: rgba(255, 64, 64, 0.3);
+    --vf-state-idle: var(--primary-ghost);
+    --vf-state-listening: var(--state-active);
+
+    --vf-mic-icon: url('data:image/svg+xml;charset=utf8,<svg xmlns="http://www.w3.org/svg" fill="currentColor" ><path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"/><path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/></svg>');
+
+}
