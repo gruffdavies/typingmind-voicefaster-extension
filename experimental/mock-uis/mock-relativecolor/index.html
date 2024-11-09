@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceFaster Theme Demo</title>
+    <link rel="stylesheet" href="root-colors.css">
+    <link rel="stylesheet" href="demo-elements.css">
+</head>
+<body>
+    <div class="theme-demo">
+        <h1>VoiceFaster Theme Demo</h1>
+
+        <div class="theme-controls">
+            <div class="color-input">
+                <label for="accent-color">Accent:</label>
+                <input type="color" id="accent-color" value="#40A9FF">
+            </div>
+            <div class="color-input">
+                <label for="human-color">Human:</label>
+                <input type="color" id="human-color" value="#78FF64">
+            </div>
+            <div class="color-input">
+                <label for="agent-color">Agent:</label>
+                <input type="color" id="agent-color" value="#FF4040">
+            </div>
+        </div>
+
+        <section class="color-section">
+            <h2>Base Colors</h2>
+            <div class="color-grid">
+                <div class="color-block" style="background: var(--vf-accent);">
+                    <span class="color-name">Accent</span>
+                    <span class="color-value">var(--vf-accent)</span>
+                </div>
+                <div class="color-block" style="background: var(--vf-human);">
+                    <span class="color-name">Human</span>
+                    <span class="color-value">var(--vf-human)</span>
+                </div>
+                <div class="color-block" style="background: var(--vf-agent);">
+                    <span class="color-name">Agent</span>
+                    <span class="color-value">var(--vf-agent)</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="color-section">
+            <h2>UI Colors</h2>
+            <div class="color-grid">
+                <div class="color-block" style="background: var(--vf-text);">
+                    <span class="color-name">Text</span>
+                    <span class="color-value">var(--vf-text)</span>
+                </div>
+                <div class="color-block" style="background: var(--vf-text-muted);">
+                    <span class="color-name">Text Muted</span>
+                    <span class="color-value">var(--vf-text-muted)</span>
+                </div>
+                <div class="color-block" style="background: var(--vf-surface);">
+                    <span class="color-name">Surface</span>
+                    <span class="color-value">var(--vf-surface)</span>
+                </div>
+                <div class="color-block" style="background: var(--vf-surface-raised);">
+                    <span class="color-name">Surface Raised</span>
+                    <span class="color-value">var(--vf-surface-raised)</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="color-section">
+            <h2>Action Colors</h2>
+            <div class="button-demo">
+                <button class="demo-button primary">Primary Action</button>
+                <button class="demo-button secondary">Secondary Action</button>
+                <button class="demo-button destructive">Destructive Action</button>
+            </div>
+        </section>
+
+        <section class="color-section">
+            <h2>Voice Colors</h2>
+            <div class="color-grid">
+                <div class="color-block" style="background: var(--vf-human-bright);">
+                    <span class="color-name">Human Bright</span>
+                    <span class="color-value">var(--vf-human-bright)</span>
+                </div>
+                <div class="color-block" style="background: var(--vf-human-muted);">
+                    <span class="color-name">Human Muted</span>
+                    <span class="color-value">var(--vf-human-muted)</span>
+                </div>
+                <div class="color-block" style="background: var(--vf-agent-bright);">
+                    <span class="color-name">Agent Bright</span>
+                    <span class="color-value">var(--vf-agent-bright)</span>
+                </div>
+                <div class="color-block" style="background: var(--vf-agent-muted);">
+                    <span class="color-name">Agent Muted</span>
+                    <span class="color-value">var(--vf-agent-muted)</span>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Color picker functionality
+        document.querySelectorAll('input[type="color"]').forEach(input => {
+            input.addEventListener('input', (e) => {
+                const property = `--vf-${input.id.replace('-color', '')}`;
+                document.documentElement.style.setProperty(property, e.target.value);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,8 +1,19 @@
+const REQUEST_TO_QUEUED_DELAY = 500;
+const QUEUED_TO_PLAYING_DELAY = 500;
+const PLAYING_TO_COMPLETED_DELAY = 8000;
+const COMPLETED_TO_STALE_DELAY = 60000;
+
+function transitionBubbleToStateAfterDelay(bubble, newState, delay) {
+    return setTimeout(() => {
+        bubble.dataset.state = newState;
+    }, delay);
+}
+
 class MockVisualizer {
     constructor(config = {}) {
         this.config = {
             fftSize: config.fftSize || 256,
-            barCount: config.barCount || 32,
+            barCount: config.barCount || 64,
             className: config.className || '',
             color: config.color || '--vf-primary',
             xOffset: config.xOffset || 0, // Add x-offset to config
@@ -203,7 +214,7 @@ class MockVisualizer {
         for (let i = 0; i < this.config.barCount; i++) {
             const normalizedI = i / (this.config.barCount - 1);
             var decay = (this.config.barCount - i) / this.config.barCount;
-            const amplitude = 0.01 + decay * 0.05 * Math.pow(Math.sin(normalizedI * Math.PI * 2), 2);
+            const amplitude = 0.01; // + decay * 0.005 * Math.pow(Math.sin(normalizedI * Math.PI * 2), 2);
             heights.push(amplitude * 0.5); // Reduced amplitude for idle state
         }
         return heights;
@@ -348,14 +359,97 @@ class MockTTS {
             color: '--vf-secondary',
             xOffset: 0.5
         });
-        this.bubbles = document.querySelectorAll('.bubble');
         this.queue = [];
+        this.bubbles = [];
         this.agentAudio = new Audio('mockaudio/agent1.mp3');
         this.agentText = '';
 
         // Mount the visualizer
         const container = document.querySelector('.visualizer');
         this.visualizer.mount(container);
+
+        this.stateTransitionTimers = [];
+        this.bubbleContainer = document.querySelector('.speech-bubbles');
+        this.items = []; // Track items and their states
+    }
+    clearStateTimers() {
+        this.stateTransitionTimers.forEach(timer => clearTimeout(timer));
+        this.stateTransitionTimers = [];
+    }
+
+    createBubble() {
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        this.bubbleContainer.appendChild(bubble);
+        return bubble;
+    }
+    async queueNormal() {
+        const bubble = this.createBubble();
+        bubble.dataset.state = 'requesting';
+
+        // Requesting -> Queued
+        this.stateTransitionTimers.push(
+            transitionBubbleToStateAfterDelay(bubble, 'queued', REQUEST_TO_QUEUED_DELAY)
+        );
+
+        // Add to queue for processing
+        this.queue.push(bubble);
+
+        // Start processing queue if not already running
+        setTimeout(() => this.processQueue(), QUEUED_TO_PLAYING_DELAY);
+    }
+
+    async processQueue() {
+        if (this.isPlaying || this.queue.length === 0) return;
+
+        const bubble = this.queue[0];
+        this.isPlaying = true;
+
+        // Transition to playing state
+        bubble.dataset.state = 'playing';
+
+        // Play the audio
+        this.agentAudio.currentTime = 0;
+        await this.visualizer.setMode('playing', this.agentAudio);
+        await this.agentAudio.play();
+
+        // Wait for audio to complete
+        await new Promise(resolve => {
+            this.agentAudio.onended = resolve;
+        });
+
+        // Transition to completed state
+        bubble.dataset.state = 'completed';
+        await this.visualizer.setMode('idle');
+
+        // Remove from queue
+        this.queue.shift();
+        this.isPlaying = false;
+
+        // Process next item if any
+        if (this.queue.length > 0) {
+            setTimeout(() => this.processQueue(), QUEUED_TO_PLAYING_DELAY);
+        }
+    }
+
+    queueFail() {
+        const bubble = this.createBubble();
+        bubble.dataset.state = 'requesting';
+
+        // Requesting -> Error
+        this.stateTransitionTimers.push(
+            transitionBubbleToStateAfterDelay(bubble, 'error', REQUEST_TO_QUEUED_DELAY)
+        );
+    }
+
+
+    cleanup() {
+        this.clearStateTimers();
+        // Remove all bubbles
+        while (this.bubbleContainer.firstChild) {
+            this.bubbleContainer.removeChild(this.bubbleContainer.firstChild);
+        }
+        this.items = [];
     }
 
     async loadAgentText() {
@@ -380,30 +474,44 @@ class MockTTS {
         setTimeout(() => this.processQueue(), 500);
     }
 
+    // Helper function to make state transitions clearer
+
+
     async processQueue() {
-        if (this.queue.length > 0) {
-            const text = this.queue[0];
-            this.updateBubbleStates('playing');
+        // If something is playing, don't process
+        if (this.isPlaying) return;
 
-            this.agentAudio.currentTime = 0;
-            await this.agentAudio.play();
-            await this.visualizer.setMode('playing', this.agentAudio);
+        // Find the next queued item
+        const nextBubble = Array.from(this.bubbleContainer.children)
+            .find(bubble => bubble.dataset.state === 'queued');
 
-            await new Promise(resolve => {
-                this.agentAudio.onended = resolve;
-            });
+        if (!nextBubble) return; // No queued items to process
 
-            this.queue.shift();
-            this.updateBubbleStates();
-            await this.visualizer.setMode('idle');
-        }
+        this.isPlaying = true;
+
+        // Start playing
+        nextBubble.dataset.state = 'playing';
+        this.agentAudio.currentTime = 0;
+        await this.visualizer.setMode('playing', this.agentAudio);
+        await this.agentAudio.play();
+
+        // Schedule transition to completed
+        this.stateTransitionTimers.push(
+            transitionBubbleToStateAfterDelay(nextBubble, 'completed', PLAYING_TO_COMPLETED_DELAY)
+        );
+
+        // After audio finishes
+        await new Promise(resolve => {
+            this.agentAudio.onended = () => {
+                this.isPlaying = false;
+                this.visualizer.setMode('idle');
+                // Try to process next item
+                this.processQueue();
+                resolve();
+            };
+        });
     }
 
-    simulateError() {
-        const errorBubble = this.bubbles[Math.floor(Math.random() * this.bubbles.length)];
-        errorBubble.dataset.state = 'error';
-        setTimeout(() => this.updateBubbleStates(), 2000);
-    }
 
     updateBubbleStates(state = null) {
         this.bubbles.forEach((bubble, index) => {
@@ -427,18 +535,11 @@ function addTestControls() {
             <h4>Speech-to-Text Simulation</h4>
             <button onclick="mockSTT.startRecording()">Start Recording</button>
             <button onclick="mockSTT.stopRecording()">Stop Recording</button>
-            <button onclick="mockSTT.simulateInterimResults()">Simulate Interim Results</button>
-            <select id="sttQuality">
-                <option value="good">Good Recognition</option>
-                <option value="medium">Medium Quality</option>
-                <option value="poor">Poor Recognition</option>
-            </select>
         </div>
         <div class="test-section">
             <h4>Text-to-Speech Simulation</h4>
-            <button onclick="mockTTS.queueSpeech('Short test message')">Queue Short Message</button>
-            <button onclick="mockTTS.queueSpeech('This is a longer message that will take more time to process and play through the system.')">Queue Long Message</button>
-            <button onclick="mockTTS.simulateError()">Simulate TTS Error</button>
+            <button onclick="mockTTS.queueNormal()">Queue Normal</button>
+            <button onclick="mockTTS.queueFail()">Queue Fail</button>
         </div>
     `;
     document.body.appendChild(panel);

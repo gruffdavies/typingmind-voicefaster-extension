@@ -1,0 +1,109 @@
+
+  /* Demo page styles */
+  body {
+    margin: 0;
+    padding: 2rem;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a1a;
+    color: white;
+  }
+
+  .theme-demo {
+    max-width: 60rem;
+    margin: 0 auto;
+  }
+
+  .color-section {
+    margin: 2rem 0;
+  }
+
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+
+  .color-block {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    min-height: 5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .color-name {
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .color-value {
+    font-family: monospace;
+    font-size: 0.75rem;
+    opacity: 0.8;
+  }
+
+  /* Demo components */
+  .button-demo {
+    display: flex;
+    gap: 1rem;
+    margin: 1rem 0;
+    padding: 1rem;
+    background: var(--vf-surface);
+    border-radius: 0.5rem;
+  }
+
+  .demo-button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .demo-button.primary {
+    background: var(--vf-cta-bg);
+    color: var(--vf-cta-text);
+  }
+
+  .demo-button.secondary {
+    background: var(--vf-action-secondary);
+    color: var(--vf-text);
+  }
+
+  .demo-button.destructive {
+    background: var(--vf-destructive-bg);
+    color: var(--vf-destructive-text);
+  }
+
+  .demo-button:hover {
+    background: color-mix(in srgb, var(--vf-cta-bg) 90%, white);
+  }
+
+  .demo-button.destructive:hover {
+    background: color-mix(in srgb, var(--vf-destructive-bg) 90%, white);
+  }
+
+  /* Theme switcher */
+  .theme-controls {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    background: var(--vf-surface);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    backdrop-filter: blur(10px);
+  }
+
+  .color-input {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .color-input label {
+    font-size: 0.875rem;
+  }

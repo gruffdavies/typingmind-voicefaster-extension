@@ -1,0 +1,29 @@
+:root {
+    /* Core Theme Colors - The only colors that need to be set */
+    --vf-accent: #40A9FF;      /* Primary blue - used for text, icons, UI elements */
+    --vf-human: #78FF64;       /* Green for human voice/text */
+    --vf-agent: #FF4040;       /* Red for agent voice */
+
+    /* Derived VoiceFaster UI colors */
+    --vf-text: var(--vf-accent);
+    --vf-text-muted: color-mix(in srgb, var(--vf-accent) 80%, transparent);
+    --vf-surface: rgb(from var(--vf-accent) 0 0 0 / 0.3);
+    --vf-surface-raised: rgb(from var(--vf-accent) 0 0 0 / 0.4);
+
+    /* Action colors */
+    --vf-cta-bg: var(--vf-accent);
+    --vf-cta-text: white;
+    --vf-action-primary: var(--vf-accent);
+    --vf-action-secondary: color-mix(in srgb, var(--vf-accent) 30%, transparent);
+    --vf-action-destructive: rgb(255 64 64);
+    --vf-destructive-bg: var(--vf-action-destructive);
+    --vf-destructive-text: white;
+
+    /* Human voice/text derivatives */
+    --vf-human-bright: var(--vf-human);
+    --vf-human-muted: color-mix(in srgb, var(--vf-human) 60%, transparent);
+
+    /* Agent voice derivatives */
+    --vf-agent-bright: var(--vf-agent);
+    --vf-agent-muted: color-mix(in srgb, var(--vf-agent) 60%, transparent);
+  }

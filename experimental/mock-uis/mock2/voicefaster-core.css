@@ -8,8 +8,8 @@
         'transcript'
         'actions';
     grid-template-rows: auto auto auto minmax(0, auto) auto;
-    min-width: 300px;
-    max-width: 600px;
+    min-width: 18.75rem;  /* 300px */
+    max-width: 37.5rem;   /* 600px */
     overflow: hidden;
     transition: height 0.3s ease-in-out;
 }
@@ -20,12 +20,12 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 12px;
+    padding: 0.5rem 0.75rem;  /* 8px 12px */
 }
 
 .speech-bubbles {
     display: flex;
-    gap: 4px;
+    gap: 0.25rem;  /* 4px */
 }
 
 /* Provider Bar */
@@ -34,16 +34,16 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 12px;
+    padding: 0.5rem 0.75rem;  /* 8px 12px */
 }
 
 /* Visualizer */
 .visualizer {
     grid-area: visualizer;
     aspect-ratio: 16/5;
-    padding: 8px 12px;
+    padding: 0.5rem 0.75rem;  /* 8px 12px */
     background: var(--vf-surface);
-    border-radius: 4px;
+    border-radius: 0.25rem;   /* 4px */
     overflow: hidden;
     /* Ensure proper positioning for canvas */
     position: relative;
@@ -60,7 +60,6 @@
     height: 100%;
 }
 
-
 /* Transcript */
 .transcript {
     grid-area: transcript;
@@ -71,9 +70,9 @@
 }
 
 .transcript.active {
-    max-height: 200px;
+    max-height: 12.5rem;  /* 200px */
     opacity: 1;
-    padding: 8px 12px;
+    padding: 0.5rem 0.75rem;  /* 8px 12px */
 }
 
 /* Actions */
@@ -81,16 +80,16 @@
     grid-area: actions;
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
+    gap: 0.5rem;  /* 8px */
     max-height: 0;
     opacity: 0;
     transition: all 0.3s ease-in-out;
 }
 
 .actions.active {
-    max-height: 50px;
+    max-height: 3.125rem;  /* 50px */
     opacity: 1;
-    padding: 8px 12px;
+    padding: 0.5rem 0.75rem;  /* 8px 12px */
 }
 
 /* State Transitions */
@@ -105,7 +104,7 @@
 }
 
 /* Responsive Behavior */
-@media (max-width: 400px) {
+@media (max-width: 25rem) {  /* 400px */
     .voice-faster {
         min-width: 100%;
     }

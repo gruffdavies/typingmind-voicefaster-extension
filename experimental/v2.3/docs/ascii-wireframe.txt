@@ -1,24 +1,105 @@
-┌─────────────────────────────────────┐
-│ M                            1️⃣ 2️⃣ 3️⃣  │  <- TTS State bubbles
-├─────────────────────────────────────┤
-│  [DeepGram ▼]            ElevenLabs │
-│  ╭───────────────────────────────╮  │
-│  │ ▮▮▮▮▯▯▯▯▮▮▮▮▯▯▯▯ │  │  <- Visualization
-│  │ ▮▮▮▯▯▯▯▮▮▮▯▯▯▯▮▮ │  │
-│  │ ▯▯▯▮▮▮▯▯▯▮▮▮▯▯▯▯ │  │
-│  ╰───────────────────────────────╯  │
-│                                     │
-│  Expanding Transcription area...    │  <- Text 0 lines by default, naturally expanding with transcript.
-│                      [Send] [Clear] │  <- Button line only shows if text is present.
-└─────────────────────────────────────┘
+# Wireframes (ascii)
 
-┌─────────────────────────────────────┐
-│ M                            1️⃣ 2️⃣ 3️⃣  │  <- TTS State bubbles
-├─────────────────────────────────────┤
-│  [DeepGram ▼]            ElevenLabs │
-│  ╭───────────────────────────────╮  │
-│  │ ▮▮▮▮▯▯▯▯▮▮▮▮▯▯▯▯ │  │  <- Visualization
-│  │ ▮▮▮▯▯▯▯▮▮▮▯▯▯▯▮▮ │  │
-│  │ ▯▯▯▮▮▮▯▯▯▮▮▮▯▯▯▯ │  │
-│  ╰───────────────────────────────╯  │
-└─────────────────────────────────────┘
+## Compact View
+╭─────────────────────────────────────╮
+│ [Record]                 1️⃣ 2️⃣ 3️⃣  │ <- TTS Speech bubbles appear here
+│ [DeepGram ▼]            ElevenLabs  │
+│ ╭────────────────────────────────╮  │
+│ │ ▮▮▮▮▯▯▯▯▮▮▮▮▯▯▯▯▮▮▮▯▯▯▯▮▮▮▯▯▯▯ │  │
+│ │ ▮▮▮▯▯▯▯▮▮▮▯▯▯▯▮▮▮▯▯▯▯▮▮▮▯▯▯▯▮▮ │  │
+│ │ ▯▯▯▮▮▮▯▯▯▮▮▮▯▯▯▯▮▮▮▯▯▯▯▮▮▮▯▯▯▯ │  │
+│ ╰────────────────────────────────╯  │
+│  Expanding Transcription area...    │ <- Text 0 lines by default, naturally expanding with transcript.
+│                      [Send] [Clear] │ <- Button line only shows if text is present.
+│ VoiceFaster                v1.0.0β  │
+╰─────────────────────────────────────╯
+
+## Detailed View with class struucture
+
+╭─.vf-container───────────────────────╮
+├─.vf-header──────────────────────────┤
+│ ╭─.vf-controls───────────────────╮  │
+│ │ [Mic]                1️⃣ 2️⃣ 3️⃣ │  │
+│ │ .vf-record-button   .vf-bubbles│  │
+│ ├─.vf-config─────────────────────┤  │
+│ │ [DeepGram ▼]        ElevenLabs │  │
+│ │ .vf-stt-provider    .vf-tts-prv│  │
+│ ╰────────────────────────────────╯  │
+├─.vf-body────────────────────────────┤
+│ ╭─.vf-visualizer─────────────────╮  │
+│ │ ▮▮▮▮▯▯▯▯▮▮▮▮▯▯▯▯▮▮▮▯▯▯▯▮▮▮▯▯▯▯ │  │
+│ │ ▮▮▮▯▯▯▯▮▮▮▯▯▯▯▮▮▮▯▯▯▯▮▮▮▯▯▯▯▮▮ │  │
+│ │ ▯▯▯▮▮▮▯▯▯▮▮▮▯▯▯▯▮▮▮▯▯▯▯▮▮▮▯▯▯▯ │  │
+│ ╰────────────────────────────────╯  │
+│ ╭─.vf-transcript─────────────────╮  │
+│ │ ╭─.vf-transcript-content────╮  │  │
+│ │ │ This is interim text...   │  │  │
+│ │ │ .vf-text--interim         │  │  │
+│ │ │ This is final text        │  │  │
+│ │ │ .vf-text--final           │  │  │
+│ │ ╰───────────────────────────╯  │  │
+│ │ ╭─.vf-transcript-actions────╮  │  │
+│ │ │            [Send] [Clear] │  │  │
+│ │ ╰───────────────────────────╯  │  │
+│ ╰────────────────────────────────╯  │
+├─.vf-footer──────────────────────────┤
+│ VoiceFaster                v1.0.0β  │
+╰─────────────────────────────────────╯
+
+## Class Hierarchy
+
+.vf-container (data-state: recording|playing|idle|error)
+│
+├── .vf-header
+│   ├── .vf-controls
+│   │   ├── .vf-record-button
+│   │   │   ╰── .vf-mic-icon
+│   │   ╰── .vf-tts-bubbles
+│   │       ╰── .vf-tts-bubble (data-state: requesting|queued|playing|completed|error)
+│   │
+│   ╰── .vf-config
+│       ├── .vf-stt-provider
+│       │   ╰── .vf-stt-provider-select
+│       ╰── .vf-tts-provider
+│
+├── .vf-body
+│   ├── .vf-visualizer
+│   │   ╰── .vf-canvas
+│   │       ├── .vf-canvas--human  /* Active during recording */
+│   │       ╰── .vf-canvas--agent  /* Active during playing */
+│   │
+│   ╰── .vf-transcript
+│       ├── .vf-transcript-content
+│       │   ├── .vf-text--interim
+│       │   ╰── .vf-text--final
+│       ╰── .vf-transcript-actions
+│           ├── .vf-button--send
+│           ╰── .vf-button--clear
+│
+╰── .vf-footer
+
+/* Widget states (data-state on root element) control:
+ * - recording:
+ *     - Mic button animation
+ *     - Human canvas visualizer active
+ *     - Transcript showing and updating
+ *     - Actions hidden until recording stops
+ *
+ * - playing:
+ *     - Agent canvas visualizer active
+ *     - Relevant bubble animated
+ *     - Transcript visible but static
+ *     - Actions visible
+ *
+ * - idle:
+ *     - Default state
+ *     - Minimal visualizer animation
+ *     - Transcript visible if contains text
+ *     - Actions visible if transcript has content
+ *
+ * - error:
+ *     - Error indication
+ *     - Provider issues
+ *     - Error message in transcript
+ *     - Actions may be visible depending on error type
+ */
