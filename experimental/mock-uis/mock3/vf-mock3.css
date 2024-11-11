@@ -1,0 +1,257 @@
+:root {
+  /* Core Theme Colors */
+  --vf-widget-neutral: #40A9FF;
+  --vf-widget-primary: #40A9FF;
+  --vf-widget-secondary: #40A9FF;
+  --vf-widget-primary: #40A9FF;
+  /* Primary widget color */
+
+  --vf-human: #78FF64;
+  /* Human speech color */
+  --vf-agent: #FF4040;
+  /* Agent speech color */
+
+  /* Widget Accent Colours */
+  --vf-widget-bright: var(--vf-widget);
+  --vf-widget-muted: color-mix(in srgb, var(--vf-widget) 60%, transparent);
+  --vf-widget-subtle: color-mix(in srgb, var(--vf-widget) 40%, transparent);
+  --vf-widget-ghost: color-mix(in srgb, var(--vf-widget) 20%, transparent);
+
+  /* Surface Colors */
+  --vf-surface: rgb(28 28 28 / 0.85);
+  --vf-surface-raised: rgb(32 32 32 / 0.90);
+  --vf-surface-deep: rgb(38 38 38 / 0.95);
+
+  /* Button Surface Colors */
+  --vf-button-surface: rgb(45 45 45 / 0.95);
+  --vf-button-hover: rgb(55 55 55 / 0.95);
+  --vf-button-active: rgb(65 65 65 / 0.95);
+
+  /* Drag Bar specific */
+  --vf-dragbar-bg: rgb(22 22 22 / 0.95);
+  --vf-dragbar-handle: rgb(128 128 128 / 0.3);
+
+  /* Text Colors - derived from widget color */
+  --vf-text: rgba(255, 255, 255, 0.9);
+  --vf-text-muted: rgba(255, 255, 255, 0.7);
+  --vf-text-dim: rgba(255, 255, 255, 0.5);
+
+
+
+  /* Human Speech Colors */
+  --vf-human-bright: var(--vf-human);
+  --vf-human-muted: color-mix(in srgb, var(--vf-human) 60%, transparent);
+  --vf-human-subtle: color-mix(in srgb, var(--vf-human) 40%, transparent);
+  --vf-human-ghost: color-mix(in srgb, var(--vf-human) 20%, transparent);
+
+  /* Agent Speech Colors */
+  --vf-agent-bright: var(--vf-agent);
+  --vf-agent-muted: color-mix(in srgb, var(--vf-agent) 60%, transparent);
+  --vf-agent-subtle: color-mix(in srgb, var(--vf-agent) 40%, transparent);
+  --vf-agent-ghost: color-mix(in srgb, var(--vf-agent) 20%, transparent);
+
+  /* Button States */
+  --vf-mic-idle: var(--vf-text-muted);
+  --vf-mic-active: var(--vf-human-bright);
+  --vf-tts-idle: var(--vf-text-muted);
+  --vf-tts-active: var(--vf-agent-bright);
+
+  /* Bubble States */
+  --vf-bubble-requesting: white;
+  --vf-bubble-queued: var(--vf-agent-muted);
+  --vf-bubble-playing: var(--vf-agent-bright);
+  --vf-bubble-completed: var(--vf-agent-subtle);
+  --vf-bubble-error: var(--vf-agent);
+  --vf-bubble-stale: var(--vf-text-dim);
+
+  /* Effects */
+  --vf-blur: blur(12px);
+  --vf-shadow: 0 4px 12px rgb(0 0 0 / 0.3);
+  --vf-glow-mic: 0 0 12px var(--vf-human);
+  --vf-glow-tts: 0 0 12px var(--vf-agent);
+  --vf-border: 1px solid rgb(255 255 255 / 0.1);
+
+  /* Timing */
+  --vf-transition-fast: 150ms ease;
+  --vf-transition-normal: 250ms ease;
+
+  /* Layout */
+  --vf-padding-l: 8px;
+  --vf-padding-m: 4px;
+  --vf-padding-s: 2px;
+  --vf-padding-xs: 1px;
+}
+
+/* Main Widget */
+.vf-widget {
+  position: fixed;
+  right: 1rem;
+  top: 1rem;
+  width: 180px;
+  background: var(--vf-surface);
+  backdrop-filter: var(--vf-blur);
+  border: var(--vf-border);
+  border-radius: 8px;
+  box-shadow: var(--vf-shadow);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  z-index: 1000;
+  overflow: visible;
+  padding: var(--vf-padding-xs);
+  min-width: 200px;
+  /* Match Windows 11 size better */
+}
+
+/* Drag Bar */
+.vf-dragbar {
+  background: var(--vf-dragbar-bg);
+  width: 100%;
+  height: 24px;
+  cursor: grab;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 6px 6px 0 0;
+
+}
+
+.vf-dragbar-handle {
+  width: 32px;
+  height: 2px;
+  background: var(--vf-dragbar-handle);
+  border-radius: 2px;
+}
+
+/* Controls */
+.vf-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  gap: 8px;
+}
+
+/* Buttons */
+.vf-button {
+  background: var(--vf-button-surface);
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--vf-transition-fast);
+  position: relative;
+  border-radius: 50%;
+  border: none;
+  color: var(--vf-text-muted);
+  cursor: pointer;
+  justify-content: center;
+}
+
+.vf-button:hover {
+  background: var(--vf-button-hover);
+}
+
+.vf-button:active {
+  background: var(--vf-button-active);
+}
+
+/* Center icons better */
+.vf-button i {
+  font-size: 20px;
+  line-height: 1;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Settings button specifically */
+.vf-settings-btn {
+  width: 36px;
+  height: 36px;
+  background: var(--vf-surface);
+  border-radius: 4px;
+  color: var(--vf-text-muted);
+  border: none;
+  transition: all var(--vf-transition-fast);
+}
+
+.vf-settings-btn:hover {
+  color: var(--vf-text);
+  background: var(--vf-button-hover);
+}
+
+.vf-settings-btn i {
+  font-size: 18px;
+}
+
+/* Visualizers */
+.vf-visualizer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Button States */
+.vf-mic .vf-button[data-state="recording"] {
+  color: var(--vf-mic-active);
+  box-shadow: var(--vf-glow-mic);
+}
+
+.vf-tts .vf-button[data-state="speaking"] {
+  color: var(--vf-tts-active);
+  box-shadow: var(--vf-glow-tts);
+}
+
+/* Info Bar */
+.vf-info {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.7rem;
+  color: var(--vf-widget-subtle);
+}
+
+/* Bubble Tray */
+.vf-bubble-tray {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  flex-wrap: wrap;
+}
+
+.vf-bubble {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: all var(--vf-transition-normal);
+}
+
+/* Bubble States */
+.vf-bubble[data-state="requesting"] {
+  background: var(--vf-bubble-requesting);
+}
+
+.vf-bubble[data-state="queued"] {
+  background: var(--vf-bubble-queued);
+}
+
+.vf-bubble[data-state="playing"] {
+  background: var(--vf-bubble-playing);
+  box-shadow: var(--vf-glow-tts);
+}
+
+.vf-bubble[data-state="completed"] {
+  background: var(--vf-bubble-completed);
+}
+
+.vf-bubble[data-state="error"] {
+  background: var(--vf-bubble-error);
+}
+
+.vf-bubble[data-state="stale"] {
+  background: var(--vf-bubble-stale);
+}

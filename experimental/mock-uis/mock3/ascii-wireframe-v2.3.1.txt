@@ -1,0 +1,220 @@
+# Compact Widget Design
+
+╭──────────────────────╮
+│         ===          │
+│──────────────────────│
+│ ╭─────╮      ╭─────╮ │
+│ │ mic │ [⎔] │ spk │ │ <- Both mic button and agent speech icon double up as visualisers and clickable controls
+│ ╰─────╯      ╰─────╯ │
+│ VoiceFaster   v2.3.0 │ <- Small unobstrusive text
+╰──────────────────────╯
+
+
+## Settings
+
+[⎔] ← click settings icon between mic and speaker to open settings
+
+╭──────────────────────╮
+│ SETTINGS         [X] │
+│──────────────────────│
+│ Human Speech to Text │ <- Settings pertinent to transcription
+│ ──────────────────── │
+│ [DeepGram ▼]        │ <- Choose DpepGram, WebSpeech
+│ [x] TTS Staging Area │ <- turns on/off staging area
+│ ──────────────────── │
+│ Agent Text To Speech │ <- Settings pertinent to speech synthesis
+│ ──────────────────── │
+│ [ElevenLabs ▼]      │ <- Choose Service (paid) or WebSpeech (free, local)
+│ [x] Show History Bbls│ <- turns off bubbles display
+│ [2] Bubble Lines     │ <- wraps lines when line 1 is full
+│ [9] Keep last N      │ <- Audio is purged, FIFO buffer Length N
+╰──────────────────────╯
+
+
+## Widget States
+
+/* Box Styles:
+ * ╭────╮  Single line = Inactive
+ * │    │
+ * ╰────╯
+ *
+ * ╔════╗  Double line = Active
+ * ║    ║
+ * ╚════╝
+ *
+ * Visualizer Patterns:
+ *  -    → Idle state
+ * ≡Ξ≡   → Active/animating state
+*/
+
+# Idle State
+╭──────────────────────╮
+│         ====         │ <- drag handle and bar
+│──────────────────────│
+│ ╭─────╮      ╭─────╮ │
+│ │  M  │ [⎔] │  -  │ │ <- Mic button and some agent speech icon suitable for idle state
+│ ╰─────╯      ╰─────╯ │
+│ VoiceFaster   v2.3.0 │ <- Small unobstrusive text
+╰──────────────────────╯
+
+⎔ = settings symbol (cog or other)
+
+# Recording State
+╭──────────────────────╮
+│        ====          │
+│──────────────────────│
+│ ╔═════╗      ╭─────╮ │
+│ ║ ≡Ξ≡ ║ [⎔] │  -  │ │ <- Mic button pulses when active and visualiser inside shows audio
+│ ╚═════╝      ╰─────╯ │
+│ VoiceFaster   v2.3.0 │
+╰──────────────────────╯
+
+## Transcript Staging Area (optional) Appears whenever transcription text appears or is present, if enabled
+
+╭───────────────────────────────────────────╮
+│ Transcript                            [×] │ <- Close button
+├───────────────────────────────────────────┤
+│ This is some speech that was recognized   │
+│ and can show interim and final results.   │
+│                                           │ <- 3 lines to start, expands if needed growing down
+│                            [Send] [Clear] │ <- always fixed to bottom right
+╰───────────────────────────────────────────╯
+
+Send sends the speech to the specified target.
+Clear empties the transcript, stops mic and closes the transcript window.
+Close closes the transcript window with or without text in it.
+
+
+# Agent Speaking
+
+╭──────────────────────╮
+│        ====          │
+│──────────────────────│
+│ ╭─────╮      ╔═════╗ │
+│ │  M  │ [⎔] ║  ⚪ ║ │ <- First requested bubble starts here until speech starts (or error)
+│ ╰─────╯      ╚═════╝ │
+│ VoiceFaster     ↓   │ <- first bubble then animates down onto bubble line on or below bottom border
+╰─────────────────🔵──╯  <- Bubbles support Hover/long touch to show state, and click/touch to replay/stop etc
+
+This should help user understand intuitively what the bubble is/means/can do.
+
+/* States & Interactions:
+ * ⚪ Requested
+ * ⭕ Queued (Ready to play, but not playing)
+ * 🟢 - Played
+ * 🔵 - Playing
+ * 🔴 - Error state
+*/
+
+# Subsequent Queued Requests
+
+Appear below the bubble line immediately (or maybe drop down from speaker immediately in whatever state)
+This is probably more consistent actually, maybe this is what all bubbles should do.
+It's also easier to code.
+That said, no animation at all may be just as clear. Will add animation if unclear.
+
+╭──────────────────────╮
+│        ====          │
+│──────────────────────│
+│ ╭─────╮      ╔═════╗ │
+│ │  M  │ [⎔] ║ ≡Ξ≡ ║ │ <- visualisation shows here for currently playing speech
+│ ╰─────╯      ╚═════╝ │
+│ VoiceFaster   v2.3.0 │
+╰──🟢🟢🟢🟢🔵⭕⭕──╯ <- Source Stream Bubble also shows playing state, as more may be queued during speech
+
+
+╭──────────────────────╮
+│        ====          │
+│──────────────────────│
+│ ╭─────╮      ╔═════╗ │
+│ │  M  │ [⎔] ║ ≡Ξ≡ ║ │ ← playing (may have additional property like dull colour to indicate old speech)
+│ ╰─────╯      ╚═════╝ │
+│ VoiceFaster   v2.3.0 │
+╰─🟢🔵🟢🟢🟢🟢🟢──╯ <- When clicked, older agent speech is replayed and playing bubble pulses. Click to stop.
+     ↑
+ this guy pulses too
+
+
+╭──────────────────────╮
+│        ====          │
+│──────────────────────│
+│ ╭─────╮      ╭─────╮ │
+│ │  M  │ [⎔] │  -  │ │
+│ ╰─────╯      ╰─────╯ │
+│ VoiceFaster   v2.3.0 │
+╰─🟢🟢🟢🟢🟢🟢🟢──╯
+             🟢🔴🟢    <- Bubble lines wrap N below, outside widget, as specified in settings (it doesn't grow).
+
+## Styles
+
+# Main Widget
+╭─.vf-widget────────────────────╮
+│ ╭─.vf-dragbar───────────────╮ │
+│ │         ====              │ │
+│ ├─.vf-controls─────────────-┤ │
+│ │ ╭─.vf-mic─╮   ╭─.vf-tts─╮ │ │
+│ │ │ btn+viz │   │ btn+viz │ │ │
+│ │ ╰─────────╯   ╰─────────╯ │ │
+│ │      .vf-settings-btn      │ │
+│ ├─.vf-info──────────────────┤ │
+│ │ VoiceFaster        v2.3.1 │ │
+│ ╰─.vf-bubble-tray───────────╯ │
+╰────────────────────────────────╯
+
+# Settings Panel
+╭─.vf-settings─────────────────╮
+│ .vf-settings-header         │
+├──────────────────────────────┤
+│ .vf-settings-section        │
+│ ├─.vf-settings-title        │
+│ └─.vf-settings-controls     │
+│    └─.vf-settings-item      │
+├──────────────────────────────┤
+│ .vf-settings-section        │
+│ ├─.vf-settings-title        │
+│ └─.vf-settings-controls     │
+│    └─.vf-settings-item      │
+╰──────────────────────────────╯
+
+# Transcript Staging
+╭─.vf-transcript──────────────╮
+│ .vf-transcript-header      │
+├────────────────────────────┤
+│ .vf-transcript-content     │
+│ ├─.vf-text--interim        │
+│ └─.vf-text--final          │
+├────────────────────────────┤
+│ .vf-transcript-actions     │
+╰────────────────────────────╯
+
+## Hierarchy
+
+.vf-widget
+  ├── .vf-dragbar
+  ├── .vf-controls
+  │   ├── .vf-mic
+  │   │   ├── .vf-button
+  │   │   └── .vf-visualizer
+  │   ├── .vf-settings-btn
+  │   └── .vf-tts
+  │       ├── .vf-button
+  │       └── .vf-visualizer
+  ├── .vf-info
+  └── .vf-bubble-tray
+      └── .vf-bubble[data-state]
+
+.vf-settings
+  ├── .vf-settings-header
+  └── .vf-settings-section
+      ├── .vf-settings-title
+      └── .vf-settings-controls
+          └── .vf-settings-item
+
+.vf-transcript
+  ├── .vf-transcript-header
+  ├── .vf-transcript-content
+  │   ├── .vf-text--interim
+  │   └── .vf-text--final
+  └── .vf-transcript-actions
+      ├── .vf-button--send
+      └── .vf-button--clear
