@@ -123,7 +123,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--vf-padding-xl);
+  padding: var(--vf-padding-xl) var(--vf-padding-xl) 0;
   gap: 4px;
 }
 
@@ -214,9 +214,12 @@
 .vf-info {
   display: flex;
   justify-content: space-between;
-  padding: 0rem 0.5rem;
   font-size: 0.7rem;
   color: var(--vf-widget-muted);
+  margin-left: 6px;
+  margin-right: 6px;
+  margin-top: 4px;
+  margin-bottom: -6px;
 }
 
 /* Bubble Tray */
