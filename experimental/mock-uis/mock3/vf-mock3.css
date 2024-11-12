@@ -1,10 +1,9 @@
 :root {
   /* Core Theme Colors */
-  --vf-widget-neutral: #40A9FF;
+  --vf-widget-neutral: #f5ede3;
   --vf-widget-primary: #40A9FF;
-  --vf-widget-secondary: #40A9FF;
-  --vf-widget-primary: #40A9FF;
-  /* Primary widget color */
+
+  --vf-widget: var(--vf-widget-primary);
 
   --vf-human: #78FF64;
   /* Human speech color */
@@ -31,12 +30,9 @@
   --vf-dragbar-bg: rgb(22 22 22 / 0.95);
   --vf-dragbar-handle: rgb(128 128 128 / 0.3);
 
-  /* Text Colors - derived from widget color */
-  --vf-text: rgba(255, 255, 255, 0.9);
-  --vf-text-muted: rgba(255, 255, 255, 0.7);
-  --vf-text-dim: rgba(255, 255, 255, 0.5);
-
-
+  --vf-text: var(--vf-widget-neutral);
+  --vf-text-muted: color-mix(in srgb, var(--vf-widget-neutral) 60%, transparent);
+  --vf-text-dim: color-mix(in srgb, var(--vf-widget-neutral) 40%, transparent);
 
   /* Human Speech Colors */
   --vf-human-bright: var(--vf-human);
@@ -51,9 +47,9 @@
   --vf-agent-ghost: color-mix(in srgb, var(--vf-agent) 20%, transparent);
 
   /* Button States */
-  --vf-mic-idle: var(--vf-text-muted);
+  --vf-mic-idle: var(--vf-human-muted);
   --vf-mic-active: var(--vf-human-bright);
-  --vf-tts-idle: var(--vf-text-muted);
+  --vf-tts-idle: var(--vf-agent-muted);
   --vf-tts-active: var(--vf-agent-bright);
 
   /* Bubble States */
@@ -76,6 +72,7 @@
   --vf-transition-normal: 250ms ease;
 
   /* Layout */
+  --vf-padding-xl: 12px;
   --vf-padding-l: 8px;
   --vf-padding-m: 4px;
   --vf-padding-s: 2px;
@@ -87,7 +84,7 @@
   position: fixed;
   right: 1rem;
   top: 1rem;
-  width: 180px;
+  width: 160px;
   background: var(--vf-surface);
   backdrop-filter: var(--vf-blur);
   border: var(--vf-border);
@@ -97,7 +94,7 @@
   z-index: 1000;
   overflow: visible;
   padding: var(--vf-padding-xs);
-  min-width: 200px;
+  min-width: 160px;
   /* Match Windows 11 size better */
 }
 
@@ -126,8 +123,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px;
-  gap: 8px;
+  padding: var(--vf-padding-xl);
+  gap: 4px;
 }
 
 /* Buttons */
@@ -145,6 +142,14 @@
   color: var(--vf-text-muted);
   cursor: pointer;
   justify-content: center;
+}
+
+.vf-button-mic {
+  color: var(--vf-mic-idle);
+}
+
+.vf-button-tts {
+  color: var(--vf-tts-idle);
 }
 
 .vf-button:hover {
@@ -178,7 +183,6 @@
 
 .vf-settings-btn:hover {
   color: var(--vf-text);
-  background: var(--vf-button-hover);
 }
 
 .vf-settings-btn i {
@@ -210,9 +214,9 @@
 .vf-info {
   display: flex;
   justify-content: space-between;
-  padding: 0.25rem 0.5rem;
+  padding: 0rem 0.5rem;
   font-size: 0.7rem;
-  color: var(--vf-widget-subtle);
+  color: var(--vf-widget-muted);
 }
 
 /* Bubble Tray */
