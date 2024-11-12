@@ -108,7 +108,18 @@
   justify-content: center;
   align-items: center;
   border-radius: 6px 6px 0 0;
+  position: relative;  /* For canvas positioning */
+  overflow: hidden;    /* Keep visualization inside border radius */
+}
 
+.vf-dragbar-viz {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;  /* Allow drag events to pass through */
+  opacity: 0.4;         /* Make visualization subtle */
 }
 
 .vf-dragbar-handle {
@@ -116,7 +127,10 @@
   height: 2px;
   background: var(--vf-dragbar-handle);
   border-radius: 2px;
+  position: relative;  /* Keep handle above visualization */
+  z-index: 2;
 }
+
 
 /* Controls */
 .vf-controls {
@@ -130,18 +144,19 @@
 /* Buttons */
 .vf-button {
   background: var(--vf-button-surface);
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: all var(--vf-transition-fast);
-  position: relative;
   border-radius: 50%;
   border: none;
   color: var(--vf-text-muted);
   cursor: pointer;
   justify-content: center;
+  position: relative;
+  overflow: hidden;  /* Keep visualization inside circle */
 }
 
 .vf-button-mic {
@@ -152,8 +167,14 @@
   color: var(--vf-tts-idle);
 }
 
+/* Add hover effects */
 .vf-button:hover {
   background: var(--vf-button-hover);
+}
+
+.vf-button:active {
+  transform: scale(0.95);
+  background: var(--vf-button-active);
 }
 
 .vf-button:active {
@@ -162,18 +183,37 @@
 
 /* Center icons better */
 .vf-button i {
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  z-index: 2;  /* Keep icon above canvas */
+}
+
+/* Listening Animation */
+@keyframes listening-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(120, 255, 100, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(120, 255, 100, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(120, 255, 100, 0);
+  }
+}
+
+.vf-mic .vf-button[data-state="recording"] {
+  color: var(--vf-mic-active);
+  animation: listening-pulse 2s infinite;
 }
 
 /* Settings button specifically */
 .vf-settings-btn {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   background: var(--vf-surface);
   border-radius: 4px;
   color: var(--vf-text-muted);
@@ -183,10 +223,11 @@
 
 .vf-settings-btn:hover {
   color: var(--vf-text);
+  background: var(--vf-surface-deep);
 }
 
 .vf-settings-btn i {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 /* Visualizers */
@@ -197,6 +238,7 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
+  z-index: 1;  /* Between button background and icon */
 }
 
 /* Button States */

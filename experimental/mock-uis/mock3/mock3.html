@@ -15,15 +15,17 @@
     <div class="vf-widget" data-state="idle">
         <!-- Drag Bar -->
         <div class="vf-dragbar">
+            <canvas class="vf-dragbar-viz"></canvas>
             <div class="vf-dragbar-handle"></div>
         </div>
+
 
         <!-- Controls -->
         <div class="vf-controls">
             <div class="vf-mic">
-                <button class="vf-button" data-state="idle">
-                    <i class="bi bi-mic-fill vf-button-mic"></i>
+                <button class="vf-button" id="vf-mic-button" data-state="idle">
                     <canvas class="vf-visualizer vf-visualizer--human"></canvas>
+                    <i class="bi bi-mic-fill vf-button-mic"></i>
                 </button>
             </div>
 
@@ -32,9 +34,9 @@
             </button>
 
             <div class="vf-tts">
-                <button class="vf-button" data-state="idle">
-                    <i class="bi bi-volume-up-fill vf-button-tts"></i>
+                <button class="vf-button" id="vf-tts-button" data-state="idle">
                     <canvas class="vf-visualizer vf-visualizer--agent"></canvas>
+                    <i class="bi bi-volume-up-fill vf-button-tts"></i>
                 </button>
             </div>
         </div>
@@ -116,18 +118,32 @@
                     className: 'human-speech',
                     color: '--vf-human',
                     xOffset: 0,
-                    barCount: 32 // Reduced for smaller size
-                }).mount(document.querySelector('.vf-mic .vf-visualizer'));
+                    barCount: 8,  // Reduced for better performance
+                    fftSize: 2048  // Increased for better resolution
+                }).mount(document.querySelector('#vf-mic-button'));  // Mount directly to button
 
                 const ttsVisualizer = new MockVisualizer({
                     className: 'agent-speech',
                     color: '--vf-agent',
                     xOffset: 0,
-                    barCount: 32
-                }).mount(document.querySelector('.vf-tts .vf-visualizer'));
+                    barCount: 8,
+                    fftSize: 2048
+                }).mount(document.querySelector('#vf-tts-button'));  // Mount directly to button
 
+                // Pass visualizers to constructors
                 window.mockSTT = new MockSTT(micVisualizer);
                 window.mockTTS = new MockTTS(ttsVisualizer);
+
+                // Add click handler for mic button
+                const micButton = document.getElementById('vf-mic-button');
+                micButton.addEventListener('click', () => {
+                    const currentState = micButton.dataset.state;
+                    if (currentState === 'idle') {
+                        mockSTT.startRecording();
+                    } else {
+                        mockSTT.stopRecording();
+                    }
+                });
 
                 // Make widget draggable
                 makeDraggable(document.querySelector('.vf-widget'), '.vf-dragbar');
