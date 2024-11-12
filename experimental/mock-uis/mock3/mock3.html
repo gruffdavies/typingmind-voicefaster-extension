@@ -15,8 +15,8 @@
     <div class="vf-widget" data-state="idle">
         <!-- Drag Bar -->
         <div class="vf-dragbar">
-            <canvas class="vf-dragbar-viz"></canvas>
             <div class="vf-dragbar-handle"></div>
+            <canvas class="vf-dragbar-viz"></canvas>
         </div>
 
 
@@ -112,31 +112,46 @@
     <script src="mock.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const iconXAxisPos = 0;
+            const iconYAxisPos = 0.5;
+            // const xAxisLeft = 0;
+
+            // const yAxisCentre = 0.5;
+            // const yAxisBottom = 0;
+            const iconsVizBarCount = 16;
+            const handleBarVizBarCount = 32;
             try {
                 // Initialize visualizers inside the buttons
                 const micVisualizer = new MockVisualizer({
                     className: 'human-speech',
                     color: '--vf-human',
-                    xOffset: 0,
-                    barCount: 8,
-                    fftSize: 2048
+                    barCount: iconsVizBarCount,
+                    fftSize: 128,
+                    xAxisPos: iconXAxisPos,
+                    yAxisPos: iconYAxisPos,
+                    xOffset: 0
                 }).mount(document.querySelector('#vf-mic-button'));
+
+                const ttsVisualizer = new MockVisualizer({
+                    className: 'agent-speech',
+                    color: '--vf-agent',
+                    barCount: iconsVizBarCount,
+                    fftSize: 2048,
+                    xAxisPos: iconXAxisPos,
+                    yAxisPos: iconYAxisPos,
+                    xOffset: (1/iconsVizBarCount)
+                }).mount(document.querySelector('#vf-tts-button'));
 
                 // Initialize drag bar visualizer
                 const dragBarVisualizer = new MockVisualizer({
                     className: 'dragbar-viz',
                     color: '--vf-widget',
-                    barCount: 32,
-                    fftSize: 2048
+                    barCount: handleBarVizBarCount,
+                    fftSize: 2048,
+                    xAxisPos: 0,
+                    yAxisPos: 1,
+                    xOffset: 0
                 }).mount(document.querySelector('.vf-dragbar'));
-
-                const ttsVisualizer = new MockVisualizer({
-                    className: 'agent-speech',
-                    color: '--vf-agent',
-                    xOffset: 0,
-                    barCount: 8,
-                    fftSize: 2048
-                }).mount(document.querySelector('#vf-tts-button'));
 
                 // Initialize mockSTT and mockTTS ONCE with correct parameters
                 window.mockSTT = new MockSTT(micVisualizer, dragBarVisualizer);  // Pass both visualizers
@@ -169,44 +184,67 @@
             }
         });
 
-        function makeDraggable(element, handle) {
-            const dragHandle = element.querySelector(handle);
-            let isDragging = false;
-            let currentX;
-            let currentY;
-            let initialX;
-            let initialY;
-            let xOffset = 0;
-            let yOffset = 0;
+function makeDraggable(element, handle) {
+    const dragHandle = element.querySelector(handle);
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+    let xOffset = 0;
+    let yOffset = 0;
 
-            dragHandle.addEventListener('mousedown', dragStart);
-            document.addEventListener('mousemove', drag);
-            document.addEventListener('mouseup', dragEnd);
+    // Add touch event handlers
+    dragHandle.addEventListener('touchstart', dragStart, { passive: false });
+    document.addEventListener('touchmove', drag, { passive: false });
+    document.addEventListener('touchend', dragEnd);
 
-            function dragStart(e) {
-                initialX = e.clientX - xOffset;
-                initialY = e.clientY - yOffset;
-                if (e.target === dragHandle) {
-                    isDragging = true;
-                }
-            }
+    // Mouse event handlers
+    dragHandle.addEventListener('mousedown', dragStart, { passive: false });
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', dragEnd);
 
-            function drag(e) {
-                if (isDragging) {
-                    e.preventDefault();
-                    currentX = e.clientX - initialX;
-                    currentY = e.clientY - initialY;
-                    xOffset = currentX;
-                    yOffset = currentY;
-                    element.style.transform =
-                        `translate(${currentX}px, ${currentY}px)`;
-                }
-            }
+    function dragStart(e) {
+        const event = e.type === 'mousedown' ? e : e.touches[0];
+        initialX = event.clientX - xOffset;
+        initialY = event.clientY - yOffset;
 
-            function dragEnd() {
-                isDragging = false;
-            }
+        if (e.target === dragHandle || dragHandle.contains(e.target)) {
+            isDragging = true;
+            e.preventDefault();
         }
+    }
+
+    function drag(e) {
+        if (isDragging) {
+            e.preventDefault();
+            const event = e.type === 'mousemove' ? e : e.touches[0];
+
+            currentX = event.clientX - initialX;
+            currentY = event.clientY - initialY;
+
+            // Constrain to viewport
+            const rect = element.getBoundingClientRect();
+            const maxX = window.innerWidth - rect.width;
+            const maxY = window.innerHeight - rect.height;
+
+            // Allow full range of horizontal movement (negative to maxX)
+            currentX = Math.min(currentX, maxX);
+            // Allow full range of vertical movement (negative to maxY)
+            currentY = Math.min(currentY, maxY);
+
+            xOffset = currentX;
+            yOffset = currentY;
+
+            element.style.transform = `translate(${currentX}px, ${currentY}px)`;
+        }
+    }
+
+    function dragEnd() {
+        isDragging = false;
+    }
+}
+
     </script>
 </body>
 

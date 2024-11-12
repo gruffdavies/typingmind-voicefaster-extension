@@ -156,7 +156,6 @@
   cursor: pointer;
   justify-content: center;
   position: relative;
-  overflow: hidden;  /* Keep visualization inside circle */
 }
 
 .vf-button-mic {

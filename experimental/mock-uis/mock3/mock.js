@@ -47,9 +47,17 @@ class MockVisualizer {
             barCount: config.barCount || 64,
             className: config.className || '',
             color: config.color || '--vf-accent',
-            xOffset: config.xOffset || 0,
+            xAxisPos: config.xAxisPos,
+            xOffset: config.xOffset,
+            yAxisPos: config.yAxisPos,
+            heightScale: config.heightScale || 1,
             ...config
         };
+
+        // check for null - validate mandatory without defaults
+        if (this.config.xAxisPos == null || this.config.yAxisPos == null || this.config.xOffset === null) {
+            throw new Error(`xAxisPos (${this.config.xAxisPos}), yAxisPos (${this.config.yAxisPos}), and xOffset (${this.config.xOffset}) are mandatory`);
+        }
 
         this.container = null;
         this.canvas = null;
@@ -60,6 +68,9 @@ class MockVisualizer {
         this.dataArray = null;
         this.animationFrame = null;
         this.isInitialized = false;
+
+        // Add visualization parameters
+        this.vizParams = null;
     }
 
     createCanvas() {
@@ -157,13 +168,6 @@ class MockVisualizer {
 
 
 
-
-
-
-    handleResize() {
-        if (!this.isInitialized) return;
-        this.initializeCanvas();
-    }
     async setMode(mode, stream = null) {
         if (mode === this.mode && !stream) return;
 
@@ -218,64 +222,23 @@ class MockVisualizer {
 
 
 
-    // drawWaveform(heights) {
-    //     if (!this.ctx) return;
+    // Private method to compute visualization parameters
+    #computeVizParams() {
+        if (!this.ctx || !this.canvasWidth || !this.canvasHeight) return null;
 
-    //     const centerX = this.canvasWidth / 2;
-    //     const centerY = this.canvasHeight / 2;
-    //     const minRadius = (Math.min(this.canvasWidth, this.canvasHeight) / 2) * 0.3; // Base circle
-    //     const maxRadius = (Math.min(this.canvasWidth, this.canvasHeight) / 2) * 0.8; // Max extension
+        const barCount = this.config.barCount;
+        const barWidth = this.canvasWidth / barCount;
+        const xBarOffset = barWidth * this.config.xOffset;
+        const maxHeight = this.canvasHeight * this.config.heightScale;
 
-    //     this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
-
-    //     // Draw base circle
-    //     this.ctx.beginPath();
-    //     this.ctx.strokeStyle = this.getColor(this.config.color);
-    //     this.ctx.lineWidth = 2;
-    //     this.ctx.arc(centerX, centerY, minRadius, 0, Math.PI * 2);
-    //     this.ctx.stroke();
-
-    //     // Draw audio waves
-    //     this.ctx.beginPath();
-    //     heights.forEach((height, i) => {
-    //         const angle = (i / heights.length) * Math.PI * 2;
-    //         const radiusOffset = height * (maxRadius - minRadius);
-    //         const r = minRadius + radiusOffset;
-
-    //         const x = centerX + Math.cos(angle) * r;
-    //         const y = centerY + Math.sin(angle) * r;
-
-    //         if (i === 0) {
-    //             this.ctx.moveTo(x, y);
-    //         } else {
-    //             // Use quadratic curves for smoother lines
-    //             const prevAngle = ((i - 1) / heights.length) * Math.PI * 2;
-    //             const prevHeight = heights[i - 1];
-    //             const prevRadiusOffset = prevHeight * (maxRadius - minRadius);
-    //             const prevRadius = minRadius + prevRadiusOffset;
-
-    //             const cx = centerX + Math.cos((angle + prevAngle) / 2) *
-    //                       ((r + prevRadius) / 2);
-    //             const cy = centerY + Math.sin((angle + prevAngle) / 2) *
-    //                       ((r + prevRadius) / 2);
-
-    //             this.ctx.quadraticCurveTo(cx, cy, x, y);
-    //         }
-    //     });
-
-    //     // Connect back to start for smooth circle
-    //     const firstX = centerX + Math.cos(0) * (minRadius + heights[0] * (maxRadius - minRadius));
-    //     const firstY = centerY + Math.sin(0) * (minRadius + heights[0] * (maxRadius - minRadius));
-    //     this.ctx.quadraticCurveTo(
-    //         centerX + Math.cos(Math.PI * 1.75) * maxRadius,
-    //         centerY + Math.sin(Math.PI * 1.75) * maxRadius,
-    //         firstX,
-    //         firstY
-    //     );
-
-    //     this.ctx.stroke();
-    // }
-
+        return {
+            barWidth,
+            xBarOffset,
+            xStart: (this.canvasWidth * this.config.xAxisPos) + xBarOffset,
+            yAxisPos: this.config.yAxisPos, // Store the raw config value
+            maxHeight,
+        };
+    }
 
     initializeCanvas() {
         const dpr = window.devicePixelRatio || 1;
@@ -287,28 +250,61 @@ class MockVisualizer {
 
         this.canvasWidth = rect.width;
         this.canvasHeight = rect.height;
-    }
 
+        // show all above values to console
+        console.log(`Initialized ${this.config.className} canvas with dims:`, this.canvasWidth, this.canvasHeight);
+
+        // Recompute visualization parameters after canvas resize
+        this.vizParams = this.#computeVizParams();
+        console.log(`Initialized ${this.config.className} canvas with vizParams:`, this.vizParams);
+    }
     drawBars(heights) {
         if (!this.ctx) return;
 
-        const barCount = heights.length;
-        const barWidth = this.canvasWidth / barCount;
-        const maxHeight = this.canvasHeight * 1.8; // 80% of height
+        // Recompute parameters if needed
+        if (!this.vizParams) {
+            this.vizParams = this.#computeVizParams();
+            if (!this.vizParams) return;
+        }
+
+        const { barWidth, xStart, yAxisPos, maxHeight } = this.vizParams;
 
         this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
         this.ctx.fillStyle = this.getColor(this.config.color);
 
         heights.forEach((height, i) => {
             const barHeight = height * maxHeight;
-            const x = 1 + 2 * i * barWidth;
-            const y = (this.canvasHeight - barHeight) / 2; // Center vertically
+            const x = xStart + 2 * i * barWidth;
 
-            // Draw with rounded corners for subtle effect
+            // yAxisPos as anchor point:
+            // 1.0 = bottom of canvas (bars grow up)
+            // 0.0 = top of canvas (bars grow down)
+            // 0.5 = middle of canvas (bars grow from center)
+            let y;
+            if (yAxisPos === 1.0) {
+                // Bottom aligned - bars grow up
+                y = this.canvasHeight - barHeight;
+            } else if (yAxisPos === 0.0) {
+                // Top aligned - bars grow down
+                y = 0;
+            } else {
+                // Center aligned at yAxisPos
+                y = (yAxisPos * this.canvasHeight) - (barHeight / 2);
+            }
+
             this.ctx.beginPath();
-            this.ctx.roundRect(x, y, barWidth * 0.8, barHeight, 2);
+            this.ctx.roundRect(x, y, barWidth, barHeight, 2);
             this.ctx.fill();
         });
+    }
+
+
+
+    handleResize() {
+        if (!this.isInitialized) return;
+        this.initializeCanvas();
+        // vizParams will be recomputed on next draw
+        this.vizParams = null;
     }
 
     updateVisualization() {
