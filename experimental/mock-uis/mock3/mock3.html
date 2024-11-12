@@ -118,9 +118,17 @@
                     className: 'human-speech',
                     color: '--vf-human',
                     xOffset: 0,
-                    barCount: 8,  // Reduced for better performance
-                    fftSize: 2048  // Increased for better resolution
-                }).mount(document.querySelector('#vf-mic-button'));  // Mount directly to button
+                    barCount: 8,
+                    fftSize: 2048
+                }).mount(document.querySelector('#vf-mic-button'));
+
+                // Initialize drag bar visualizer
+                const dragBarVisualizer = new MockVisualizer({
+                    className: 'dragbar-viz',
+                    color: '--vf-widget',
+                    barCount: 32,
+                    fftSize: 2048
+                }).mount(document.querySelector('.vf-dragbar'));
 
                 const ttsVisualizer = new MockVisualizer({
                     className: 'agent-speech',
@@ -128,10 +136,10 @@
                     xOffset: 0,
                     barCount: 8,
                     fftSize: 2048
-                }).mount(document.querySelector('#vf-tts-button'));  // Mount directly to button
+                }).mount(document.querySelector('#vf-tts-button'));
 
-                // Pass visualizers to constructors
-                window.mockSTT = new MockSTT(micVisualizer);
+                // Initialize mockSTT and mockTTS ONCE with correct parameters
+                window.mockSTT = new MockSTT(micVisualizer, dragBarVisualizer);  // Pass both visualizers
                 window.mockTTS = new MockTTS(ttsVisualizer);
 
                 // Add click handler for mic button

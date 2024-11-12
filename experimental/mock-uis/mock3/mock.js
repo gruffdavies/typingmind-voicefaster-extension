@@ -9,6 +9,37 @@ function transitionBubbleToStateAfterDelay(bubble, newState, delay) {
     }, delay);
 }
 
+// Add at the top of mock.js
+const AudioManager = {
+    context: null,
+    sources: new Map(),
+
+    getContext() {
+        if (!this.context) {
+            this.context = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        return this.context;
+    },
+
+    async getSource(stream) {
+        if (!this.context) {
+            this.context = this.getContext();
+        }
+
+        if (stream instanceof HTMLMediaElement) {
+            let source = this.sources.get(stream);
+            if (!source) {
+                source = this.context.createMediaElementSource(stream);
+                this.sources.set(stream, source);
+            }
+            return source;
+        } else if (stream instanceof MediaStream) {
+            return this.context.createMediaStreamSource(stream);
+        }
+        return null;
+    }
+};
+
 class MockVisualizer {
     constructor(config = {}) {
         this.config = {
@@ -25,12 +56,10 @@ class MockVisualizer {
         this.ctx = null;
         this.mode = 'idle';
         this.styles = getComputedStyle(document.documentElement);
-        this.audioContext = null;
         this.analyser = null;
         this.dataArray = null;
         this.animationFrame = null;
         this.isInitialized = false;
-        this.connectedSources = new Map();
     }
 
     createCanvas() {
@@ -126,125 +155,169 @@ class MockVisualizer {
         this.isInitialized = false;
     }
 
-    cleanup() {
-        this.connectedSources.forEach((source) => {
-            source.disconnect();
-        });
-        this.connectedSources.clear();
 
-        if (this.audioContext) {
-            this.audioContext.close();
-            this.audioContext = null;
-        }
-    }
 
-    initializeCanvas() {
-        const dpr = window.devicePixelRatio || 1;
-        // Use button dimensions instead of fixed values
-        const buttonSize = 48; // matches button width/height
-        const padding = 4;  // small padding inside button
-        const size = buttonSize - (padding * 2);
 
-        this.canvas.width = size * dpr;
-        this.canvas.height = size * dpr;
-        this.ctx.scale(dpr, dpr);
-        this.canvasWidth = size;
-        this.canvasHeight = size;
-
-        // Position canvas inside button
-        this.canvas.style.position = 'absolute';
-        this.canvas.style.top = `${padding}px`;
-        this.canvas.style.left = `${padding}px`;
-        this.canvas.style.width = `${size}px`;
-        this.canvas.style.height = `${size}px`;
-        this.canvas.style.pointerEvents = 'none'; // Allow clicks to pass through
-    }
 
 
     handleResize() {
         if (!this.isInitialized) return;
         this.initializeCanvas();
     }
-
     async setMode(mode, stream = null) {
         if (mode === this.mode && !stream) return;
 
         this.mode = mode;
-        this.container.classList.toggle('visualization--expanded',
-            mode === 'listening' || mode === 'playing');
 
         if (stream) {
-            await this.setupAudioAnalysis(stream);
+            try {
+                const context = AudioManager.getContext();
+
+                if (context.state === "suspended") {
+                    await context.resume();
+                }
+
+                // Create and configure analyser
+                this.analyser = context.createAnalyser();
+                this.analyser.fftSize = this.config.fftSize || 2048;
+                this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+
+                // Get shared source
+                const source = await AudioManager.getSource(stream);
+
+                // Connect to analyser
+                source.connect(this.analyser);
+
+                // Connect to destination only for media elements
+                if (stream instanceof HTMLMediaElement) {
+                    source.connect(context.destination);
+                }
+
+                return true;
+            } catch (err) {
+                console.error('Error in setMode:', err);
+                return false;
+            }
+        } else {
+            // Clear analyser when stopping
+            if (this.analyser) {
+                this.analyser.disconnect();
+                this.analyser = null;
+            }
+            this.dataArray = null;
         }
     }
 
-    drawWaveform(heights) {
+    cleanup() {
+        if (this.analyser) {
+            this.analyser.disconnect();
+            this.analyser = null;
+        }
+        this.dataArray = null;
+    }
+
+
+
+    // drawWaveform(heights) {
+    //     if (!this.ctx) return;
+
+    //     const centerX = this.canvasWidth / 2;
+    //     const centerY = this.canvasHeight / 2;
+    //     const minRadius = (Math.min(this.canvasWidth, this.canvasHeight) / 2) * 0.3; // Base circle
+    //     const maxRadius = (Math.min(this.canvasWidth, this.canvasHeight) / 2) * 0.8; // Max extension
+
+    //     this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+
+    //     // Draw base circle
+    //     this.ctx.beginPath();
+    //     this.ctx.strokeStyle = this.getColor(this.config.color);
+    //     this.ctx.lineWidth = 2;
+    //     this.ctx.arc(centerX, centerY, minRadius, 0, Math.PI * 2);
+    //     this.ctx.stroke();
+
+    //     // Draw audio waves
+    //     this.ctx.beginPath();
+    //     heights.forEach((height, i) => {
+    //         const angle = (i / heights.length) * Math.PI * 2;
+    //         const radiusOffset = height * (maxRadius - minRadius);
+    //         const r = minRadius + radiusOffset;
+
+    //         const x = centerX + Math.cos(angle) * r;
+    //         const y = centerY + Math.sin(angle) * r;
+
+    //         if (i === 0) {
+    //             this.ctx.moveTo(x, y);
+    //         } else {
+    //             // Use quadratic curves for smoother lines
+    //             const prevAngle = ((i - 1) / heights.length) * Math.PI * 2;
+    //             const prevHeight = heights[i - 1];
+    //             const prevRadiusOffset = prevHeight * (maxRadius - minRadius);
+    //             const prevRadius = minRadius + prevRadiusOffset;
+
+    //             const cx = centerX + Math.cos((angle + prevAngle) / 2) *
+    //                       ((r + prevRadius) / 2);
+    //             const cy = centerY + Math.sin((angle + prevAngle) / 2) *
+    //                       ((r + prevRadius) / 2);
+
+    //             this.ctx.quadraticCurveTo(cx, cy, x, y);
+    //         }
+    //     });
+
+    //     // Connect back to start for smooth circle
+    //     const firstX = centerX + Math.cos(0) * (minRadius + heights[0] * (maxRadius - minRadius));
+    //     const firstY = centerY + Math.sin(0) * (minRadius + heights[0] * (maxRadius - minRadius));
+    //     this.ctx.quadraticCurveTo(
+    //         centerX + Math.cos(Math.PI * 1.75) * maxRadius,
+    //         centerY + Math.sin(Math.PI * 1.75) * maxRadius,
+    //         firstX,
+    //         firstY
+    //     );
+
+    //     this.ctx.stroke();
+    // }
+
+
+    initializeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = this.container.getBoundingClientRect();
+
+        this.canvas.width = rect.width * dpr;
+        this.canvas.height = rect.height * dpr;
+        this.ctx.scale(dpr, dpr);
+
+        this.canvasWidth = rect.width;
+        this.canvasHeight = rect.height;
+    }
+
+    drawBars(heights) {
         if (!this.ctx) return;
 
-        const centerX = this.canvasWidth / 2;
-        const centerY = this.canvasHeight / 2;
-        const minRadius = (Math.min(this.canvasWidth, this.canvasHeight) / 2) * 0.3; // Base circle
-        const maxRadius = (Math.min(this.canvasWidth, this.canvasHeight) / 2) * 0.8; // Max extension
+        const barCount = heights.length;
+        const barWidth = this.canvasWidth / barCount;
+        const maxHeight = this.canvasHeight * 1.8; // 80% of height
 
         this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+        this.ctx.fillStyle = this.getColor(this.config.color);
 
-        // Draw base circle
-        this.ctx.beginPath();
-        this.ctx.strokeStyle = this.getColor(this.config.color);
-        this.ctx.lineWidth = 2;
-        this.ctx.arc(centerX, centerY, minRadius, 0, Math.PI * 2);
-        this.ctx.stroke();
-
-        // Draw audio waves
-        this.ctx.beginPath();
         heights.forEach((height, i) => {
-            const angle = (i / heights.length) * Math.PI * 2;
-            const radiusOffset = height * (maxRadius - minRadius);
-            const r = minRadius + radiusOffset;
+            const barHeight = height * maxHeight;
+            const x = 1 + 2 * i * barWidth;
+            const y = (this.canvasHeight - barHeight) / 2; // Center vertically
 
-            const x = centerX + Math.cos(angle) * r;
-            const y = centerY + Math.sin(angle) * r;
-
-            if (i === 0) {
-                this.ctx.moveTo(x, y);
-            } else {
-                // Use quadratic curves for smoother lines
-                const prevAngle = ((i - 1) / heights.length) * Math.PI * 2;
-                const prevHeight = heights[i - 1];
-                const prevRadiusOffset = prevHeight * (maxRadius - minRadius);
-                const prevRadius = minRadius + prevRadiusOffset;
-
-                const cx = centerX + Math.cos((angle + prevAngle) / 2) *
-                          ((r + prevRadius) / 2);
-                const cy = centerY + Math.sin((angle + prevAngle) / 2) *
-                          ((r + prevRadius) / 2);
-
-                this.ctx.quadraticCurveTo(cx, cy, x, y);
-            }
+            // Draw with rounded corners for subtle effect
+            this.ctx.beginPath();
+            this.ctx.roundRect(x, y, barWidth * 0.8, barHeight, 2);
+            this.ctx.fill();
         });
-
-        // Connect back to start for smooth circle
-        const firstX = centerX + Math.cos(0) * (minRadius + heights[0] * (maxRadius - minRadius));
-        const firstY = centerY + Math.sin(0) * (minRadius + heights[0] * (maxRadius - minRadius));
-        this.ctx.quadraticCurveTo(
-            centerX + Math.cos(Math.PI * 1.75) * maxRadius,
-            centerY + Math.sin(Math.PI * 1.75) * maxRadius,
-            firstX,
-            firstY
-        );
-
-        this.ctx.stroke();
     }
 
     updateVisualization() {
         if (!this.analyser || !this.dataArray) return;
 
-        // Use fewer frequency bins for smoother animation
-        const frequencyBins = 2 ** 8;  // Increased from 8 for more detail
+        const frequencyBins = 32; // More bars for drag bar width
         const binSize = Math.floor(this.analyser.frequencyBinCount / frequencyBins);
-
-        // Average the frequencies into fewer bins with smoothing
         const heights = new Array(frequencyBins).fill(0);
+
         this.analyser.getByteFrequencyData(this.dataArray);
 
         for (let i = 0; i < frequencyBins; i++) {
@@ -252,14 +325,12 @@ class MockVisualizer {
             for (let j = 0; j < binSize; j++) {
                 sum += this.dataArray[i * binSize + j];
             }
-            // Add smoothing
-            const targetHeight = (sum / binSize) / 255;
-            heights[i] = -2.5 + targetHeight * 1.5; // Reduce amplitude for subtler effect
+            // Smooth and scale the visualization
+            heights[i] = (sum / binSize / 255) * 0.5; // Reduced amplitude
         }
 
-        this.drawWaveform(heights);
+        this.drawBars(heights);
     }
-
 
     startAnimation() {
         const animate = () => {
@@ -281,8 +352,9 @@ class MockVisualizer {
 }
 
 class MockSTT {
-    constructor(visualizer) {  // Accept visualizer as parameter
-        this.visualizer = visualizer;  // Use passed visualizer
+    constructor(buttonViz, dragBarViz) {
+        this.buttonVisualizer = buttonViz;
+        this.dragBarVisualizer = dragBarViz;
         this.isRecording = false;
         this.transcriptInterim = document.querySelector('.vf-text--interim');
         this.transcriptFinal = document.querySelector('.vf-text--final');
@@ -339,7 +411,8 @@ class MockSTT {
 
         this.humanAudio.currentTime = 0;
         await this.humanAudio.play();
-        await this.visualizer.setMode('listening', this.humanAudio);
+        await this.buttonVisualizer.setMode('listening', this.humanAudio);
+        await this.dragBarVisualizer.setMode('listening', this.humanAudio);
 
         this.transcriptIndex = 0;
         this.simulateTranscription();
@@ -377,11 +450,15 @@ class MockSTT {
             clearInterval(this.transcriptInterval);
         }
 
-        await this.visualizer.setMode('idle');
+        await this.buttonVisualizer.setMode('idle');
+        await this.dragBarVisualizer.setMode('idle');
         if (this.transcriptFinal) {
             document.querySelector('.vf-transcript-actions')?.classList.add('active');
         }
     }
+
+
+
 }
 
 
