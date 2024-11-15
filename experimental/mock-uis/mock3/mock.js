@@ -347,117 +347,6 @@ class MockVisualizer {
     }
 }
 
-class MockSTT {
-    constructor(buttonViz, dragBarViz) {
-        this.buttonVisualizer = buttonViz;
-        this.dragBarVisualizer = dragBarViz;
-        this.isRecording = false;
-        this.transcriptInterim = document.querySelector('.vf-text--interim');
-        this.transcriptFinal = document.querySelector('.vf-text--final');
-        this.micButton = document.getElementById('vf-mic-button');
-        this.widget = document.querySelector('.vf-widget');
-
-        this.humanAudio = new Audio('mockaudio/human1.mp3');
-        this.transcriptText = '';
-        this.transcriptIndex = 0;
-        this.transcriptInterval = null;
-    }
-
-    simulateInterimResults() {
-        const quality = document.querySelector('.vf-stt-provider-select').value;
-        const phrases = {
-            good: ["Testing one two three", "Testing one two three four"],
-            medium: ["Testing won too three", "Testing one too three four"],
-            poor: ["Tasting when to free", "Tasting when to three four"]
-        };
-
-        let index = 0;
-        if (this.transcriptInterval) {
-            clearInterval(this.transcriptInterval);
-        }
-
-        this.transcriptInterval = setInterval(() => {
-            if (index < phrases[quality].length) {
-                this.transcriptInterim.textContent = phrases[quality][index];
-                index++;
-            } else {
-                clearInterval(this.transcriptInterval);
-                // Move last interim result to final
-                this.transcriptFinal.textContent = this.transcriptInterim.textContent;
-                this.transcriptInterim.textContent = '';
-            }
-        }, 1000);
-    }
-
-    async loadTranscriptText() {
-        try {
-            const response = await fetch('mockaudio/human1.txt');
-            this.transcriptText = await response.text();
-        } catch (err) {
-            console.error('Error loading transcript:', err);
-            this.transcriptText = "Error loading transcript";
-        }
-    }
-
-    async startRecording() {
-        await this.loadTranscriptText();
-        this.isRecording = true;
-        this.widget.dataset.state = 'recording';
-        this.micButton.dataset.state = 'recording';  // Update mic button state
-
-        this.humanAudio.currentTime = 0;
-        await this.humanAudio.play();
-        await this.buttonVisualizer.setMode('listening', this.humanAudio);
-        await this.dragBarVisualizer.setMode('listening', this.humanAudio);
-
-        this.transcriptIndex = 0;
-        this.simulateTranscription();
-    }
-
-    simulateTranscription() {
-        if (this.transcriptInterval) {
-            clearInterval(this.transcriptInterval);
-        }
-
-        const words = this.transcriptText.split(' ');
-
-        this.transcriptInterval = setInterval(() => {
-            if (this.transcriptIndex < words.length) {
-                const currentText = words.slice(0, this.transcriptIndex + 1).join(' ');
-                this.transcriptInterim.textContent = currentText;
-                this.transcriptIndex++;
-            } else {
-                clearInterval(this.transcriptInterval);
-                // Move completed transcription to final
-                this.transcriptFinal.textContent = this.transcriptInterim.textContent;
-                this.transcriptInterim.textContent = '';
-            }
-        }, 400);
-    }
-
-    async stopRecording() {
-        this.isRecording = false;
-        this.widget.dataset.state = 'idle';
-        this.micButton.dataset.state = 'idle';  // Update mic button state
-
-        this.humanAudio.pause();
-        this.humanAudio.currentTime = 0;
-        if (this.transcriptInterval) {
-            clearInterval(this.transcriptInterval);
-        }
-
-        await this.buttonVisualizer.setMode('idle');
-        await this.dragBarVisualizer.setMode('idle');
-        if (this.transcriptFinal) {
-            document.querySelector('.vf-transcript-actions')?.classList.add('active');
-        }
-    }
-
-
-
-}
-
-
 class MockTTS {
     constructor(visualizer) {  // Accept visualizer as parameter
         this.visualizer = visualizer;  // Use passed visualizer
@@ -623,17 +512,179 @@ class MockTTS {
         });
     }
 }
+class MockSTT {
+    constructor(buttonViz, dragBarViz) {
+        this.buttonVisualizer = buttonViz;
+        this.dragBarVisualizer = dragBarViz;
+        this.isRecording = false;
+
+        this.micButton = document.getElementById('vf-mic-button');
+        this.widget = document.querySelector('.vf-widget');
+
+        this.humanAudio = new Audio('mockaudio/human1.mp3');
+        this.transcriptText = '';
+        this.transcriptIndex = 0;
+        this.transcriptInterval = null;
+
+        // Keep these
+        this.transcript = document.querySelector('.vf-transcript');
+        this.transcriptInterim = document.querySelector('.vf-text--interim');
+        this.transcriptFinal = document.querySelector('.vf-text--final');
+
+        // Setup transcript controls
+        this.setupTranscriptControls();
+
+        // Add mic button click handler
+        this.micButton.addEventListener('click', () => this.toggleRecording());
+    }
+
+    async toggleRecording() {
+        if (this.isRecording) {
+            await this.stopRecording();
+        } else {
+            await this.startRecording();
+        }
+    }
+
+    setupTranscriptControls() {
+        // Close button
+        document.querySelector('.vf-transcript-close').addEventListener('click', () => {
+            this.transcript.hidden = true;
+        });
+
+        // Send button
+        document.querySelector('.vf-button--send').addEventListener('click', () => {
+            this.sendTranscript();
+        });
+
+        // Clear button
+        document.querySelector('.vf-button--clear').addEventListener('click', () => {
+            this.clearTranscript();
+        });
+    }
+    simulateInterimResults() {
+        const quality = document.querySelector('.vf-stt-provider-select').value;
+        const phrases = {
+            good: ["Testing one two three", "Testing one two three four"],
+            medium: ["Testing won too three", "Testing one too three four"],
+            poor: ["Tasting when to free", "Tasting when to three four"]
+        };
+
+        let index = 0;
+        if (this.transcriptInterval) {
+            clearInterval(this.transcriptInterval);
+        }
+
+        this.transcriptInterval = setInterval(() => {
+            if (index < phrases[quality].length) {
+                this.transcriptInterim.textContent = phrases[quality][index];
+                index++;
+            } else {
+                clearInterval(this.transcriptInterval);
+                // Move last interim result to final
+                this.transcriptFinal.textContent = this.transcriptInterim.textContent;
+                this.transcriptInterim.textContent = '';
+            }
+        }, 1000);
+    }
+
+    async loadTranscriptText() {
+        try {
+            const response = await fetch('mockaudio/human1.txt');
+            this.transcriptText = await response.text();
+        } catch (err) {
+            console.error('Error loading transcript:', err);
+            this.transcriptText = "Error loading transcript";
+        }
+    }
+
+    async startRecording() {
+        await this.loadTranscriptText();
+        this.isRecording = true;
+        this.widget.dataset.state = 'recording';
+        this.micButton.dataset.state = 'recording';  // Update mic button state
+
+        this.humanAudio.currentTime = 0;
+        await this.humanAudio.play();
+        await this.buttonVisualizer.setMode('listening', this.humanAudio);
+        await this.dragBarVisualizer.setMode('listening', this.humanAudio);
+
+        this.transcriptIndex = 0;
+        this.simulateTranscription();
+    }
+
+    simulateTranscription() {
+        if (this.transcriptInterval) {
+            clearInterval(this.transcriptInterval);
+        }
+
+        const words = this.transcriptText.split(' ');
+
+        // Show transcript area immediately when starting
+        this.transcript.hidden = false;
+
+        // Clear any previous content
+        this.transcriptInterim.textContent = '';
+        this.transcriptFinal.textContent = '';
+
+        this.transcriptInterval = setInterval(() => {
+            if (this.transcriptIndex < words.length) {
+                const currentText = words.slice(0, this.transcriptIndex + 1).join(' ');
+                this.transcriptInterim.textContent = currentText;
+                this.transcriptIndex++;
+            } else {
+                clearInterval(this.transcriptInterval);
+                // Move completed transcription to final
+                this.transcriptFinal.textContent = this.transcriptInterim.textContent;
+                this.transcriptInterim.textContent = '';
+                // Show send/clear buttons
+                document.querySelector('.vf-transcript-actions').classList.add('active');
+            }
+        }, 400);
+    }
+
+
+    clearTranscript() {
+        this.transcriptInterim.textContent = '';
+        this.transcriptFinal.textContent = '';
+        this.transcriptIndex = 0;
+    }
+
+    sendTranscript() {
+        // For mock, just clear after sending
+        this.clearTranscript();
+        this.transcript.hidden = true;
+    }
+
+    async stopRecording() {
+        this.isRecording = false;
+        this.widget.dataset.state = 'idle';
+        this.micButton.dataset.state = 'idle';  // Update mic button state
+
+        this.humanAudio.pause();
+        this.humanAudio.currentTime = 0;
+        if (this.transcriptInterval) {
+            clearInterval(this.transcriptInterval);
+        }
+
+        await this.buttonVisualizer.setMode('idle');
+        await this.dragBarVisualizer.setMode('idle');
+        if (this.transcriptFinal) {
+            document.querySelector('.vf-transcript-actions')?.classList.add('active');
+        }
+        this.clearTranscript();
+        this.transcript.hidden = true;
+    }
+}
+
+
+
 
 function addTestControls() {
     const panel = document.createElement('div');
     panel.className = 'vf-test-panel';
     panel.innerHTML = `
         <h3>Test Controls</h3>
-        <div class="vf-test-section">
-            <h4>Speech-to-Text Simulation</h4>
-            <button onclick="mockSTT.startRecording()">Start Recording</button>
-            <button onclick="mockSTT.stopRecording()">Stop Recording</button>
-        </div>
         <div class="vf-test-section">
             <h4>Text-to-Speech Simulation</h4>
             <button onclick="mockTTS.queueNormal()">Queue Normal</button>
@@ -643,6 +694,7 @@ function addTestControls() {
     document.body.appendChild(panel);
 }
 
+
 async function testBothStreams() {
     await mockSTT.startRecording();
     setTimeout(() => mockTTS.queueSpeech(true),
@@ -651,18 +703,56 @@ async function testBothStreams() {
 
 // Add to the script section or a separate JS file
 document.addEventListener('DOMContentLoaded', () => {
-    const micButton = document.getElementById('vf-mic-button');
+    try {
+        // Initialize visualizers inside the buttons
+        const micVisualizer = new MockVisualizer({
+            className: 'human-speech',
+            color: '--vf-human',
+            barCount: iconsVizBarCount,
+            fftSize: 128,
+            xAxisPos: iconXAxisPos,
+            yAxisPos: iconYAxisPos,
+            xOffset: 0
+        }).mount(document.querySelector('#vf-mic-button'));
 
-    micButton.addEventListener('click', () => {
-        const currentState = micButton.dataset.state;
-        if (currentState === 'idle') {
-            micButton.dataset.state = 'recording';
-            // Start recording/visualization
-            mockSTT.startRecording();
-        } else {
-            micButton.dataset.state = 'idle';
-            // Stop recording/visualization
-            mockSTT.stopRecording();
-        }
-    });
+        const ttsVisualizer = new MockVisualizer({
+            className: 'agent-speech',
+            color: '--vf-agent',
+            barCount: iconsVizBarCount,
+            fftSize: 2048,
+            xAxisPos: iconXAxisPos,
+            yAxisPos: iconYAxisPos,
+            xOffset: (1/iconsVizBarCount)
+        }).mount(document.querySelector('#vf-tts-button'));
+
+        // Initialize drag bar visualizer
+        const dragBarVisualizer = new MockVisualizer({
+            className: 'dragbar-viz',
+            color: '--vf-widget',
+            barCount: handleBarVizBarCount,
+            fftSize: 2048,
+            xAxisPos: 0,
+            yAxisPos: 1,
+            xOffset: 0
+        }).mount(document.querySelector('.vf-dragbar'));
+
+        // Initialize mockSTT and mockTTS ONCE with correct parameters
+        window.mockSTT = new MockSTT(micVisualizer, dragBarVisualizer);
+        window.mockTTS = new MockTTS(ttsVisualizer);
+
+        // Make widget draggable
+        makeDraggable(document.querySelector('.vf-widget'), '.vf-dragbar');
+
+        // Add settings toggle
+        const settingsBtn = document.querySelector('.vf-settings-btn');
+        const settingsPanel = document.querySelector('.vf-settings');
+        settingsBtn.addEventListener('click', () => {
+            settingsPanel.hidden = !settingsPanel.hidden;
+        });
+
+        addTestControls();
+    } catch (err) {
+        console.error('Error initializing VoiceFaster:', err);
+    }
 });
+

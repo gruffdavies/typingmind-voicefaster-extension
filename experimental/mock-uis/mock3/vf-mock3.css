@@ -81,7 +81,7 @@
 
 /* Main Widget */
 .vf-widget {
-  position: fixed;
+  position: relative;
   right: 1rem;
   top: 1rem;
   width: 160px;
@@ -302,4 +302,91 @@
 
 .vf-bubble[data-state="stale"] {
   background: var(--vf-bubble-stale);
+}
+
+
+
+/* Transcript Area */
+.vf-transcript {
+  background: var(--vf-surface-deep);
+  border-radius: 8px;
+  border: var(--vf-border);
+  position: absolute;
+  top: calc(100% + 8px);  /* Position below widget with 8px gap */
+  left: 0;
+  right: 0;
+  z-index: 1001;  /* Above widget */
+  min-width: 26rem;  /* Match widget width */
+  box-shadow: var(--vf-shadow);
+  overflow: hidden;
+}
+
+.vf-transcript-header {
+  padding: var(--vf-padding-m) var(--vf-padding-l);
+  border-bottom: var(--vf-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.vf-transcript-content {
+  padding: var(--vf-padding-l);
+  min-height: 60px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.vf-text--interim {
+  color: var(--vf-human-muted);
+  font-style: italic;
+}
+
+.vf-text--final {
+  color: var(--vf-human);
+}
+
+.vf-transcript-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--vf-padding-m);
+  padding: var(--vf-padding-m) var(--vf-padding-l);
+  border-top: var(--vf-border);
+}
+
+.vf-transcript[hidden] {
+  display: none;
+}
+/* Add to vf-mock3.css */
+.vf-transcript-actions button {
+  background: var(--vf-button-surface);
+  border: none;
+  color: var(--vf-text);
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--vf-transition-fast);
+}
+
+.vf-transcript-actions button:hover {
+  background: var(--vf-button-hover);
+}
+
+.vf-transcript-close {
+  background: transparent;
+  border: none;
+  color: var(--vf-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  transition: color var(--vf-transition-fast);
+}
+
+.vf-transcript-close:hover {
+  color: var(--vf-text);
+}
+
+/* Make transcript content layout better */
+.vf-transcript-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }

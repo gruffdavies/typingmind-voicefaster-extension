@@ -1,224 +1,217 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VoiceFaster UI</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="testpage.css">
-    <link rel="stylesheet" href="vf-mock3.css">
-</head>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+    <link rel="stylesheet" href="testpage.css" />
+    <link rel="stylesheet" href="vf-mock3.css" />
+  </head>
 
-<body>
+  <body>
     <!-- Main Widget -->
     <div class="vf-widget" data-state="idle">
+      <div class="vf-widget-container">
         <!-- Drag Bar -->
         <div class="vf-dragbar">
-            <div class="vf-dragbar-handle"></div>
-            <canvas class="vf-dragbar-viz"></canvas>
+          <div class="vf-dragbar-handle"></div>
+          <canvas class="vf-dragbar-viz"></canvas>
         </div>
-
 
         <!-- Controls -->
         <div class="vf-controls">
-            <div class="vf-mic">
-                <button class="vf-button" id="vf-mic-button" data-state="idle">
-                    <canvas class="vf-visualizer vf-visualizer--human"></canvas>
-                    <i class="bi bi-mic-fill vf-button-mic"></i>
-                </button>
-            </div>
-
-            <button class="vf-settings-btn">
-                <i class="bi bi-gear"></i>
+          <div class="vf-mic">
+            <button class="vf-button" id="vf-mic-button" data-state="idle">
+              <canvas class="vf-visualizer vf-visualizer--human"></canvas>
+              <i class="bi bi-mic-fill vf-button-mic"></i>
             </button>
+          </div>
 
-            <div class="vf-tts">
-                <button class="vf-button" id="vf-tts-button" data-state="idle">
-                    <canvas class="vf-visualizer vf-visualizer--agent"></canvas>
-                    <i class="bi bi-volume-up-fill vf-button-tts"></i>
-                </button>
-            </div>
+          <button class="vf-settings-btn">
+            <i class="bi bi-gear"></i>
+          </button>
+
+          <div class="vf-tts">
+            <button class="vf-button" id="vf-tts-button" data-state="idle">
+              <canvas class="vf-visualizer vf-visualizer--agent"></canvas>
+              <i class="bi bi-volume-up-fill vf-button-tts"></i>
+            </button>
+          </div>
         </div>
 
         <!-- Info Bar -->
         <div class="vf-info">
-            <span>VoiceFaster</span>
-            <span>v2.3.1</span>
+          <span>VoiceFaster</span>
+          <span>v2.3.1</span>
         </div>
 
         <!-- Bubble Tray -->
         <div class="vf-bubble-tray">
-            <!-- Bubbles will be dynamically inserted here -->
+          <!-- Bubbles will be dynamically inserted here -->
         </div>
+      </div>
+      <!-- Transcript Panel (Initially Hidden) -->
+      <div class="vf-transcript" hidden>
+        <div class="vf-transcript-header">
+          <span>Transcript</span>
+          <button class="vf-transcript-close"><i class="bi bi-x"></i></button>
+        </div>
+        <div class="vf-transcript-content">
+          <span class="vf-text--interim"></span>
+          <span class="vf-text--final"></span>
+        </div>
+        <div class="vf-transcript-actions">
+          <button class="vf-button--send">Send</button>
+          <button class="vf-button--clear">Clear</button>
+        </div>
+      </div>
     </div>
 
     <!-- Settings Panel (Initially Hidden) -->
     <div class="vf-settings" hidden>
-        <div class="vf-settings-header">
-            <span>SETTINGS</span>
-            <button class="vf-settings-close"><i class="bi bi-x"></i></button>
-        </div>
+      <div class="vf-settings-header">
+        <span>SETTINGS</span>
+        <button class="vf-settings-close"><i class="bi bi-x"></i></button>
+      </div>
 
-        <div class="vf-settings-section">
-            <h3 class="vf-settings-title">Human Speech to Text</h3>
-            <div class="vf-settings-controls">
-                <select class="vf-settings-item">
-                    <option value="deepgram">DeepGram</option>
-                    <option value="webspeech">WebSpeech</option>
-                </select>
-                <label class="vf-settings-item">
-                    <input type="checkbox" checked> TTS Staging Area
-                </label>
-            </div>
+      <div class="vf-settings-section">
+        <h3 class="vf-settings-title">Human Speech to Text</h3>
+        <div class="vf-settings-controls">
+          <select class="vf-settings-item">
+            <option value="deepgram">DeepGram</option>
+            <option value="webspeech">WebSpeech</option>
+          </select>
+          <label class="vf-settings-item">
+            <input type="checkbox" checked /> TTS Staging Area
+          </label>
         </div>
+      </div>
 
-        <div class="vf-settings-section">
-            <h3 class="vf-settings-title">Agent Text to Speech</h3>
-            <div class="vf-settings-controls">
-                <select class="vf-settings-item">
-                    <option value="elevenlabs">ElevenLabs</option>
-                    <option value="webspeech">WebSpeech (Free)</option>
-                </select>
-                <label class="vf-settings-item">
-                    <input type="checkbox" checked> Show History Bubbles
-                </label>
-                <div class="vf-settings-item">
-                    <label>Bubble Lines: <input type="number" value="2" min="1" max="5"></label>
-                </div>
-                <div class="vf-settings-item">
-                    <label>Keep Last N: <input type="number" value="9" min="1" max="20"></label>
-                </div>
-            </div>
+      <div class="vf-settings-section">
+        <h3 class="vf-settings-title">Agent Text to Speech</h3>
+        <div class="vf-settings-controls">
+          <select class="vf-settings-item">
+            <option value="elevenlabs">ElevenLabs</option>
+            <option value="webspeech">WebSpeech (Free)</option>
+          </select>
+          <label class="vf-settings-item">
+            <input type="checkbox" checked /> Show History Bubbles
+          </label>
+          <div class="vf-settings-item">
+            <label
+              >Bubble Lines: <input type="number" value="2" min="1" max="5"
+            /></label>
+          </div>
+          <div class="vf-settings-item">
+            <label
+              >Keep Last N: <input type="number" value="9" min="1" max="20"
+            /></label>
+          </div>
         </div>
-    </div>
-
-    <!-- Transcript Panel (Initially Hidden) -->
-    <div class="vf-transcript" hidden>
-        <div class="vf-transcript-header">
-            <span>Transcript</span>
-            <button class="vf-transcript-close"><i class="bi bi-x"></i></button>
-        </div>
-        <div class="vf-transcript-content">
-            <span class="vf-text--interim"></span>
-            <span class="vf-text--final"></span>
-        </div>
-        <div class="vf-transcript-actions">
-            <button class="vf-button--send">Send</button>
-            <button class="vf-button--clear">Clear</button>
-        </div>
+      </div>
     </div>
 
     <script src="mock.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const iconXAxisPos = 0;
-            const iconYAxisPos = 0.5;
-            // const xAxisLeft = 0;
+      document.addEventListener("DOMContentLoaded", () => {
+        const iconXAxisPos = 0;
+        const iconYAxisPos = 0.5;
+        const iconsVizBarCount = 16;
+        const handleBarVizBarCount = 32;
+        try {
+          // Initialize visualizers inside the buttons
+          const micVisualizer = new MockVisualizer({
+            className: "human-speech",
+            color: "--vf-human",
+            barCount: iconsVizBarCount,
+            fftSize: 128,
+            xAxisPos: iconXAxisPos,
+            yAxisPos: iconYAxisPos,
+            xOffset: 0,
+          }).mount(document.querySelector("#vf-mic-button"));
 
-            // const yAxisCentre = 0.5;
-            // const yAxisBottom = 0;
-            const iconsVizBarCount = 16;
-            const handleBarVizBarCount = 32;
-            try {
-                // Initialize visualizers inside the buttons
-                const micVisualizer = new MockVisualizer({
-                    className: 'human-speech',
-                    color: '--vf-human',
-                    barCount: iconsVizBarCount,
-                    fftSize: 128,
-                    xAxisPos: iconXAxisPos,
-                    yAxisPos: iconYAxisPos,
-                    xOffset: 0
-                }).mount(document.querySelector('#vf-mic-button'));
+          const ttsVisualizer = new MockVisualizer({
+            className: "agent-speech",
+            color: "--vf-agent",
+            barCount: iconsVizBarCount,
+            fftSize: 2048,
+            xAxisPos: iconXAxisPos,
+            yAxisPos: iconYAxisPos,
+            xOffset: 1 / iconsVizBarCount,
+          }).mount(document.querySelector("#vf-tts-button"));
 
-                const ttsVisualizer = new MockVisualizer({
-                    className: 'agent-speech',
-                    color: '--vf-agent',
-                    barCount: iconsVizBarCount,
-                    fftSize: 2048,
-                    xAxisPos: iconXAxisPos,
-                    yAxisPos: iconYAxisPos,
-                    xOffset: (1/iconsVizBarCount)
-                }).mount(document.querySelector('#vf-tts-button'));
+          // Initialize drag bar visualizer
+          const dragBarVisualizer = new MockVisualizer({
+            className: "dragbar-viz",
+            color: "--vf-widget",
+            barCount: handleBarVizBarCount,
+            fftSize: 2048,
+            xAxisPos: 0,
+            yAxisPos: 1,
+            xOffset: 0,
+          }).mount(document.querySelector(".vf-dragbar"));
 
-                // Initialize drag bar visualizer
-                const dragBarVisualizer = new MockVisualizer({
-                    className: 'dragbar-viz',
-                    color: '--vf-widget',
-                    barCount: handleBarVizBarCount,
-                    fftSize: 2048,
-                    xAxisPos: 0,
-                    yAxisPos: 1,
-                    xOffset: 0
-                }).mount(document.querySelector('.vf-dragbar'));
+          // Initialize mockSTT and mockTTS ONCE with correct parameters
+          window.mockSTT = new MockSTT(micVisualizer, dragBarVisualizer);
+          window.mockTTS = new MockTTS(ttsVisualizer);
 
-                // Initialize mockSTT and mockTTS ONCE with correct parameters
-                window.mockSTT = new MockSTT(micVisualizer, dragBarVisualizer);  // Pass both visualizers
-                window.mockTTS = new MockTTS(ttsVisualizer);
+          // Make widget draggable
+          makeDraggable(document.querySelector(".vf-widget"), ".vf-dragbar");
 
-                // Add click handler for mic button
-                const micButton = document.getElementById('vf-mic-button');
-                micButton.addEventListener('click', () => {
-                    const currentState = micButton.dataset.state;
-                    if (currentState === 'idle') {
-                        mockSTT.startRecording();
-                    } else {
-                        mockSTT.stopRecording();
-                    }
-                });
+          // Add settings toggle
+          const settingsBtn = document.querySelector(".vf-settings-btn");
+          const settingsPanel = document.querySelector(".vf-settings");
+          settingsBtn.addEventListener("click", () => {
+            settingsPanel.hidden = !settingsPanel.hidden;
+          });
 
-                // Make widget draggable
-                makeDraggable(document.querySelector('.vf-widget'), '.vf-dragbar');
+          addTestControls();
+        } catch (err) {
+          console.error("Error initializing VoiceFaster:", err);
+        }
+      });
 
-                // Add settings toggle
-                const settingsBtn = document.querySelector('.vf-settings-btn');
-                const settingsPanel = document.querySelector('.vf-settings');
-                settingsBtn.addEventListener('click', () => {
-                    settingsPanel.hidden = !settingsPanel.hidden;
-                });
+      function makeDraggable(element, handle) {
+        const dragHandle = element.querySelector(handle);
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
 
-                addTestControls();
-            } catch (err) {
-                console.error('Error initializing VoiceFaster:', err);
-            }
+        // Add touch event handlers
+        dragHandle.addEventListener("touchstart", dragStart, {
+          passive: false,
         });
+        document.addEventListener("touchmove", drag, { passive: false });
+        document.addEventListener("touchend", dragEnd);
 
-function makeDraggable(element, handle) {
-    const dragHandle = element.querySelector(handle);
-    let isDragging = false;
-    let currentX;
-    let currentY;
-    let initialX;
-    let initialY;
-    let xOffset = 0;
-    let yOffset = 0;
+        // Mouse event handlers
+        dragHandle.addEventListener("mousedown", dragStart, { passive: false });
+        document.addEventListener("mousemove", drag);
+        document.addEventListener("mouseup", dragEnd);
 
-    // Add touch event handlers
-    dragHandle.addEventListener('touchstart', dragStart, { passive: false });
-    document.addEventListener('touchmove', drag, { passive: false });
-    document.addEventListener('touchend', dragEnd);
+        function dragStart(e) {
+          const event = e.type === "mousedown" ? e : e.touches[0];
+          initialX = event.clientX - xOffset;
+          initialY = event.clientY - yOffset;
 
-    // Mouse event handlers
-    dragHandle.addEventListener('mousedown', dragStart, { passive: false });
-    document.addEventListener('mousemove', drag);
-    document.addEventListener('mouseup', dragEnd);
-
-    function dragStart(e) {
-        const event = e.type === 'mousedown' ? e : e.touches[0];
-        initialX = event.clientX - xOffset;
-        initialY = event.clientY - yOffset;
-
-        if (e.target === dragHandle || dragHandle.contains(e.target)) {
+          if (e.target === dragHandle || dragHandle.contains(e.target)) {
             isDragging = true;
             e.preventDefault();
+          }
         }
-    }
 
-    function drag(e) {
-        if (isDragging) {
+        function drag(e) {
+          if (isDragging) {
             e.preventDefault();
-            const event = e.type === 'mousemove' ? e : e.touches[0];
+            const event = e.type === "mousemove" ? e : e.touches[0];
 
             currentX = event.clientX - initialX;
             currentY = event.clientY - initialY;
@@ -237,15 +230,13 @@ function makeDraggable(element, handle) {
             yOffset = currentY;
 
             element.style.transform = `translate(${currentX}px, ${currentY}px)`;
+          }
         }
-    }
 
-    function dragEnd() {
-        isDragging = false;
-    }
-}
-
+        function dragEnd() {
+          isDragging = false;
+        }
+      }
     </script>
-</body>
-
+  </body>
 </html>
