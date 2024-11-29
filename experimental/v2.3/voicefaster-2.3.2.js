@@ -199,9 +199,14 @@
         }
 
         setupTTSHandlers() {
-            this.ttsPlayer.on('stateChange', state => this.handleTTSStateChange(state));
+            this.ttsPlayer.on('stateChange', state => {
+                this.state.isSpeaking = state === 'playing';
+                this.coordinateState();
+            });
+
             this.ttsPlayer.on('error', error => this.handleError(error));
         }
+
 
         handleTranscript(text, isFinal) {
             if (this.config.targetElement && isFinal) {
@@ -1618,7 +1623,6 @@
         }
     }
 
-    // TTSPlayer.js
     class TTSPlayer extends EventEmitter {
         constructor(visualizer) {
             super();
@@ -1633,8 +1637,12 @@
         setupAudioHandlers() {
             this.audio.onended = async () => {
                 this.isPlaying = false;
-                const currentStream = this.queue.getCurrentPlayingStream();
+                this.emit('stateChange', 'stopped');
+                if (this.visualizer) {
+                    await this.visualizer.setMode('idle');
+                }
 
+                const currentStream = this.queue.getCurrentPlayingStream();
                 if (currentStream) {
                     this.queue.updateStreamState(currentStream.id, "completed");
 
@@ -1645,9 +1653,23 @@
                     if (nextStream) {
                         this.queue.updateStreamState(nextStream.id, "queued");
                         await this.processNextInQueue();
-                    } else {
-                        this.stop();
                     }
+                }
+            };
+
+            this.audio.onplay = async () => {
+                this.isPlaying = true;
+                this.emit('stateChange', 'playing');
+                if (this.visualizer) {
+                    await this.visualizer.setMode('playing', this.audio);
+                }
+            };
+
+            this.audio.onpause = async () => {
+                this.isPlaying = false;
+                this.emit('stateChange', 'paused');
+                if (this.visualizer) {
+                    await this.visualizer.setMode('idle');
                 }
             };
         }
@@ -1656,6 +1678,10 @@
             const nextStream = this.queue.getNextQueuedStream();
             if (!nextStream) {
                 this.isPlaying = false;
+                this.emit('stateChange', 'stopped');
+                if (this.visualizer) {
+                    await this.visualizer.setMode('idle');
+                }
                 return;
             }
 
@@ -1665,6 +1691,7 @@
             }
 
             this.isPlaying = true;
+            this.emit('stateChange', 'playing');
             nextStream.state = "requesting";
 
             try {
@@ -1685,14 +1712,33 @@
                 this.audio.src = audioUrl;
                 await this.audio.play();
 
-                this.emit('stateChange', 'playing');
             } catch (error) {
                 console.error("Error in processNextInQueue:", error);
                 nextStream.state = "error";
                 this.isPlaying = false;
+                this.emit('stateChange', 'stopped');
+                if (this.visualizer) {
+                    await this.visualizer.setMode('idle');
+                }
                 this.emit('error', error);
                 await this.processNextInQueue();
             }
+
+        }
+
+
+        async queueAudioStream(streamRequestResponse) {
+            const queueItem = new TTSQueueItem(streamRequestResponse);
+            this.queue.addStream(queueItem);
+
+            if (!this.isPlaying) {
+                await this.processNextInQueue();
+            }
+
+            return {
+                message: "Audio stream request queued",
+                id: queueItem.id
+            };
         }
 
         async queueText(text) {
@@ -1714,45 +1760,17 @@
                 })
             });
 
-            const queueItem = new TTSQueueItem(streamInfo);
-            this.queue.addStream(queueItem);
-
-            if (!this.isPlaying) {
-                await this.processNextInQueue();
-            }
-
-            return {
-                message: "Audio stream request queued",
-                text: text,
-                id: queueItem.id
-            };
-        }
-
-        async play() {
-            if (!this.isPlaying) {
-                if (this.audio.src) {
-                    await this.audio.play();
-                    this.isPlaying = true;
-                    const currentStream = this.queue.getCurrentPlayingStream();
-                    if (currentStream) {
-                        this.queue.updateStreamState(currentStream.id, "playing");
-                    }
-                } else {
-                    await this.processNextInQueue();
-                }
-            }
+            return this.queueAudioStream(streamInfo);
         }
 
         pause() {
             this.audio.pause();
-            this.isPlaying = false;
             this.emit('stateChange', 'paused');
         }
 
         stop() {
             this.audio.pause();
             this.audio.currentTime = 0;
-            this.isPlaying = false;
             this.emit('stateChange', 'stopped');
         }
 
@@ -1761,6 +1779,7 @@
             this.queue = new TTSAudioQueue();
         }
     }
+
 
     /* Bootstrapping Code */
 
@@ -1796,6 +1815,13 @@
         }
         return window.voiceFaster.ttsPlayer.queueText(params.text);
     };
+
+    window.addEventListener("message", (event) => {
+        if (event.data.type === "QUEUE_AUDIO_STREAM" && window.voiceFaster?.ttsPlayer) {
+            window.voiceFaster.ttsPlayer.queueAudioStream(event.data.payload);
+        }
+    });
+
 
 
 })();
