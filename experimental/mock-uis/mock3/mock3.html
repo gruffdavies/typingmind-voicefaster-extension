@@ -236,6 +236,13 @@
         function dragEnd() {
           isDragging = false;
         }
+
+        // Add settings close button functionality
+        const settingsCloseBtn = document.querySelector('.vf-settings-close');
+        settingsCloseBtn.addEventListener('click', () => {
+            document.querySelector('.vf-settings').hidden = true;
+        });
+
       }
     </script>
   </body>

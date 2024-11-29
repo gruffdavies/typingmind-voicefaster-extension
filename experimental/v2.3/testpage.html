@@ -40,55 +40,30 @@
     <!-- Configuration -->
     <script src="config/secrets.js"></script>
     <script src="config/version.js"></script>
+    <script src="voicefaster-2.3.2.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const textArea = document.querySelector('#chat-input-textbox');
 
-    <!-- Main Application -->
-    <script type="module">
-        import { TranscriptionController } from './src/ui/TranscriptionController.js';
-        import { TranscriptionProviderFactory } from './src/transcription/TranscriptionProviderFactory.js';
-
-        const textArea = document.querySelector('#chat-input-textbox');  //
-
-        // Function to auto-resize the textarea
-        function autoResize() {
-            // Reset height to auto to get the correct scrollHeight
-            textArea.style.height = 'auto';
-
-            // Calculate new height based on scrollHeight
-            const newHeight = Math.min(
-                Math.max(textArea.scrollHeight, 40), // 40px = 2.5rem (min-height)
-                120  // 7.5rem (max-height)
-            );
-
-            // Apply the new height
-            textArea.style.height = `${newHeight}px`;
-        }
-
-        // Add event listeners
-        textArea.addEventListener('input', autoResize);
-        // For programmatic changes
-        textArea.addEventListener('change', autoResize);
-
-        // Optional: Handle programmatic content changes
-        const observer = new MutationObserver(autoResize);
-        observer.observe(textArea, {
-            childList: true,
-            characterData: true,
-            subtree: true
-        });
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                const provider = await TranscriptionProviderFactory.createProvider();
-                const controller = new TranscriptionController(provider, {targetElement: textArea, transcribeToStagingArea: true });
-
-                document.getElementById('demo-version').textContent =
-                    `Voice Transcription v${version.version}`;
-
-            } catch (error) {
-                console.error('Initialization failed:', error);
-                document.getElementById('status-indicator').textContent =
-                    'Error: Failed to initialize transcription';
+            // Auto-resize functionality
+            function autoResize() {
+                textArea.style.height = 'auto';
+                const newHeight = Math.min(
+                    Math.max(textArea.scrollHeight, 40),
+                    120
+                );
+                textArea.style.height = `${newHeight}px`;
             }
+
+            textArea.addEventListener('input', autoResize);
+            textArea.addEventListener('change', autoResize);
+
+            const observer = new MutationObserver(autoResize);
+            observer.observe(textArea, {
+                childList: true,
+                characterData: true,
+                subtree: true
+            });
         });
     </script>
 </body>

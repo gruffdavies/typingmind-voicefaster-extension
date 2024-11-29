@@ -98,6 +98,11 @@
   /* Match Windows 11 size better */
 }
 
+.vf-widget-container {
+    position: relative;
+    overflow: visible;
+  }
+
 /* Drag Bar */
 .vf-dragbar {
   background: var(--vf-dragbar-bg);
@@ -318,6 +323,7 @@
   z-index: 1001;  /* Above widget */
   min-width: 26rem;  /* Match widget width */
   box-shadow: var(--vf-shadow);
+  color: var(--vf-text);
   overflow: hidden;
 }
 
@@ -390,3 +396,138 @@
   flex-direction: column;
   gap: 8px;
 }
+
+/* Settings Panel */
+.vf-settings {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--vf-surface-deep);
+    border-radius: 8px;
+    border: var(--vf-border);
+    width: 280px;
+    box-shadow: var(--vf-shadow);
+    color: var(--vf-text);
+    z-index: 1001;
+  }
+
+  /* Settings Header */
+  .vf-settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--vf-padding-l);
+    border-bottom: var(--vf-border);
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .vf-settings-close {
+    background: transparent;
+    border: none;
+    color: var(--vf-text-muted);
+    cursor: pointer;
+    padding: 4px;
+    transition: color var(--vf-transition-fast);
+    display: flex;
+    align-items: center;
+  }
+
+  .vf-settings-close:hover {
+    color: var(--vf-text);
+  }
+
+  /* Settings Sections */
+  .vf-settings-section {
+    padding: var(--vf-padding-l);
+    border-bottom: var(--vf-border);
+  }
+
+  .vf-settings-section:last-child {
+    border-bottom: none;
+  }
+
+  .vf-settings-title {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--vf-text-muted);
+    margin: 0 0 var(--vf-padding-l);
+  }
+
+  /* Settings Controls */
+  .vf-settings-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vf-padding-l);
+  }
+
+  .vf-settings-item {
+    display: flex;
+    align-items: center;
+    gap: var(--vf-padding-m);
+    font-size: 0.85rem;
+  }
+
+  /* Dropdowns */
+  .vf-settings-item select {
+    background: var(--vf-button-surface);
+    border: var(--vf-border);
+    color: var(--vf-text);
+    padding: 6px var(--vf-padding-l);
+    border-radius: 4px;
+    width: 100%;
+    cursor: pointer;
+    transition: background var(--vf-transition-fast);
+  }
+
+  .vf-settings-item select:hover {
+    background: var(--vf-button-hover);
+  }
+
+  /* Checkboxes */
+  .vf-settings-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    border: var(--vf-border);
+    background: var(--vf-button-surface);
+    border-radius: 3px;
+    cursor: pointer;
+    accent-color: var(--vf-widget);
+  }
+
+  /* Number Inputs */
+  .vf-settings-item input[type="number"] {
+    background: var(--vf-button-surface);
+    border: var(--vf-border);
+    color: var(--vf-text);
+    padding: 4px var(--vf-padding-m);
+    border-radius: 4px;
+    width: 60px;
+    text-align: center;
+  }
+
+  .vf-settings-item input[type="number"]:hover {
+    background: var(--vf-button-hover);
+  }
+
+  /* Hide spin buttons for number inputs */
+  .vf-settings-item input[type="number"]::-webkit-inner-spin-button,
+  .vf-settings-item input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* Labels */
+  .vf-settings-item label {
+    display: flex;
+    align-items: center;
+    gap: var(--vf-padding-m);
+    cursor: pointer;
+    color: var(--vf-text);
+  }
+
+  /* Settings Panel Hidden State */
+  .vf-settings[hidden] {
+    display: none;
+  }
