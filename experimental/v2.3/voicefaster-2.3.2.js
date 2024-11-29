@@ -777,60 +777,93 @@
         }
 
         makeDraggable() {
+            const dragHandle = this.container.querySelector('.vf-dragbar');
             let isDragging = false;
-            let startX, startY, initialX, initialY;
+            let startX, startY;
+            let startRight; // Track distance from right edge
 
             const dragStart = (e) => {
-                const dragbar = e.target.closest('.vf-dragbar');
-                if (!dragbar) return;
+                if (e.target === dragHandle || dragHandle.contains(e.target)) {
+                    isDragging = true;
+                    e.preventDefault();
 
-                isDragging = true;
-                this.container.classList.add('vf-widget--dragging');
-
-                startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-                startY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
-
-                const rect = this.container.getBoundingClientRect();
-                initialX = rect.left;
-                initialY = rect.top;
+                    const rect = this.container.getBoundingClientRect();
+                    // Calculate distance from right edge of viewport
+                    startRight = window.innerWidth - (rect.right);
+                    startX = (e.type === "mousedown" ? e.clientX : e.touches[0].clientX);
+                    startY = (e.type === "mousedown" ? e.clientY : e.touches[0].clientY) - rect.top;
+                }
             };
-            // UIManager.js (continued)
+
             const drag = (e) => {
                 if (!isDragging) return;
-
                 e.preventDefault();
-                const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
-                const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
 
-                const deltaX = clientX - startX;
-                const deltaY = clientY - startY;
+                const clientX = e.type === "mousemove" ? e.clientX : e.touches[0].clientX;
+                const clientY = e.type === "mousemove" ? e.clientY : e.touches[0].clientY;
 
-                // Ensure the element stays within viewport bounds
+                // Calculate new position from right edge
+                const deltaX = startX - clientX;
+                const newRight = startRight + deltaX;
+                const newY = clientY - startY;
+
+                // Constrain to viewport
+                const maxRight = window.innerWidth - this.container.offsetWidth;
+                const maxY = window.innerHeight - this.container.offsetHeight;
+
+                // Apply new position
+                this.container.style.right = `${Math.max(0, Math.min(maxRight, newRight))}px`;
+                this.container.style.top = `${Math.max(0, Math.min(maxY, newY))}px`;
+            };
+
+            const keepInView = () => {
                 const rect = this.container.getBoundingClientRect();
-                const maxX = window.innerWidth - rect.width;
-                const maxY = window.innerHeight - rect.height;
+                const rightDistance = window.innerWidth - rect.right;
+                const maxRight = window.innerWidth - rect.width;
 
-                const newX = Math.min(Math.max(0, initialX + deltaX), maxX);
-                const newY = Math.min(Math.max(0, initialY + deltaY), maxY);
+                if (rightDistance < 0) {
+                    this.container.style.right = '0px';
+                } else if (rightDistance > maxRight) {
+                    this.container.style.right = `${maxRight}px`;
+                }
 
-                this.container.style.transform = `translate(${newX}px, ${newY}px)`;
+                if (rect.top < 0) {
+                    this.container.style.top = '0px';
+                } else if (rect.bottom > window.innerHeight) {
+                    this.container.style.top = `${window.innerHeight - rect.height}px`;
+                }
             };
 
             const dragEnd = () => {
                 isDragging = false;
-                this.container.classList.remove('vf-widget--dragging');
             };
 
-            // Mouse events
-            this.container.addEventListener('mousedown', dragStart);
-            document.addEventListener('mousemove', drag);
-            document.addEventListener('mouseup', dragEnd);
+            // Add resize observer for continuous size monitoring
+            const resizeObserver = new ResizeObserver(() => {
+                if (!isDragging) keepInView();
+            });
+            resizeObserver.observe(document.body);
 
-            // Touch events
-            this.container.addEventListener('touchstart', dragStart, { passive: true });
-            document.addEventListener('touchmove', drag, { passive: false });
-            document.addEventListener('touchend', dragEnd);
+            // Add window resize listener with debounce
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                if (resizeTimeout) clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    if (!isDragging) keepInView();
+                }, 100);
+            });
+
+            // Add event listeners
+            dragHandle.addEventListener("mousedown", dragStart, { passive: false });
+            dragHandle.addEventListener("touchstart", dragStart, { passive: false });
+            document.addEventListener("mousemove", drag);
+            document.addEventListener("touchmove", drag, { passive: false });
+            document.addEventListener("mouseup", dragEnd);
+            document.addEventListener("touchend", dragEnd);
         }
+
+
+
 
         toggleSettings() {
             const settings = this.container.querySelector('.vf-settings');

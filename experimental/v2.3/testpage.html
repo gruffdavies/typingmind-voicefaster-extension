@@ -5,39 +5,49 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="testpage-styles.css">
     <link rel="stylesheet" href="voicefaster-styles.css">
-    <title>Voice Transcription Demo</title>
+    <title>Chat Application Demo</title>
 </head>
 <body>
-    <div id="demo-version" class="demo-version"></div>
+    <!-- App Header -->
+    <header class="app-header">
+        <h1>Chat Application</h1>
+        <div id="demo-version" class="demo-version">Demo v1.0</div>
+    </header>
 
-    <div class="chat-container">
-        <!-- Chat Messages Area -->
-        <div class="messages-area">
-            <div class="message ai">
-                <div>
-                    Hello! How can I help you today?
+    <!-- Main Chat Interface -->
+    <main class="app-container">
+        <div class="chat-container">
+            <!-- Chat Messages Area -->
+            <div class="messages-area">
+                <div class="message ai">
+                    <div>Hello! How can I help you today?</div>
+                </div>
+                <div class="message user">
+                    <div>Testing the speech-to-text functionality</div>
                 </div>
             </div>
-            <div class="message user">
-                <div>
-                    Testing the speech-to-text functionality
-                </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <textarea
+                    id="chat-input-textbox"
+                    placeholder="Type a message or use voice input..."
+                    rows="1"
+                ></textarea>
+                <button id="send-message" class="send-button">
+                    <i class="bi bi-arrow-right"></i>
+                </button>
             </div>
         </div>
+    </main>
 
-        <!-- Input Area -->
-        <div class="input-area">
-            <textarea id="chat-input-textbox" placeholder="Type a message or use voice input..." rows="1"></textarea>
-            <button onclick="sendMessage()" id="send-message">→ Send</button>
-        </div>
-    </div>
-
-    <div class="debug">
+    <!-- Debug Panel (Hidden by Default) -->
+    <div class="debug-panel" hidden>
         <div id="status-indicator">Status: Idle</div>
         <div id="websocket-status">WebSocket: Disconnected</div>
     </div>
 
-    <!-- Configuration -->
+    <!-- Scripts -->
     <script src="config/secrets.js"></script>
     <script src="config/version.js"></script>
     <script src="voicefaster-2.3.2.js"></script>
@@ -45,7 +55,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             const textArea = document.querySelector('#chat-input-textbox');
 
-            // Auto-resize functionality
             function autoResize() {
                 textArea.style.height = 'auto';
                 const newHeight = Math.min(
@@ -63,6 +72,14 @@
                 childList: true,
                 characterData: true,
                 subtree: true
+            });
+
+            // Send button handler
+            document.getElementById('send-message').addEventListener('click', () => {
+                // Add send message functionality here
+                console.log('Message sent:', textArea.value);
+                textArea.value = '';
+                autoResize();
             });
         });
     </script>

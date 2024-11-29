@@ -81,9 +81,10 @@
 
 /* Main Widget */
 .vf-widget {
-  position: relative;
+  position: fixed;
+  /* left: calc(100vw - 160px - 1rem);  /* St */
   right: 1rem;
-  top: 1rem;
+  top: 5rem;
   width: 160px;
   background: var(--vf-surface);
   backdrop-filter: var(--vf-blur);
@@ -95,7 +96,6 @@
   overflow: visible;
   padding: var(--vf-padding-xs);
   min-width: 160px;
-  /* Match Windows 11 size better */
 }
 
 .vf-widget-container {
