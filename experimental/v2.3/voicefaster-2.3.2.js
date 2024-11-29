@@ -1448,7 +1448,7 @@
                 vad_events: true,
                 endpointing: 300,
                 maxRetries: 3,
-                connectionTimeout: 5000,
+                connectionTimeout: 1000,
                 maxBufferSize: 50,
                 ...config
             };
@@ -1485,126 +1485,212 @@
         }
 
         async startTranscribing() {
+            if (this.isListening) {
+                await this.stopTranscribing();
+                return;
+            }
+            // Reset state
+            this.connectionAttempt = 0;
+            this.connectionState = ConnectionState.CONNECTING;
+            this.setupWebSocket();
+            this.isListening = true;
+
             try {
-                // Reset state
-                this.connectionAttempt = 0;
-                this.connectionState = ConnectionState.CONNECTING;
-                this.isListening = true;
-
-                // Setup new WebSocket connection
-                await this.setupWebSocket();
-
                 // Get and setup audio stream
                 const stream = await this.getAudioStream();
                 this.setupMediaRecorder(stream);
-
-                this.connectionState = ConnectionState.CONNECTED;
             } catch (error) {
-                this.connectionState = ConnectionState.FAILED;
                 this._handleError(error);
                 throw error;
             }
+
+            // this.connectionState = ConnectionState.CONNECTED;
+
         }
 
         async stopTranscribing() {
-            this.clearTimeouts();
+            // Set state first to prevent new data being sent
             this.isListening = false;
+            this.connectionState = ConnectionState.CLOSING;
+            this.clearTimeouts();
 
-            // Stop media recorder
+            // Clean up MediaRecorder first
             if (this.mediaRecorder) {
                 this.mediaRecorder.stop();
                 this.mediaRecorder = null;
             }
 
-            // Close WebSocket
+            // Close WebSocket with proper await
             if (this.ws) {
+                try {
+                    await this.closeWebSocket();
+                } catch (error) {
+                    console.warn('Error during WebSocket closure:', error);
+                }
+            }
+
+            // Final cleanup
+            this.ws = null;
+            this.connectionState = ConnectionState.CLOSED;
+            this.audioBuffer = [];
+        }
+
+        closeWebSocket() {
+            return new Promise((resolve, reject) => {
+                if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
+                    resolve();
+                    return;
+                }
+
+                const onClose = () => {
+                    this.ws.removeEventListener('close', onClose);
+                    resolve();
+                };
+
+                const onError = (error) => {
+                    this.ws.removeEventListener('error', onError);
+                    reject(error);
+                };
+
+                this.ws.addEventListener('close', onClose);
+                this.ws.addEventListener('error', onError);
+
+                // Initiate close
                 try {
                     this.ws.close();
                 } catch (error) {
-                    console.warn('Error closing WebSocket:', error);
-                }
-                this.ws = null;
-            }
-
-            // Clear audio buffer
-            this.audioBuffer = [];
-
-            // Reset connection state
-            this.connectionState = ConnectionState.CLOSED;
-            this.isListening = false;
-        }
-
-        setupWebSocket() {
-            return new Promise((resolve, reject) => {
-                this.clearTimeouts();
-                this.connectionAttempt++;
-
-                const deepgramBaseURL = 'wss://api.deepgram.com/v1/listen';
-                const deepgramOptions = {
-                    model: this.config.model,
-                    language: this.config.language,
-                    smart_format: this.config.smart_format,
-                    interim_results: this.config.interim_results,
-                    vad_events: this.config.vad_events,
-                    endpointing: this.config.endpointing
-                };
-
-                const keywords = ['keywords=KwizIQ:2'].join('&');
-                const deepgramUrl = `${deepgramBaseURL}?${new URLSearchParams(deepgramOptions)}&${keywords}`;
-
-                try {
-                    this.ws = new WebSocket(deepgramUrl, ['token', window.secrets.deepgramApiKey]);
-
-                    this.connectionTimeout = setTimeout(() => {
-                        if (this.ws?.readyState !== WebSocket.OPEN) {
-                            reject(new Error('Connection timeout'));
-                            this.handleConnectionFailure();
-                        }
-                    }, this.config.connectionTimeout);
-
-                    this.ws.onopen = () => {
-                        console.debug("🎯 DeepGram WebSocket opened");
-                        this.clearTimeouts();
-                        this.connectionAttempt = 0;
-                        this._handleStateChange('listening');
-                        this.processBufferedAudio();
-                        resolve();
-                    };
-
-                    this.ws.onmessage = (event) => {
-                        try {
-                            const response = JSON.parse(event.data);
-                            if (response.type === 'Results') {
-                                const transcript = response.channel.alternatives[0].transcript;
-                                this._processTranscript(transcript, response.is_final);
-                            }
-                        } catch (error) {
-                            this._handleError(error);
-                        }
-                    };
-
-                    this.ws.onclose = () => {
-                        console.debug("🎯 DeepGram WebSocket closed");
-                        if (this.connectionState === ConnectionState.CONNECTED) {
-                            this.handleConnectionFailure();
-                        }
-                    };
-
-                    this.ws.onerror = (error) => {
-                        console.error("🔴 DeepGram WebSocket error:", error);
-                        reject(error);
-                        this._handleError(error);
-                        this.handleConnectionFailure();
-                    };
-
-                } catch (error) {
                     reject(error);
-                    this._handleError(error);
-                    this.handleConnectionFailure();
                 }
             });
         }
 
+        // setupWebSocket() {
+        //     return new Promise((resolve, reject) => {
+        //         this.clearTimeouts();
+        //         this.connectionAttempt++;
+
+        //         const deepgramBaseURL = 'wss://api.deepgram.com/v1/listen';
+        //         const deepgramOptions = {
+        //             model: this.config.model,
+        //             language: this.config.language,
+        //             smart_format: this.config.smart_format,
+        //             interim_results: this.config.interim_results,
+        //             vad_events: this.config.vad_events,
+        //             endpointing: this.config.endpointing
+        //         };
+
+        //         const keywords = ['keywords=KwizIQ:2'].join('&');
+        //         const deepgramUrl = `${deepgramBaseURL}?${new URLSearchParams(deepgramOptions)}&${keywords}`;
+
+        //         try {
+        //             this.ws = new WebSocket(deepgramUrl, ['token', window.secrets.deepgramApiKey]);
+
+        //             this.connectionTimeout = setTimeout(() => {
+        //                 if (this.ws?.readyState !== WebSocket.OPEN) {
+        //                     reject(new Error('Connection timeout'));
+        //                     this.handleConnectionFailure();
+        //                 }
+        //             }, this.config.connectionTimeout);
+
+        //             this.ws.onopen = () => {
+        //                 console.debug("🎯 DeepGram WebSocket opened");
+        //                 this.clearTimeouts();
+        //                 this.connectionAttempt = 0;
+        //                 this._handleStateChange('listening');
+        //                 this.processBufferedAudio();
+        //                 resolve();
+        //             };
+
+        //             this.ws.onmessage = (event) => {
+        //                 try {
+        //                     const response = JSON.parse(event.data);
+        //                     if (response.type === 'Results') {
+        //                         const transcript = response.channel.alternatives[0].transcript;
+        //                         this._processTranscript(transcript, response.is_final);
+        //                     }
+        //                 } catch (error) {
+        //                     this._handleError(error);
+        //                 }
+        //             };
+
+        //             this.ws.onclose = () => {
+        //                 console.debug("🎯 DeepGram WebSocket closed");
+        //                 if (this.connectionState === ConnectionState.CONNECTED) {
+        //                     this.handleConnectionFailure();
+        //                 }
+        //             };
+
+        //             this.ws.onerror = (error) => {
+        //                 console.error("🔴 DeepGram WebSocket error:", error);
+        //                 reject(error);
+        //                 this._handleError(error);
+        //                 this.handleConnectionFailure();
+        //             };
+
+        //         } catch (error) {
+        //             reject(error);
+        //             this._handleError(error);
+        //             this.handleConnectionFailure();
+        //         }
+        //     });
+        // }
+        setupWebSocket() {
+            this.clearTimeouts();
+            this.connectionState = ConnectionState.CONNECTING;
+            this.connectionAttempt++;
+            const deepgramBaseURL = "wss://api.deepgram.com/v1/listen";
+            const deepgramOptions = {
+                model: this.config.model,
+                language: this.config.language,
+                smart_format: this.config.smart_format,
+                interim_results: this.config.interim_results,
+                vad_events: this.config.vad_events,
+                endpointing: this.config.endpointing
+            };
+            const keywords = ["keywords=KwizIQ:2"].join("&");
+            const deepgramUrl = `${deepgramBaseURL}?${new URLSearchParams(deepgramOptions)}&${keywords}`;
+            console.debug(`\u{1F310} Connecting DeepGram WebSocket (attempt ${this.connectionAttempt}/${this.config.maxRetries}):`, deepgramUrl);
+            try {
+                this.ws = new WebSocket(deepgramUrl, ["token", secrets.deepgramApiKey]);
+                this.connectionTimeout = setTimeout(() => {
+                    if (this.ws?.readyState !== WebSocket.OPEN) {
+                        console.warn(`\u26A0\uFE0F WebSocket connection timeout (attempt ${this.connectionAttempt})`);
+                        this.handleConnectionFailure();
+                    }
+                }, this.config.connectionTimeout);
+                this.ws.onopen = () => {
+                    console.debug("🎯 DeepGram WebSocket opened");
+                    this.clearTimeouts();
+                    this.connectionAttempt = 0;
+                    this.connectionState = ConnectionState.CONNECTED;
+                    this._handleStateChange('listening');
+                    this.processBufferedAudio();
+                };
+                this.ws.onclose = () => {
+                    console.debug("\u{1F3AF} DeepGram WebSocket closed");
+                    this.connectionState = ConnectionState.CLOSED;
+                    this.handleConnectionFailure();
+                };
+                this.ws.onerror = (error) => {
+                    console.error("\u{1F534} DeepGram WebSocket error:", error);
+                    this.handleConnectionFailure();
+                };
+                this.ws.onmessage = (event) => {
+                    try {
+                        const response = JSON.parse(event.data);
+                        if (response.type === 'Results') {
+                            const transcript = response.channel.alternatives[0].transcript;
+                            this._processTranscript(transcript, response.is_final);
+                        }
+                    } catch (error) {
+                        this._handleError(error);
+                    }
+                };
+            } catch (error) {
+                console.error("\u{1F534} Error creating WebSocket:", error);
+                this.handleConnectionFailure();
+            }
+        }
 
         setupMediaRecorder(stream) {
             this.mediaRecorder = new MediaRecorder(stream);
@@ -1619,43 +1705,41 @@
             this.mediaRecorder.start(250);
         }
 
-        processAudioData(audioData) {
-            console.debug(`🎯 DeepGram.processAudioData called, size:`, audioData.byteLength);
-
-            if (this.ws?.readyState === WebSocket.OPEN) {
+        processBufferedAudio() {
+            if (this.connectionState !== ConnectionState.CONNECTED)
+                return;
+            console.debug(`Processing buffered audio: ${this.audioBuffer.length} chunks`);
+            while (this.audioBuffer.length > 0 && this.ws?.readyState === WebSocket.OPEN) {
+                const audioData = this.audioBuffer.shift();
                 try {
                     this.ws.send(audioData);
-                    console.debug("🎯 Audio data sent to DeepGram");
+                    console.debug("Buffered audio chunk sent, size:", audioData.byteLength);
                 } catch (error) {
-                    console.error("🔴 Error sending audio to DeepGram:", error);
-                    this.bufferAudioData(audioData);
+                    console.error("Error sending buffered audio:", error);
+                    this.audioBuffer.unshift(audioData);
+                    break;
                 }
-            } else {
-                console.debug("🎯 WebSocket not ready, buffering audio");
-                this.bufferAudioData(audioData);
             }
         }
-
-        // processAudioData(audioData) {
-        //     if (this.connectionState !== ConnectionState.CONNECTED) {
-        //         console.debug("🎯 Not Connected Yet, buffering audio");
-        //         this.bufferAudioData(audioData);
-        //         return;
-        //     }
-
-        //     if (this.ws?.readyState === WebSocket.OPEN) {
-        //         try {
-        //             this.ws.send(audioData);
-        //         } catch (error) {
-        //             console.error("Error sending audio to DeepGram:", error);
-        //             this.bufferAudioData(audioData);
-        //         }
-        //     } else {
-        //         console.debug("🎯 WebSocket not ready, buffering audio");
-        //         this.bufferAudioData(audioData);
-        //     }
-        // }
-
+        processAudioData(audioData) {
+            console.debug(`DeepGram.processAudioData called, connection state: ${this.connectionState}`);
+            if (this.connectionState === ConnectionState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
+                try {
+                    this.ws.send(audioData);
+                    console.debug("Audio data sent to DeepGram, size:", audioData.byteLength);
+                } catch (error) {
+                    console.error("Error sending audio to DeepGram:", error);
+                    if (this.connectionState === ConnectionState.CONNECTED) {
+                        this.bufferAudioData(audioData);
+                    }
+                }
+            } else if (this.connectionState === ConnectionState.CONNECTING || this.connectionState === ConnectionState.RECONNECTING) {
+                console.debug(`WebSocket connecting/reconnecting, buffering audio data. State: ${this.connectionState}`);
+                this.bufferAudioData(audioData);
+            } else {
+                console.warn(` WebSocket in terminal state (${this.connectionState}), discarding audio data`);
+            }
+        }
 
         bufferAudioData(audioData) {
             if (this.audioBuffer.length < this.config.maxBufferSize) {
@@ -1668,41 +1752,31 @@
             }
         }
 
-
-        processBufferedAudio() {
-            while (this.audioBuffer.length > 0 && this.ws?.readyState === WebSocket.OPEN) {
-                const audioData = this.audioBuffer.shift();
-                try {
-                    this.ws.send(audioData);
-                } catch (error) {
-                    this.audioBuffer.unshift(audioData);
-                    break;
-                }
-            }
-        }
-
         handleConnectionFailure() {
             if (!this.isListening) return;
 
             if (this.connectionAttempt < this.config.maxRetries) {
+                this.connectionState = ConnectionState.RECONNECTING;
+                console.debug(`🔄 Scheduling reconnection attempt ${this.connectionAttempt + 1}/${this.config.maxRetries}`);
                 const backoffTime = Math.min(1000 * Math.pow(2, this.connectionAttempt - 1), 5000);
+
                 this.reconnectTimeout = setTimeout(() => {
                     if (this.isListening) {
                         this.setupWebSocket();
                     }
                 }, backoffTime);
 
-                this._handleError(new Error(  // Use base class method
+                this._handleError(new Error(
                     `Connection attempt ${this.connectionAttempt} failed, retrying in ${backoffTime / 1000} seconds...`
                 ));
             } else {
+                this.connectionState = ConnectionState.FAILED;
                 this.isListening = false;
-                this._handleError(new Error(  // Use base class method
-                    'Failed to establish connection after maximum attempts'
-                ));
+                this._handleError(new Error('Failed to establish connection after maximum attempts'));
                 this._handleStateChange('idle');
             }
         }
+
 
         clearTimeouts() {
             if (this.connectionTimeout) {
