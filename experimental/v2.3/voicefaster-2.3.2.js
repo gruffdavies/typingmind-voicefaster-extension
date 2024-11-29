@@ -54,7 +54,7 @@
     class VoiceFasterController {
         constructor(config = {}) {
             this.config = {
-                defaultSTTProvider: 'deepgram',
+                defaultTranscriberProvider: 'deepgram',
                 defaultVoiceId: 'LKzEuRvwo37aJ6JFMnxk',
                 maxQueueSize: 100,
                 maxQueueAge: 3600000,
@@ -63,8 +63,8 @@
                 ...config
             };
 
-            this.ttsPlayer = null;
-            this.sttProvider = null;
+            this.speakerComponent = null;
+            this.transcriberComponent = null;
             this.visualizer = null;
             this.ui = null;
             this.state = {
@@ -82,8 +82,8 @@
                 console.log("VoiceFasterController: Initializing...");
                 await this.initializeUI();
                 await this.initializeVisualizers();
-                await this.initializeSTT();
-                await this.initializeTTS();
+                await this.initializeTranscriber();
+                await this.initializeSpeaker();
                 this.coordinateState();
                 console.log("VoiceFasterController: Initialization complete");
             } catch (error) {
@@ -102,7 +102,7 @@
             const iconYAxisPos = 0.5;
             const iconsVizBarCount = 16;
 
-            // Create STT (mic) visualizer
+            // Create Transcriber (mic) visualizer
             this.micVisualizer = new AudioVisualizer({
                 className: "human-speech",
                 color: "--vf-human",
@@ -113,8 +113,8 @@
                 xOffset: 0
             });
 
-            // Create TTS visualizer
-            this.ttsVisualizer = new AudioVisualizer({
+            // Create Speaker visualizer
+            this.speakerVisualizer = new AudioVisualizer({
                 className: "agent-speech",
                 color: "--vf-agent",
                 barCount: iconsVizBarCount,
@@ -126,34 +126,21 @@
 
             // Mount visualizers after UI is initialized
             this.micVisualizer.mount(this.ui.container.querySelector('#vf-mic-button'));
-            this.ttsVisualizer.mount(this.ui.container.querySelector('#vf-tts-button'));
+            this.speakerVisualizer.mount(this.ui.container.querySelector('#vf-Speaker-button'));
         }
 
-        // Update the provider initializations to use the correct visualizers
-        async initializeSTT() {
-            try {
-                this.sttProvider = await STTProviderManager.createProvider(
-                    this.config.defaultSTTProvider
-                );
-                this.setupSTTHandlers();
-                // Pass the mic visualizer to the STT provider
-                if (this.sttProvider.setVisualizer) {
-                    this.sttProvider.setVisualizer(this.micVisualizer);
-                }
-            } catch (error) {
-                console.error("Failed to initialize STT provider:", error);
-                throw error;
-            }
+        async initializeTranscriber() {
+            this.transcriberComponent = new TranscriberComponent(this.micVisualizer);
+            await this.transcriberComponent.initialize();
+            this.setupTranscriberHandlers();
         }
 
-        async initializeTTS() {
-            // Pass the TTS visualizer to the TTS player
-            this.ttsPlayer = new TTSPlayer(this.ttsVisualizer);
-            this.setupTTSHandlers();
+        async initializeSpeaker() {
+            this.speakerComponent = new SpeechComponent(this.speakerVisualizer);
+            this.setupSpeakerHandlers();
 
-            // Add the QueueUIManager as an observer to the TTSPlayer's queue
             if (this.ui?.queueUIManager) {
-                this.ttsPlayer.queue.addObserver(this.ui.queueUIManager);
+                this.speakerComponent.queue.addObserver(this.ui.queueUIManager);
             }
         }
 
@@ -167,54 +154,50 @@
             }
 
             if (this.state.isSpeaking) {
-                this.ttsVisualizer?.setMode('playing');
+                this.speakerVisualizer?.setMode('playing');
             } else {
-                this.ttsVisualizer?.setMode('idle');
+                this.speakerVisualizer?.setMode('idle');
             }
 
             this.ui?.updateState(this.state);
         }
 
 
-        async switchSTTProvider() {
-            const wasRecording = this.sttProvider.isListening;
+        async switchTranscriberProvider() {
+            const wasRecording = this.transcriberComponent.isListening;
             if (wasRecording) {
-                await this.sttProvider.stop();
+                await this.transcriberComponent.stop();
             }
 
-            try {
-                const newProvider = await STTProviderManager.switchProvider(this.sttProvider);
-                this.sttProvider = newProvider;
-                this.setupSTTHandlers();
-
-                if (wasRecording) {
-                    await this.sttProvider.start();
-                }
-            } catch (error) {
-                console.error("Failed to switch STT provider:", error);
-                throw error;
-            }
+            await this.transcriberComponent.switchProvider();
         }
 
-        setupSTTHandlers() {
-            this.sttProvider.setHandlers({
-                onTranscript: (text, isFinal) => this.handleTranscript(text, isFinal),
-                onStateChange: (state) => this.handleSTTStateChange(state),
+        setupTranscriberHandlers() {
+            this.transcriberComponent.setHandlers({
+                onTranscript: (text, isFinal) => {
+                    console.debug("Transcript received:", { text, isFinal });  // Add logging
+                    this.handleTranscript(text, isFinal);
+                },
+                onStateChange: (state) => {
+                    console.debug("Transcriber state changed:", state);  // Add logging
+                    this.handleTranscriberStateChange(state);
+                },
                 onError: (error) => this.handleError(error)
             });
         }
 
-        setupTTSHandlers() {
-            this.ttsPlayer.on('stateChange', state => {
+        setupSpeakerHandlers() {
+            this.speakerComponent.on('stateChange', state => {
                 this.state.isSpeaking = state === 'playing';
                 this.coordinateState();
             });
 
-            this.ttsPlayer.on('error', error => this.handleError(error));
+            this.speakerComponent.on('error', error => this.handleError(error));
         }
 
 
         handleTranscript(text, isFinal) {
+            console.debug("Handling transcript:", { text, isFinal });  // Add logging
             if (this.config.targetElement && isFinal) {
                 const currentText = this.config.targetElement.value;
                 const spacer = currentText && !currentText.endsWith(' ') ? ' ' : '';
@@ -225,18 +208,13 @@
             this.ui.updateTranscript(text, isFinal);
         }
 
-        handleSTTStateChange(state) {
-            this.state.isListening = state === 'listening';
-            this.coordinateState();
-        }
+        handleTranscriberStateChange(state) {
+            // this.state.isListening = state === 'listening';
 
-        handleSTTStateChange(state) {
-            this.state.isListening = state === 'listening';
-
-            // Show transcript immediately when recording starts if staging is enabled
-            if (state === 'listening' && this.config.transcribeToStagingArea) {
-                this.ui?.updateTranscript('', false); // This will show the window with empty content
-            }
+            // // Show transcript immediately when recording starts if staging is enabled
+            // if (state === 'listening' && this.config.transcribeToStagingArea) {
+            //     this.ui?.updateTranscript('', false); // This will show the window with empty content
+            // }
 
             this.coordinateState();
         }
@@ -263,9 +241,9 @@
             }
 
             if (this.state.isSpeaking) {
-                this.ttsVisualizer?.setMode('playing');
+                this.speakerVisualizer?.setMode('playing');
             } else {
-                this.ttsVisualizer?.setMode('idle');
+                this.speakerVisualizer?.setMode('idle');
             }
 
             this.ui?.updateState(this.state);
@@ -275,10 +253,10 @@
         // Public API methods
         async toggleRecording() {
             try {
-                if (this.state.isListening) {
-                    await this.sttProvider.stop();
+                if (this.transcriberComponent.isListening) {
+                    await this.transcriberComponent.stop();
                 } else {
-                    await this.sttProvider.start();
+                    await this.transcriberComponent.start();
                 }
             } catch (error) {
                 this.handleError(error);
@@ -287,17 +265,17 @@
 
         async queueText(text) {
             try {
-                await this.ttsPlayer.queueText(text);
+                await this.speakerComponent.queueText(text);
             } catch (error) {
                 this.handleError(error);
             }
         }
 
         cleanup() {
-            this.sttProvider?.stop();
-            this.ttsPlayer?.cleanup();
+            this.transcriberComponent?.stop();
+            this.speakerComponent?.cleanup();
             this.micVisualizer?.cleanup();
-            this.ttsVisualizer?.cleanup();
+            this.speakerVisualizer?.cleanup();
             this.ui?.cleanup();
         }
 
@@ -644,19 +622,19 @@
             settingsBtn.innerHTML = '<i class="bi bi-gear"></i>';
             settingsBtn.addEventListener('click', () => this.toggleSettings());
 
-            // TTS control
-            const ttsControl = document.createElement('div');
-            ttsControl.className = 'vf-tts';
-            const ttsButton = document.createElement('button');
-            ttsButton.className = 'vf-button';
-            ttsButton.id = 'vf-tts-button';
-            ttsButton.dataset.state = 'idle';
-            ttsButton.innerHTML = '<i class="bi bi-volume-up-fill"></i>';
-            ttsControl.appendChild(ttsButton);
+            // Speaker control
+            const SpeakerControl = document.createElement('div');
+            SpeakerControl.className = 'vf-Speaker';
+            const SpeakerButton = document.createElement('button');
+            SpeakerButton.className = 'vf-button';
+            SpeakerButton.id = 'vf-Speaker-button';
+            SpeakerButton.dataset.state = 'idle';
+            SpeakerButton.innerHTML = '<i class="bi bi-volume-up-fill"></i>';
+            SpeakerControl.appendChild(SpeakerButton);
 
             controls.appendChild(micControl);
             controls.appendChild(settingsBtn);
-            controls.appendChild(ttsControl);
+            controls.appendChild(SpeakerControl);
 
             this.container.appendChild(controls);
         }
@@ -691,12 +669,12 @@
         <button class="vf-settings-close"><i class="bi bi-x"></i></button>
     `;
 
-            const sttSection = document.createElement('div');
-            sttSection.className = 'vf-settings-section';
-            sttSection.innerHTML = `
+            const TranscriberSection = document.createElement('div');
+            TranscriberSection.className = 'vf-settings-section';
+            TranscriberSection.innerHTML = `
         <h3 class="vf-settings-title">Speech Recognition</h3>
         <div class="vf-settings-controls">
-            <select class="vf-stt-provider-select">
+            <select class="vf-Transcriber-provider-select">
                 <option value="deepgram">DeepGram</option>
                 <option value="webspeech">Web Speech</option>
             </select>
@@ -704,27 +682,28 @@
     `;
 
             // Add provider switching logic
-            const providerSelect = sttSection.querySelector('.vf-stt-provider-select');
-            providerSelect.value = this.controller.sttProvider instanceof DeepGramSTT ? 'deepgram' : 'webspeech';
+            const providerSelect = TranscriberSection.querySelector('.vf-Transcriber-provider-select');
+            providerSelect.value = this.controller.transcriberComponent.provider instanceof DeepGramTranscriber ? 'deepgram' : 'webspeech';
 
             providerSelect.addEventListener('change', async (e) => {
                 try {
-                    await this.controller.switchSTTProvider();
+                    await this.controller.switchTranscriberProvider();
                     this.showNotification('Speech recognition provider switched successfully');
                 } catch (error) {
                     console.error('Failed to switch provider:', error);
                     // Revert select value
-                    providerSelect.value = this.controller.sttProvider instanceof DeepGramSTT ? 'deepgram' : 'webspeech';
+                    providerSelect.value = this.controller.transcriberComponent.provider instanceof DeepGramTranscriber ? 'deepgram' : 'webspeech';
                     this.showError('Failed to switch provider: ' + error.message);
                 }
             });
 
-            settings.append(header, sttSection);
+            settings.append(header, TranscriberSection);
             this.container.appendChild(settings);
         }
 
         // Add notification method
         showNotification(message) {
+            console.log('Showing notification:', message);
             const notification = document.createElement('div');
             notification.className = 'vf-notification';
             notification.textContent = message;
@@ -771,7 +750,7 @@
 
             closeBtn.addEventListener('click', () => {
                 transcript.hidden = true;
-                if (this.controller.sttProvider.isListening) {
+                if (this.controller.transcriberComponent.isListening) {
                     this.controller.toggleRecording();
                 }
             });
@@ -783,7 +762,7 @@
                 if (finalText && this.controller.config.targetElement) {
                     this.controller.config.targetElement.value += ' ' + finalText;
                     transcript.hidden = true;
-                    if (this.controller.sttProvider.isListening) {
+                    if (this.controller.transcriberComponent.isListening) {
                         this.controller.toggleRecording();
                     }
                 }
@@ -792,7 +771,7 @@
             clearBtn.addEventListener('click', () => {
                 transcript.querySelector('.vf-text--interim').textContent = '';
                 transcript.querySelector('.vf-text--final').textContent = '';
-                if (this.controller.sttProvider.isListening) {
+                if (this.controller.transcriberComponent.isListening) {
                     this.controller.toggleRecording();
                 }
             });
@@ -825,9 +804,9 @@
                 micButton.dataset.state = state.isListening ? 'recording' : 'idle';
             }
 
-            const ttsButton = this.container.querySelector('#vf-tts-button');
-            if (ttsButton) {
-                ttsButton.dataset.state = state.isSpeaking ? 'speaking' : 'idle';
+            const SpeakerButton = this.container.querySelector('#vf-Speaker-button');
+            if (SpeakerButton) {
+                SpeakerButton.dataset.state = state.isSpeaking ? 'speaking' : 'idle';
             }
 
             if (state.hasError) {
@@ -1038,39 +1017,39 @@
 
         createBubbleClickHandler(stream) {
             return async () => {
-                const currentStream = this.controller.ttsPlayer.queue.getCurrentPlayingStream();
+                const currentStream = this.controller.speakerComponent.queue.getCurrentPlayingStream();
 
                 try {
                     switch (stream.state) {
                         case 'queued':
                             if (!currentStream) {
-                                await this.controller.ttsPlayer.processNextInQueue();
+                                await this.controller.speakerComponent.processNextInQueue();
                             }
                             break;
 
                         case 'playing':
-                            await this.controller.ttsPlayer.pause();
+                            await this.controller.speakerComponent.pause();
                             break;
 
                         case 'completed':
                             // Create new stream with same content for replay
-                            const replayStream = new TTSQueueItem({
+                            const replayStream = new SpeechQueueItem({
                                 url: stream.url,
                                 method: stream.method,
                                 headers: stream.headers,
                                 body: stream.body
                             });
-                            this.controller.ttsPlayer.queue.addStream(replayStream);
+                            this.controller.speakerComponent.queue.addStream(replayStream);
                             if (!currentStream) {
-                                await this.controller.ttsPlayer.processNextInQueue();
+                                await this.controller.speakerComponent.processNextInQueue();
                             }
                             break;
 
                         case 'error':
                             // Retry the failed stream
-                            this.controller.ttsPlayer.queue.updateStreamState(stream.id, "queued");
+                            this.controller.speakerComponent.queue.updateStreamState(stream.id, "queued");
                             if (!currentStream) {
-                                await this.controller.ttsPlayer.processNextInQueue();
+                                await this.controller.speakerComponent.processNextInQueue();
                             }
                             break;
 
@@ -1145,49 +1124,130 @@
         FAILED: 'failed'
     };
 
-    // STTProviderManager.js
-    class STTProviderManager {
-        static async createProvider(preferredType = "deepgram") {
+    class TranscriberComponent {
+        constructor(visualizer) {
+            this.visualizer = visualizer;
+            this.provider = null;
+            this.handlers = null;
+        }
+
+        async initialize(preferredType = "deepgram") {
+            this.provider = await this.createProvider(preferredType);
+            if (this.provider) {
+                this.provider.setVisualizer(this.visualizer);
+                this.provider.setHandlers(this.handlers);
+            }
+        }
+
+        async createProvider(preferredType) {
             try {
-                // Try preferred provider first
                 if (preferredType === "deepgram") {
-                    const provider = new DeepGramSTT();
+                    const provider = new DeepGramTranscriber();
                     if (await provider.isAvailable()) {
-                        console.log("Using DeepGram STT provider");
+                        console.debug("Using DeepGram Transcriber");
                         return provider;
-                    } else {
-                        console.warn("DeepGram provider not available, falling back to WebSpeech");
                     }
+                    console.warn("DeepGram provider not available, falling back to WebSpeech");
                 }
 
-                // Fallback to WebSpeech
-                const webSpeech = new WebSpeechSTT();
+                const webSpeech = new WebSpeechTranscriber();
                 if (await webSpeech.isAvailable()) {
-                    console.log("Using WebSpeechSTT provider");
+                    console.debug("Using WebSpeech Transcriber");
                     return webSpeech;
                 }
 
-                throw new Error("No speech recognition service available");
+                throw new Error("No transcription service available");
             } catch (error) {
-                console.error("Failed to create STT provider:", error);
+                console.error("Failed to create transcriber provider:", error);
                 throw error;
             }
         }
 
-        static async switchProvider(currentProvider) {
-            const newType = currentProvider instanceof DeepGramSTT ? "webspeech" : "deepgram";
-            return this.createProvider(newType);
+        async switchProvider() {
+            const wasRecording = this.provider.isListening;
+            if (wasRecording) {
+                await this.stop();
+            }
+
+            const newType = this.provider instanceof DeepGramTranscriber ?
+                "webspeech" : "deepgram";
+
+            this.provider = await this.createProvider(newType);
+            this.provider.setHandlers(this.handlers);
+
+            if (wasRecording) {
+                await this.start();
+            }
+
+            return this.provider;
         }
-    }
 
+        setVisualizer(visualizer) {
+            this.visualizer = visualizer;
+            if (this.provider && this.provider.setVisualizer) {
+                this.provider.setVisualizer(visualizer);
+            }
+        }
 
-    class STTProvider {
+        setHandlers(handlers) {
+            this.handlers = handlers;
+            if (this.provider) {
+                this.provider.setHandlers(handlers);
+            }
+        }
+
+        // Delegate methods to provider
         async start() {
-            throw new Error("Method 'start' must be implemented");
+            if (!this.provider) throw new Error("No transcriber provider initialized");
+            try {
+                await this.provider.startTranscribing();
+                console.debug("TranscriberComponent started, isListening:", this.isListening);
+            } catch (error) {
+                throw error;
+            }
         }
 
         async stop() {
-            throw new Error("Method 'stop' must be implemented");
+            if (this.provider) {
+                await this.provider.stopTranscribing();
+                console.debug("TranscriberComponent stopped, isListening:", this.isListening);
+            }
+        }
+
+        get isListening() {
+            if (this.provider) {
+                return this.provider?.isListening;
+            } else {
+                console.warn("TranscriberComponent.isListening querieed but no provider is initialized");
+                return false;
+            }
+        }
+
+        set isListening(value) {
+            if (this.provider) {
+                this.provider.isListening = value;
+            } else {
+                console.warn("TranscriberComponent.isListening set but no provider is initialized");
+            }
+        }
+
+        cleanup() {
+            if (this.provider) {
+                this.provider.stop();
+            }
+            if (this.visualizer) {
+                this.visualizer.cleanup();
+            }
+        }
+    }
+
+    class TranscriberProvider {
+        async startTranscribing() {
+            throw new Error("startTranscribing must be implemented");
+        }
+
+        async stopTranscribing() {
+            throw new Error("stopTranscribing must be implemented");
         }
 
         async isAvailable() {
@@ -1199,15 +1259,26 @@
         }
     }
 
-    // BaseSTTProvider.js
-    class BaseSTTProvider extends STTProvider {
+    // BaseTranscriberProvider.js
+    class BaseTranscriberProvider extends TranscriberProvider {
         constructor() {
             super();
             this.visualizer = null;
-            this.isListening = false;
+            this._isListening = false;
             this.audioStream = null;
             this.handlers = null;
             this.finalTranscript = '';
+        }
+
+        get isListening() {
+            return this._isListening;
+        }
+
+        set isListening(value) {
+            if (this._isListening !== value) {
+                this._isListening = value;
+                this._handleStateChange(value ? 'listening' : 'idle');
+            }
         }
 
         setVisualizer(visualizer) {
@@ -1238,37 +1309,13 @@
             }
         }
 
-        // Template method pattern for start/stop
-        async start() {
-            if (this.isListening) {
-                await this.stop();
-            }
-
-            try {
-                await this.startVisualization();
-                await this.startRecognition();
-                this.isListening = true;
-            } catch (error) {
-                await this.stopVisualization();
-                throw error;
-            }
-        }
-
-        async stop() {
-            if (this.isListening) {
-                await this.stopRecognition();
-                await this.stopVisualization();
-                this.isListening = false;
-            }
-        }
-
         // Abstract methods to be implemented by subclasses
-        async startRecognition() {
-            throw new Error("startRecognition must be implemented");
+        async startTranscribing() {
+            throw new Error("startTranscribing must be implemented");
         }
 
-        async stopRecognition() {
-            throw new Error("stopRecognition must be implemented");
+        async stopTranscribing() {
+            throw new Error("stopTranscribing must be implemented");
         }
 
         _processTranscript(text, isFinal) {
@@ -1283,7 +1330,7 @@
         }
 
         _handleError(error) {
-            console.error('STT Error:', error);
+            console.error('Transcriber Error:', error);
             this.handlers?.onError?.(error);
         }
 
@@ -1293,8 +1340,8 @@
     }
 
 
-    // WebSpeechSTT.js
-    class WebSpeechSTT extends BaseSTTProvider {
+    // WebSpeechTranscriber.js
+    class WebSpeechTranscriber extends BaseTranscriberProvider {
         constructor() {
             super();
             if (!('webkitSpeechRecognition' in window)) {
@@ -1311,14 +1358,21 @@
 
             this.setupRecognitionHandlers();
         }
+        get isListening() {
+            return super.isListening;
+        }
+
+        set isListening(value) {
+            super.isListening = value;
+        }
 
         setupRecognitionHandlers() {
             this.recognition.onstart = () => {
-                this.handlers?.onStateChange?.('listening');
+                this.isListening = true;
             };
 
             this.recognition.onend = () => {
-                this.handlers?.onStateChange?.('idle');
+                this.isListening = false;
             };
 
             this.recognition.onresult = (event) => {
@@ -1359,12 +1413,12 @@
             };
         }
 
-        async startRecognition() {
+        async startTranscribing() {
             this.finalTranscript = '';
             this.recognition.start();
         }
 
-        async stopRecognition() {
+        async stopTranscribing() {
             this.recognition.stop();
         }
 
@@ -1378,8 +1432,8 @@
     }
 
 
-    // DeepGramSTT.js
-    class DeepGramSTT extends BaseSTTProvider {
+    // DeepGramTranscriber.js
+    class DeepGramTranscriber extends BaseTranscriberProvider {
         constructor(config = {}) {
             super();
             this.config = {
@@ -1404,7 +1458,14 @@
             this.connectionState = ConnectionState.CLOSED;
 
         }
+        // Use super to access base class isListening
+        get isListening() {
+            return super.isListening;
+        }
 
+        set isListening(value) {
+            super.isListening = value;
+        }
 
         async isAvailable() {
             try {
@@ -1419,28 +1480,31 @@
             this.handlers = handlers;
         }
 
-        async startRecognition() {
+        async startTranscribing() {
             try {
                 // Reset state
                 this.connectionAttempt = 0;
                 this.connectionState = ConnectionState.CONNECTING;
+                this.isListening = true;
 
                 // Setup new WebSocket connection
                 await this.setupWebSocket();
+                console.debug("🎯 DeepGram WebSocket connected");
 
-                // Get and setup audio stream
+                // // Get and setup audio stream
                 const stream = await this.getAudioStream();
+                console.debug("🎯 Got Audio Stream");
                 this.setupMediaRecorder(stream);
 
-                this.connectionState = ConnectionState.CONNECTED;
             } catch (error) {
                 this.connectionState = ConnectionState.FAILED;
+                this.isListening = false;
                 this._handleError(error);
                 throw error;
             }
         }
 
-        async stopRecognition() {
+        async stopTranscribing() {
             this.clearTimeouts();
 
             // Stop media recorder
@@ -1464,10 +1528,10 @@
 
             // Reset connection state
             this.connectionState = ConnectionState.CLOSED;
-            this._handleStateChange('idle');
+            this.isListening = false;
         }
 
-        setupWebSocket() {
+        async setupWebSocket() {
             return new Promise((resolve, reject) => {
                 this.clearTimeouts();
                 this.connectionAttempt++;
@@ -1484,12 +1548,13 @@
 
                 const keywords = ['keywords=KwizIQ:2'].join('&');
                 const deepgramUrl = `${deepgramBaseURL}?${new URLSearchParams(deepgramOptions)}&${keywords}`;
-
+                console.debug(`Trying to Connect to DeepGram WebSocket (attempt ${this.connectionAttempt}/${this.config.maxRetries}):`, deepgramUrl);
                 try {
                     this.ws = new WebSocket(deepgramUrl, ['token', window.secrets.deepgramApiKey]);
 
                     this.connectionTimeout = setTimeout(() => {
                         if (this.ws?.readyState !== WebSocket.OPEN) {
+                            console.warn(`🔴 WebSocket connection timeout (attempt ${this.connectionAttempt})`);
                             reject(new Error('Connection timeout'));
                             this.handleConnectionFailure();
                         }
@@ -1499,12 +1564,13 @@
                         console.debug("🎯 DeepGram WebSocket opened");
                         this.clearTimeouts();
                         this.connectionAttempt = 0;
-                        this._handleStateChange('listening');
+                        this.connectionState = ConnectionState.CONNECTED;
                         this.processBufferedAudio();
                         resolve();
                     };
 
                     this.ws.onmessage = (event) => {
+                        console.debug("🎯 DeepGram received message:", event.data);
                         try {
                             const response = JSON.parse(event.data);
                             if (response.type === 'Results') {
@@ -1512,22 +1578,16 @@
                                 this._processTranscript(transcript, response.is_final);
                             }
                         } catch (error) {
+                            console.error("🔴 DeepGram message processing error:", error);
                             this._handleError(error);
                         }
                     };
 
                     this.ws.onclose = () => {
-                        console.debug("🎯 DeepGram WebSocket closed");
+                        console.debug("DeepGram WebSocket closed");
                         if (this.connectionState === ConnectionState.CONNECTED) {
                             this.handleConnectionFailure();
                         }
-                    };
-
-                    this.ws.onerror = (error) => {
-                        console.error("🔴 DeepGram WebSocket error:", error);
-                        reject(error);
-                        this._handleError(error);
-                        this.handleConnectionFailure();
                     };
 
                 } catch (error) {
@@ -1537,6 +1597,7 @@
                 }
             });
         }
+
 
         setupMediaRecorder(stream) {
             this.mediaRecorder = new MediaRecorder(stream);
@@ -1551,15 +1612,35 @@
             this.mediaRecorder.start(250);
         }
 
+        // processAudioData(audioData) {
+        //     console.debug(`🎯 DeepGram.processAudioData called, size:`, audioData.byteLength);
+
+        //     if (this.ws?.readyState === WebSocket.OPEN) {
+        //         try {
+        //             this.ws.send(audioData);
+        //             console.debug("🎯 Audio data sent to DeepGram");
+        //         } catch (error) {
+        //             console.error("🔴 Error sending audio to DeepGram:", error);
+        //             this.bufferAudioData(audioData);
+        //         }
+        //     } else {
+        //         console.debug("🎯 WebSocket not ready, buffering audio");
+        //         this.bufferAudioData(audioData);
+        //     }
+        // }
+
         processAudioData(audioData) {
-            console.debug(`🎯 DeepGram.processAudioData called, size:`, audioData.byteLength);
+            if (this.connectionState !== ConnectionState.CONNECTED) {
+                console.debug("🎯 Not Connected Yet, buffering audio");
+                this.bufferAudioData(audioData);
+                return;
+            }
 
             if (this.ws?.readyState === WebSocket.OPEN) {
                 try {
                     this.ws.send(audioData);
-                    console.debug("🎯 Audio data sent to DeepGram");
                 } catch (error) {
-                    console.error("🔴 Error sending audio to DeepGram:", error);
+                    console.error("Error sending audio to DeepGram:", error);
                     this.bufferAudioData(audioData);
                 }
             } else {
@@ -1567,6 +1648,7 @@
                 this.bufferAudioData(audioData);
             }
         }
+
 
         bufferAudioData(audioData) {
             if (this.audioBuffer.length < this.config.maxBufferSize) {
@@ -1592,8 +1674,17 @@
             }
         }
 
-        handleConnectionFailure() {
+        handleConnectionFailure(event) {
             if (!this.isListening) return;
+
+            const errorInfo = event instanceof Event ? {
+                code: event.code,
+                reason: event.reason || 'Unknown reason',
+                wasClean: event.wasClean
+            } : {
+                error: event,
+                message: event?.message || 'Unknown error'
+            };
 
             if (this.connectionAttempt < this.config.maxRetries) {
                 const backoffTime = Math.min(1000 * Math.pow(2, this.connectionAttempt - 1), 5000);
@@ -1603,13 +1694,12 @@
                     }
                 }, backoffTime);
 
-                this._handleError(new Error(  // Use base class method
-                    `Connection attempt ${this.connectionAttempt} failed, retrying in ${backoffTime / 1000} seconds...`
+                this._handleError(new Error(
+                    `Connection attempt ${this.connectionAttempt} failed: ${JSON.stringify(errorInfo)}. Retrying in ${backoffTime / 1000} seconds...`
                 ));
             } else {
-                this.isListening = false;
-                this._handleError(new Error(  // Use base class method
-                    'Failed to establish connection after maximum attempts'
+                this._handleError(new Error(
+                    `Failed to establish connection after ${this.config.maxRetries} attempts. Last error: ${JSON.stringify(errorInfo)}`
                 ));
                 this._handleStateChange('idle');
             }
@@ -1649,8 +1739,8 @@
         }
     }
 
-    // TTSQueueItem.js
-    class TTSQueueItem {
+    // SpeakerQueueItem.js
+    class SpeechQueueItem {
         constructor(streamRequestResponse) {
             this.id = new Date().getTime().toString();
             this.url = streamRequestResponse.url;
@@ -1757,8 +1847,8 @@
         }
     }
 
-    // TTSAudioQueue.js
-    class TTSAudioQueue {
+    // SpeakerAudioQueue.js
+    class SpeechQueue {
         #streams;
         #maxSize;
         #maxAge;
@@ -1838,11 +1928,11 @@
         }
     }
 
-    class TTSPlayer extends EventEmitter {
+    class SpeechComponent extends EventEmitter {
         constructor(visualizer) {
             super();
             this.audio = new Audio();
-            this.queue = new TTSAudioQueue();
+            this.queue = new SpeechQueue();
             this.visualizer = visualizer;
             this.isPlaying = false;
 
@@ -1939,7 +2029,7 @@
 
 
         async queueAudioStream(streamRequestResponse) {
-            const queueItem = new TTSQueueItem(streamRequestResponse);
+            const queueItem = new SpeechQueueItem(streamRequestResponse);
             this.queue.addStream(queueItem);
 
             if (!this.isPlaying) {
@@ -1987,7 +2077,7 @@
 
         cleanup() {
             this.stop();
-            this.queue = new TTSAudioQueue();
+            this.queue = new SpeechQueue();
         }
     }
 
@@ -2020,17 +2110,17 @@
         }
     });
 
-    // Plugin interface for TTS
+    // Plugin interface for Speaker
     window.VOICEFASTER_stream_voice_audio = async (params, userSettings) => {
         if (!window.voiceFaster) {
             throw new Error("VoiceFaster not initialized");
         }
-        return window.voiceFaster.ttsPlayer.queueText(params.text);
+        return window.voiceFaster.speakerComponent.queueText(params.text);
     };
 
     window.addEventListener("message", (event) => {
-        if (event.data.type === "QUEUE_AUDIO_STREAM" && window.voiceFaster?.ttsPlayer) {
-            window.voiceFaster.ttsPlayer.queueAudioStream(event.data.payload);
+        if (event.data.type === "QUEUE_AUDIO_STREAM" && window.voiceFaster?.speakerComponent) {
+            window.voiceFaster.speakerComponent.queueAudioStream(event.data.payload);
         }
     });
 
