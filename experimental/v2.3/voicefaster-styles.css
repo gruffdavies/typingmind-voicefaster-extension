@@ -55,7 +55,7 @@
     /* Bubble States */
     --vf-bubble-requesting: white;
     --vf-bubble-queued: var(--vf-agent-muted);
-    --vf-bubble-playing: var(--vf-agent-bright);
+    --vf-bubble-playing: var(--vf-widget-primary);
     --vf-bubble-completed: var(--vf-agent-subtle);
     --vf-bubble-error: var(--vf-agent);
     --vf-bubble-stale: var(--vf-text-dim);
@@ -284,6 +284,26 @@
     padding: 4px;
     flex-wrap: wrap;
 }
+
+/* Missing TTS Playing Animation */
+@keyframes playing-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 64, 64, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 64, 64, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 64, 64, 0);
+    }
+}
+
+.vf-bubble[data-state="playing"] {
+    background: var(--vf-bubble-playing);
+    box-shadow: var(--vf-glow-tts);
+    animation: playing-pulse 2s infinite;
+}
+
 
 .vf-bubble {
     width: 8px;

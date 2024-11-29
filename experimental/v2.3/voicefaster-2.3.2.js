@@ -150,7 +150,13 @@
             // Pass the TTS visualizer to the TTS player
             this.ttsPlayer = new TTSPlayer(this.ttsVisualizer);
             this.setupTTSHandlers();
+
+            // Add the QueueUIManager as an observer to the TTSPlayer's queue
+            if (this.ui?.queueUIManager) {
+                this.ttsPlayer.queue.addObserver(this.ui.queueUIManager);
+            }
         }
+
 
         // Update the state coordination to handle both visualizers
         coordinateState() {
@@ -297,6 +303,7 @@
 
     }
 
+
     // AudioVisualizer.js
     class AudioVisualizer {
         constructor(config = {}) {
@@ -326,6 +333,8 @@
             this.animationFrame = null;
             this.isInitialized = false;
             this.vizParams = null;
+            this.audioContext = null;
+            this.mediaElementSource = null;
         }
 
         createCanvas() {
@@ -379,46 +388,6 @@
             this.isInitialized = false;
         }
 
-        async setMode(mode, stream = null) {
-            if (mode === this.mode && !stream) return;
-
-            this.mode = mode;
-
-            if (stream) {
-                try {
-                    const context = new (window.AudioContext || window.webkitAudioContext)();
-
-                    if (context.state === "suspended") {
-                        await context.resume();
-                    }
-
-                    this.analyser = context.createAnalyser();
-                    this.analyser.fftSize = this.config.fftSize || 2048;
-                    this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-
-                    const source = stream instanceof HTMLMediaElement ?
-                        context.createMediaElementSource(stream) :
-                        context.createMediaStreamSource(stream);
-
-                    source.connect(this.analyser);
-
-                    if (stream instanceof HTMLMediaElement) {
-                        source.connect(context.destination);
-                    }
-
-                    return true;
-                } catch (err) {
-                    console.error('Error in setMode:', err);
-                    return false;
-                }
-            } else {
-                if (this.analyser) {
-                    this.analyser.disconnect();
-                    this.analyser = null;
-                }
-                this.dataArray = null;
-            }
-        }
 
         #computeVizParams() {
             if (!this.ctx || !this.canvasWidth || !this.canvasHeight) return null;
@@ -530,15 +499,90 @@
             this.drawBars(heights);
         }
 
+        async setMode(mode, stream = null) {
+            if (mode === this.mode && !stream) return;
+
+            this.mode = mode;
+
+            if (stream) {
+                try {
+                    if (!this.audioContext) {
+                        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    }
+
+                    if (this.audioContext.state === "suspended") {
+                        await this.audioContext.resume();
+                    }
+
+                    this.analyser = this.analyser || this.audioContext.createAnalyser();
+                    this.analyser.fftSize = this.config.fftSize || 2048;
+                    this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+
+                    if (stream instanceof HTMLMediaElement) {
+                        // Reuse existing MediaElementSource if it exists
+                        if (!this.mediaElementSource) {
+                            this.mediaElementSource = this.audioContext.createMediaElementSource(stream);
+                        }
+
+                        // Disconnect any existing connections
+                        try {
+                            this.mediaElementSource.disconnect();
+                        } catch (e) {
+                            // Ignore disconnection errors
+                        }
+
+                        // Make new connections
+                        this.mediaElementSource.connect(this.analyser);
+                        this.mediaElementSource.connect(this.audioContext.destination);
+                    } else {
+                        const source = this.audioContext.createMediaStreamSource(stream);
+                        source.connect(this.analyser);
+                    }
+
+                    return true;
+                } catch (err) {
+                    console.error('Error in setMode:', err);
+                    return false;
+                }
+            } else {
+                if (this.analyser) {
+                    try {
+                        this.analyser.disconnect();
+                    } catch (e) {
+                        // Ignore disconnection errors
+                    }
+                }
+                this.dataArray = null;
+            }
+        }
+
         cleanup() {
-            this.sttProvider?.stop();
-            this.ttsPlayer?.cleanup();
-            this.micVisualizer?.cleanup();
-            this.ttsVisualizer?.cleanup();
-            this.ui?.cleanup();
+            if (this.mediaElementSource) {
+                try {
+                    this.mediaElementSource.disconnect();
+                } catch (e) {
+                    // Ignore disconnection errors
+                }
+            }
+            if (this.analyser) {
+                try {
+                    this.analyser.disconnect();
+                } catch (e) {
+                    // Ignore disconnection errors
+                }
+            }
+            if (this.audioContext) {
+                this.audioContext.close();
+            }
+            this.mediaElementSource = null;
+            this.analyser = null;
+            this.audioContext = null;
         }
 
     }
+
+
+
 
     // UIManager.js
     class UIManager {
@@ -547,6 +591,7 @@
             this.container = null;
             this.visualizerContainer = null;
             this.queueVisualizerContainer = null;
+            this.queueUIManager = null;
         }
 
         async initialize() {
@@ -554,7 +599,7 @@
             this.createHeader();
             this.createControls();
             this.createVisualizerContainer();
-            this.createQueueVisualizer();
+            this.createQueueUI();
             this.createTranscriptArea();
             this.makeDraggable();
 
@@ -622,11 +667,16 @@
             this.container.appendChild(this.visualizerContainer);
         }
 
-        createQueueVisualizer() {
+        createQueueUI() {
             this.queueVisualizerContainer = document.createElement('div');
             this.queueVisualizerContainer.className = 'vf-bubble-tray';
             this.container.appendChild(this.queueVisualizerContainer);
+
+            // Initialize QueueUIManager
+            this.queueUIManager = new QueueUIManager(this.controller);
+            this.queueUIManager.mount(this.queueVisualizerContainer);
         }
+
 
         // In UIManager.js, modify the createSettings method:
         async createSettings() {
@@ -916,6 +966,171 @@
             // Remove all event listeners
             const clone = this.container.cloneNode(true);
             this.container.parentNode.replaceChild(clone, this.container);
+            this.container = null;
+        }
+    }
+
+    class QueueUIManager {
+        constructor(controller) {
+            this.controller = controller;
+            this.container = null;
+            this.maxItems = 12;
+            this.bubbleClickHandlers = new Map(); // Store handlers to allow proper cleanup
+        }
+
+        mount(container) {
+            if (!container) {
+                console.error('QueueUIManager: No container provided for mounting');
+                return;
+            }
+            this.container = container;
+        }
+
+        update(queue) {
+            console.log("QueueUIManager updating, queue size:", queue.size);
+            if (!this.container) return;
+
+            // Clean up excess bubbles and their event listeners
+            while (this.container.children.length > this.maxItems) {
+                const bubble = this.container.firstChild;
+                this.cleanupBubble(bubble);
+                this.container.removeChild(bubble);
+            }
+
+            // Get current streams
+            const streams = Array.from(queue);
+
+            // Remove bubbles for non-existent streams
+            Array.from(this.container.children).forEach((bubble, index) => {
+                if (!streams[index]) {
+                    this.cleanupBubble(bubble);
+                    this.container.removeChild(bubble);
+                }
+            });
+
+            // Update existing bubbles and create new ones
+            streams.forEach((stream, index) => {
+                let bubble = this.container.children[index];
+
+                if (bubble) {
+                    this.updateBubble(bubble, stream);
+                } else {
+                    bubble = this.createBubble(stream);
+                    this.container.appendChild(bubble);
+                }
+            });
+        }
+
+        createBubble(stream) {
+            const bubble = document.createElement('div');
+            bubble.className = 'vf-bubble';
+            bubble.dataset.state = stream.state;
+            bubble.dataset.id = stream.id;
+            bubble.title = stream.getDetailsString();
+
+            // Create and store the click handler
+            const clickHandler = this.createBubbleClickHandler(stream);
+            this.bubbleClickHandlers.set(bubble, clickHandler);
+            bubble.addEventListener('click', clickHandler);
+
+            return bubble;
+        }
+
+        createBubbleClickHandler(stream) {
+            return async () => {
+                const currentStream = this.controller.ttsPlayer.queue.getCurrentPlayingStream();
+
+                try {
+                    switch (stream.state) {
+                        case 'queued':
+                            if (!currentStream) {
+                                await this.controller.ttsPlayer.processNextInQueue();
+                            }
+                            break;
+
+                        case 'playing':
+                            await this.controller.ttsPlayer.pause();
+                            break;
+
+                        case 'completed':
+                            // Create new stream with same content for replay
+                            const replayStream = new TTSQueueItem({
+                                url: stream.url,
+                                method: stream.method,
+                                headers: stream.headers,
+                                body: stream.body
+                            });
+                            this.controller.ttsPlayer.queue.addStream(replayStream);
+                            if (!currentStream) {
+                                await this.controller.ttsPlayer.processNextInQueue();
+                            }
+                            break;
+
+                        case 'error':
+                            // Retry the failed stream
+                            this.controller.ttsPlayer.queue.updateStreamState(stream.id, "queued");
+                            if (!currentStream) {
+                                await this.controller.ttsPlayer.processNextInQueue();
+                            }
+                            break;
+
+                        default:
+                            console.warn(`Unhandled stream state: ${stream.state}`);
+                            break;
+                    }
+                } catch (error) {
+                    console.error('Error handling bubble click:', error);
+                    // Optionally show error to user via controller's error handling
+                    if (this.controller.handleError) {
+                        this.controller.handleError(error);
+                    }
+                }
+            };
+        }
+
+        updateBubble(bubble, stream) {
+            if (!bubble || !stream) return;
+
+            // Update state and tooltip
+            bubble.dataset.state = stream.state;
+            bubble.title = stream.getDetailsString();
+
+            // Update ARIA attributes for accessibility
+            bubble.setAttribute('aria-label', `Audio stream ${stream.id} - ${stream.state}`);
+            bubble.setAttribute('role', 'button');
+
+            // Add appropriate cursor style based on state
+            bubble.style.cursor = ['queued', 'playing', 'completed', 'error'].includes(stream.state)
+                ? 'pointer'
+                : 'default';
+        }
+
+        cleanupBubble(bubble) {
+            if (!bubble) return;
+
+            // Remove event listener if it exists
+            const handler = this.bubbleClickHandlers.get(bubble);
+            if (handler) {
+                bubble.removeEventListener('click', handler);
+                this.bubbleClickHandlers.delete(bubble);
+            }
+        }
+
+        cleanup() {
+            if (!this.container) return;
+
+            // Clean up all bubbles
+            Array.from(this.container.children).forEach(bubble => {
+                this.cleanupBubble(bubble);
+            });
+
+            // Clear the container
+            this.container.innerHTML = '';
+
+            // Clear the handler map
+            this.bubbleClickHandlers.clear();
+
+            // Remove container reference
             this.container = null;
         }
     }
@@ -1646,12 +1861,9 @@
                 if (currentStream) {
                     this.queue.updateStreamState(currentStream.id, "completed");
 
-                    const streams = Array.from(this.queue);
-                    const currentIndex = streams.indexOf(currentStream);
-                    const nextStream = streams[currentIndex + 1];
-
+                    // Process next stream if available
+                    const nextStream = this.queue.getNextQueuedStream();
                     if (nextStream) {
-                        this.queue.updateStreamState(nextStream.id, "queued");
                         await this.processNextInQueue();
                     }
                 }
@@ -1674,6 +1886,7 @@
             };
         }
 
+
         async processNextInQueue() {
             const nextStream = this.queue.getNextQueuedStream();
             if (!nextStream) {
@@ -1685,14 +1898,8 @@
                 return;
             }
 
-            const currentPlaying = this.queue.getCurrentPlayingStream();
-            if (currentPlaying && currentPlaying.id !== nextStream.id) {
-                this.queue.updateStreamState(currentPlaying.id, "completed");
-            }
-
-            this.isPlaying = true;
-            this.emit('stateChange', 'playing');
-            nextStream.state = "requesting";
+            // Use queue's updateStreamState method consistently
+            this.queue.updateStreamState(nextStream.id, "requesting");
 
             try {
                 const response = await fetch(nextStream.url, {
@@ -1708,13 +1915,17 @@
                 const blob = await response.blob();
                 const audioUrl = URL.createObjectURL(blob);
 
-                nextStream.state = "playing";
+                // Update state to playing through queue
+                this.queue.updateStreamState(nextStream.id, "playing");
+                this.isPlaying = true;
+                this.emit('stateChange', 'playing');
+
                 this.audio.src = audioUrl;
                 await this.audio.play();
 
             } catch (error) {
                 console.error("Error in processNextInQueue:", error);
-                nextStream.state = "error";
+                this.queue.updateStreamState(nextStream.id, "error");
                 this.isPlaying = false;
                 this.emit('stateChange', 'stopped');
                 if (this.visualizer) {
@@ -1723,8 +1934,8 @@
                 this.emit('error', error);
                 await this.processNextInQueue();
             }
-
         }
+
 
 
         async queueAudioStream(streamRequestResponse) {
@@ -1779,6 +1990,7 @@
             this.queue = new TTSAudioQueue();
         }
     }
+
 
 
     /* Bootstrapping Code */
