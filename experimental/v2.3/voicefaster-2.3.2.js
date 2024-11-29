@@ -79,13 +79,13 @@
 
         async initialize() {
             try {
-                console.debug("VoiceFasterController: Initializing...");
+                console.log("VoiceFasterController: Initializing...");
                 await this.initializeUI();
                 await this.initializeVisualizers();
                 await this.initializeSTT();
                 await this.initializeTTS();
                 this.coordinateState();
-                console.debug("VoiceFasterController: Initialization complete");
+                console.log("VoiceFasterController: Initialization complete");
             } catch (error) {
                 console.error("VoiceFasterController: Initialization failed:", error);
                 this.handleError(error);
@@ -219,10 +219,17 @@
             this.coordinateState();
         }
 
-        handleTTSStateChange(state) {
-            this.state.isSpeaking = state === 'speaking';
+        handleSTTStateChange(state) {
+            this.state.isListening = state === 'listening';
+
+            // Show transcript immediately when recording starts if staging is enabled
+            if (state === 'listening' && this.config.transcribeToStagingArea) {
+                this.ui?.updateTranscript('', false); // This will show the window with empty content
+            }
+
             this.coordinateState();
         }
+
 
         handleError(error) {
             this.state.hasError = true;
@@ -685,10 +692,7 @@
 
             const content = document.createElement('div');
             content.className = 'vf-transcript-content';
-            content.innerHTML = `
-            <span class="vf-text--interim"></span>
-            <span class="vf-text--final"></span>
-        `;
+            content.innerHTML = `<span class="vf-text--final"></span><span class="vf-text--interim"></span>`;
 
             const actions = document.createElement('div');
             actions.className = 'vf-transcript-actions';
@@ -712,37 +716,51 @@
 
             closeBtn.addEventListener('click', () => {
                 transcript.hidden = true;
+                if (this.controller.sttProvider.isListening) {
+                    this.controller.toggleRecording();
+                }
             });
 
             sendBtn.addEventListener('click', () => {
+                console.debug('Send button clicked');
                 // Handle send action
                 const finalText = transcript.querySelector('.vf-text--final').textContent;
                 if (finalText && this.controller.config.targetElement) {
                     this.controller.config.targetElement.value += ' ' + finalText;
                     transcript.hidden = true;
+                    if (this.controller.sttProvider.isListening) {
+                        this.controller.toggleRecording();
+                    }
                 }
             });
 
             clearBtn.addEventListener('click', () => {
                 transcript.querySelector('.vf-text--interim').textContent = '';
                 transcript.querySelector('.vf-text--final').textContent = '';
+                if (this.controller.sttProvider.isListening) {
+                    this.controller.toggleRecording();
+                }
             });
         }
+
 
         updateTranscript(text, isFinal) {
             const transcript = this.container.querySelector('.vf-transcript');
             if (!transcript) return;
 
             transcript.hidden = false;
+            const contentArea = transcript.querySelector('.vf-transcript-content');
+            const interimSpan = contentArea.querySelector('.vf-text--interim');
+            const finalSpan = contentArea.querySelector('.vf-text--final');
 
             if (isFinal) {
-                const finalSpan = transcript.querySelector('.vf-text--final');
-                finalSpan.textContent = text;
-                transcript.querySelector('.vf-text--interim').textContent = '';
+                finalSpan.textContent += text + ' ';
+                interimSpan.textContent = '';
             } else {
-                transcript.querySelector('.vf-text--interim').textContent = text;
+                interimSpan.textContent = text;
             }
         }
+
 
         updateState(state) {
             this.container.dataset.state = state.isListening ? 'listening' : 'idle';
@@ -802,19 +820,28 @@
                 const clientX = e.type === "mousemove" ? e.clientX : e.touches[0].clientX;
                 const clientY = e.type === "mousemove" ? e.clientY : e.touches[0].clientY;
 
-                // Calculate new position from right edge
                 const deltaX = startX - clientX;
                 const newRight = startRight + deltaX;
                 const newY = clientY - startY;
 
-                // Constrain to viewport
-                const maxRight = window.innerWidth - this.container.offsetWidth;
-                const maxY = window.innerHeight - this.container.offsetHeight;
+                // Get transcript dimensions if visible
+                const transcript = this.container.querySelector('.vf-transcript');
+                const transcriptWidth = transcript && !transcript.hidden ?
+                    transcript.offsetWidth : this.container.offsetWidth;
+
+                // Use the wider of the two widths for constraints
+                const effectiveWidth = Math.max(this.container.offsetWidth, transcriptWidth);
+
+                // Constrain to viewport considering the effective width
+                const maxRight = window.innerWidth - effectiveWidth;
+                const maxY = window.innerHeight - (this.container.offsetHeight +
+                    (transcript && !transcript.hidden ? transcript.offsetHeight + 8 : 0));
 
                 // Apply new position
                 this.container.style.right = `${Math.max(0, Math.min(maxRight, newRight))}px`;
                 this.container.style.top = `${Math.max(0, Math.min(maxY, newY))}px`;
             };
+
 
             const keepInView = () => {
                 const rect = this.container.getBoundingClientRect();
@@ -890,6 +917,13 @@
 
 
     /* Speech Recognition and Transcription Classes */
+    const ConnectionState = {
+        CLOSED: 'closed',
+        CONNECTING: 'connecting',
+        CONNECTED: 'connected',
+        RECONNECTING: 'reconnecting',
+        FAILED: 'failed'
+    };
 
     // STTProviderManager.js
     class STTProviderManager {
@@ -899,13 +933,17 @@
                 if (preferredType === "deepgram") {
                     const provider = new DeepGramSTT();
                     if (await provider.isAvailable()) {
+                        console.log("Using DeepGram STT provider");
                         return provider;
+                    } else {
+                        console.warn("DeepGram provider not available, falling back to WebSpeech");
                     }
                 }
 
                 // Fallback to WebSpeech
                 const webSpeech = new WebSpeechSTT();
                 if (await webSpeech.isAvailable()) {
+                    console.log("Using WebSpeechSTT provider");
                     return webSpeech;
                 }
 
@@ -948,6 +986,8 @@
             this.visualizer = null;
             this.isListening = false;
             this.audioStream = null;
+            this.handlers = null;
+            this.finalTranscript = '';
         }
 
         setVisualizer(visualizer) {
@@ -1010,7 +1050,28 @@
         async stopRecognition() {
             throw new Error("stopRecognition must be implemented");
         }
+
+        _processTranscript(text, isFinal) {
+            if (isFinal) {
+                this.finalTranscript += text + ' ';
+            }
+            this.handlers?.onTranscript?.(text, isFinal);
+        }
+
+        _handleStateChange(state) {
+            this.handlers?.onStateChange?.(state);
+        }
+
+        _handleError(error) {
+            console.error('STT Error:', error);
+            this.handlers?.onError?.(error);
+        }
+
+        setHandlers(handlers) {
+            this.handlers = handlers;
+        }
     }
+
 
     // WebSpeechSTT.js
     class WebSpeechSTT extends BaseSTTProvider {
@@ -1050,13 +1111,9 @@
                 }
 
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    const transcript = event.results[i][0].transcript;
-                    if (event.results[i].isFinal) {
-                        this.finalTranscript += transcript;
-                        this.handlers?.onTranscript?.(transcript, true);
-                    } else {
-                        interimTranscript += transcript;
-                        this.handlers?.onTranscript?.(transcript, false);
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        const transcript = event.results[i][0].transcript;
+                        this._processTranscript(transcript, event.results[i].isFinal);
                     }
                 }
             };
@@ -1078,7 +1135,7 @@
                     default:
                         errorMessage = `Speech recognition error: ${event.error}`;
                 }
-                this.handlers?.onError?.(new Error(errorMessage));
+                this._handleError(new Error(errorMessage));
             };
         }
 
@@ -1102,9 +1159,6 @@
 
 
     // DeepGramSTT.js
-
-
-
     class DeepGramSTT extends BaseSTTProvider {
         constructor(config = {}) {
             super();
@@ -1121,45 +1175,16 @@
                 ...config
             };
 
-            this.handlers = null;
             this.ws = null;
             this.audioBuffer = [];
             this.connectionAttempt = 0;
             this.connectionTimeout = null;
             this.reconnectTimeout = null;
             this.mediaRecorder = null;
+            this.connectionState = ConnectionState.CLOSED;
+
         }
 
-        async startRecognition() {
-            try {
-                this.setupWebSocket();
-                const stream = await this.getAudioStream();
-                this.setupMediaRecorder(stream);
-            } catch (error) {
-                this.handlers?.onError?.(error);
-                throw error;
-            }
-        }
-
-        async stopRecognition() {
-            this.clearTimeouts();
-
-            if (this.mediaRecorder) {
-                this.mediaRecorder.stop();
-                this.mediaRecorder = null;
-            }
-
-            if (this.ws) {
-                try {
-                    this.ws.close();
-                } catch (error) {
-                    console.warn('Error closing WebSocket:', error);
-                }
-                this.ws = null;
-            }
-
-            this.audioBuffer = [];
-        }
 
         async isAvailable() {
             try {
@@ -1174,66 +1199,123 @@
             this.handlers = handlers;
         }
 
-        setupWebSocket() {
-            this.clearTimeouts();
-            this.connectionAttempt++;
-
-            const deepgramBaseURL = 'wss://api.deepgram.com/v1/listen';
-            const deepgramOptions = {
-                model: this.config.model,
-                language: this.config.language,
-                smart_format: this.config.smart_format,
-                interim_results: this.config.interim_results,
-                vad_events: this.config.vad_events,
-                endpointing: this.config.endpointing
-            };
-
-            const keywords = ['keywords=KwizIQ:2'].join('&');
-            const deepgramUrl = `${deepgramBaseURL}?${new URLSearchParams(deepgramOptions)}&${keywords}`;
-
+        async startRecognition() {
             try {
-                this.ws = new WebSocket(deepgramUrl, ['token', window.secrets.deepgramApiKey]);
+                // Reset state
+                this.connectionAttempt = 0;
+                this.connectionState = ConnectionState.CONNECTING;
 
-                this.connectionTimeout = setTimeout(() => {
-                    if (this.ws?.readyState !== WebSocket.OPEN) {
-                        this.handleConnectionFailure();
-                    }
-                }, this.config.connectionTimeout);
+                // Setup new WebSocket connection
+                await this.setupWebSocket();
 
-                this.ws.onopen = () => {
-                    this.clearTimeouts();
-                    this.connectionAttempt = 0;
-                    this.handlers?.onStateChange?.('listening');
-                    this.processBufferedAudio();
-                };
+                // Get and setup audio stream
+                const stream = await this.getAudioStream();
+                this.setupMediaRecorder(stream);
 
-                this.ws.onclose = () => {
-                    this.handleConnectionFailure();
-                };
-
-                this.ws.onerror = (error) => {
-                    this.handlers?.onError?.(error);
-                    this.handleConnectionFailure();
-                };
-
-                this.ws.onmessage = (event) => {
-                    try {
-                        const response = JSON.parse(event.data);
-                        if (response.type === 'Results') {
-                            const transcript = response.channel.alternatives[0].transcript;
-                            this.handlers?.onTranscript?.(
-                                transcript,
-                                response.is_final
-                            );
-                        }
-                    } catch (error) {
-                        console.error('Error processing DeepGram message:', error);
-                    }
-                };
+                this.connectionState = ConnectionState.CONNECTED;
             } catch (error) {
-                this.handlers?.onError?.(error);
-                this.handleConnectionFailure();
+                this.connectionState = ConnectionState.FAILED;
+                this._handleError(error);
+                throw error;
             }
+        }
+
+        async stopRecognition() {
+            this.clearTimeouts();
+
+            // Stop media recorder
+            if (this.mediaRecorder) {
+                this.mediaRecorder.stop();
+                this.mediaRecorder = null;
+            }
+
+            // Close WebSocket
+            if (this.ws) {
+                try {
+                    this.ws.close();
+                } catch (error) {
+                    console.warn('Error closing WebSocket:', error);
+                }
+                this.ws = null;
+            }
+
+            // Clear audio buffer
+            this.audioBuffer = [];
+
+            // Reset connection state
+            this.connectionState = ConnectionState.CLOSED;
+            this._handleStateChange('idle');
+        }
+
+        setupWebSocket() {
+            return new Promise((resolve, reject) => {
+                this.clearTimeouts();
+                this.connectionAttempt++;
+
+                const deepgramBaseURL = 'wss://api.deepgram.com/v1/listen';
+                const deepgramOptions = {
+                    model: this.config.model,
+                    language: this.config.language,
+                    smart_format: this.config.smart_format,
+                    interim_results: this.config.interim_results,
+                    vad_events: this.config.vad_events,
+                    endpointing: this.config.endpointing
+                };
+
+                const keywords = ['keywords=KwizIQ:2'].join('&');
+                const deepgramUrl = `${deepgramBaseURL}?${new URLSearchParams(deepgramOptions)}&${keywords}`;
+
+                try {
+                    this.ws = new WebSocket(deepgramUrl, ['token', window.secrets.deepgramApiKey]);
+
+                    this.connectionTimeout = setTimeout(() => {
+                        if (this.ws?.readyState !== WebSocket.OPEN) {
+                            reject(new Error('Connection timeout'));
+                            this.handleConnectionFailure();
+                        }
+                    }, this.config.connectionTimeout);
+
+                    this.ws.onopen = () => {
+                        console.debug("🎯 DeepGram WebSocket opened");
+                        this.clearTimeouts();
+                        this.connectionAttempt = 0;
+                        this._handleStateChange('listening');
+                        this.processBufferedAudio();
+                        resolve();
+                    };
+
+                    this.ws.onmessage = (event) => {
+                        try {
+                            const response = JSON.parse(event.data);
+                            if (response.type === 'Results') {
+                                const transcript = response.channel.alternatives[0].transcript;
+                                this._processTranscript(transcript, response.is_final);
+                            }
+                        } catch (error) {
+                            this._handleError(error);
+                        }
+                    };
+
+                    this.ws.onclose = () => {
+                        console.debug("🎯 DeepGram WebSocket closed");
+                        if (this.connectionState === ConnectionState.CONNECTED) {
+                            this.handleConnectionFailure();
+                        }
+                    };
+
+                    this.ws.onerror = (error) => {
+                        console.error("🔴 DeepGram WebSocket error:", error);
+                        reject(error);
+                        this._handleError(error);
+                        this.handleConnectionFailure();
+                    };
+
+                } catch (error) {
+                    reject(error);
+                    this._handleError(error);
+                    this.handleConnectionFailure();
+                }
+            });
         }
 
         setupMediaRecorder(stream) {
@@ -1250,13 +1332,18 @@
         }
 
         processAudioData(audioData) {
+            console.debug(`🎯 DeepGram.processAudioData called, size:`, audioData.byteLength);
+
             if (this.ws?.readyState === WebSocket.OPEN) {
                 try {
                     this.ws.send(audioData);
+                    console.debug("🎯 Audio data sent to DeepGram");
                 } catch (error) {
+                    console.error("🔴 Error sending audio to DeepGram:", error);
                     this.bufferAudioData(audioData);
                 }
             } else {
+                console.debug("🎯 WebSocket not ready, buffering audio");
                 this.bufferAudioData(audioData);
             }
         }
@@ -1264,11 +1351,14 @@
         bufferAudioData(audioData) {
             if (this.audioBuffer.length < this.config.maxBufferSize) {
                 this.audioBuffer.push(audioData);
+                console.debug("🎯 Audio data buffered, buffer size:", this.audioBuffer.length);
             } else {
+                console.warn("⚠️ Audio buffer full, dropping oldest chunk");
                 this.audioBuffer.shift();
                 this.audioBuffer.push(audioData);
             }
         }
+
 
         processBufferedAudio() {
             while (this.audioBuffer.length > 0 && this.ws?.readyState === WebSocket.OPEN) {
@@ -1293,15 +1383,15 @@
                     }
                 }, backoffTime);
 
-                this.handlers?.onError?.(new Error(
+                this._handleError(new Error(  // Use base class method
                     `Connection attempt ${this.connectionAttempt} failed, retrying in ${backoffTime / 1000} seconds...`
                 ));
             } else {
                 this.isListening = false;
-                this.handlers?.onError?.(new Error(
+                this._handleError(new Error(  // Use base class method
                     'Failed to establish connection after maximum attempts'
                 ));
-                this.handlers?.onStateChange?.('idle');
+                this._handleStateChange('idle');
             }
         }
 
