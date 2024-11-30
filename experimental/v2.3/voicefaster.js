@@ -65,14 +65,7 @@
 
             this.speakerComponent = null;
             this.transcriberComponent = null;
-            this.visualizer = null;
             this.ui = null;
-            this.state = {
-                isListening: false,
-                isSpeaking: false,
-                hasError: false,
-                errorMessage: ''
-            };
 
             this.initialize();
         }
@@ -84,7 +77,6 @@
                 await this.initializeVisualizers();
                 await this.initializeTranscriber();
                 await this.initializeSpeaker();
-                this.coordinateState();
                 console.log("VoiceFasterController: Initialization complete");
             } catch (error) {
                 console.error("VoiceFasterController: Initialization failed:", error);
@@ -136,7 +128,7 @@
         }
 
         async initializeSpeaker() {
-            this.speakerComponent = new SpeechComponent(this.speakerVisualizer);
+            this.speakerComponent = new SpeakerComponent(this.speakerVisualizer);
             this.setupSpeakerHandlers();
 
             if (this.ui?.queueUIManager) {
@@ -145,22 +137,6 @@
         }
 
 
-        // Update the state coordination to handle both visualizers
-        coordinateState() {
-            if (this.state.isListening) {
-                this.micVisualizer?.setMode('listening');
-            } else {
-                this.micVisualizer?.setMode('idle');
-            }
-
-            if (this.state.isSpeaking) {
-                this.speakerVisualizer?.setMode('playing');
-            } else {
-                this.speakerVisualizer?.setMode('idle');
-            }
-
-            this.ui?.updateState(this.state);
-        }
 
 
         async switchTranscriberProvider() {
@@ -188,8 +164,7 @@
 
         setupSpeakerHandlers() {
             this.speakerComponent.on('stateChange', state => {
-                this.state.isSpeaking = state === 'playing';
-                this.coordinateState();
+                this.ui.setSpeakerState(this.speakerComponent.isSpeaking ? 'speaking' : 'idle');
             });
 
             this.speakerComponent.on('error', error => this.handleError(error));
@@ -209,6 +184,7 @@
         }
 
         handleTranscriberStateChange(state) {
+            this.ui.setMicState(state);
             // this.state.isListening = state === 'listening';
 
             // // Show transcript immediately when recording starts if staging is enabled
@@ -216,54 +192,33 @@
             //     this.ui?.updateTranscript('', false); // This will show the window with empty content
             // }
 
-            this.coordinateState();
         }
 
 
         handleError(error) {
             this.state.hasError = true;
             this.state.errorMessage = error.message || 'Unknown error occurred';
-            this.coordinateState();
 
             // Auto-clear error after 5 seconds
             setTimeout(() => {
                 this.state.hasError = false;
                 this.state.errorMessage = '';
-                this.coordinateState();
             }, 5000);
         }
 
-        coordinateState() {
-            if (this.state.isListening) {
-                this.micVisualizer?.setMode('listening');
-            } else {
-                this.micVisualizer?.setMode('idle');
-            }
 
-            if (this.state.isSpeaking) {
-                this.speakerVisualizer?.setMode('playing');
-            } else {
-                this.speakerVisualizer?.setMode('idle');
-            }
-
-            this.ui?.updateState(this.state);
-        }
 
 
         // Public API methods
         async toggleRecording() {
-            try {
-                console.debug("toggleRecording called and this.transcriberComponent.isListening is", this.transcriberComponent.isListening);
-                if (this.transcriberComponent.isListening) {
-                    await this.transcriberComponent.stop();
-                    console.debug("toggleRecording called and this.transcriberComponent.isListening is", this.transcriberComponent.isListening);
-                } else {
-                    await this.transcriberComponent.start();
-                    console.debug("toggleRecording called and this.transcriberComponent.isListening is", this.transcriberComponent.isListening);
-                }
-            } catch (error) {
-                this.handleError(error);
-                console.error("Error in toggleRecording:", error);
+            if (this.transcriberComponent.isListening) {
+                console.debug("stopping transcribing because toggleRecording called and this.transcriberComponent.isListening is", this.transcriberComponent.isListening);
+                await this.transcriberComponent.stop();
+                this.ui.setMicState('idle');
+            } else {
+                console.debug("starting transcribing because toggleRecording called and this.transcriberComponent.isListening is", this.transcriberComponent.isListening);
+                await this.transcriberComponent.start();
+                this.ui.setMicState('listening');
             }
         }
 
@@ -284,6 +239,7 @@
         }
 
     }
+
 
 
     // AudioVisualizer.js
@@ -477,12 +433,13 @@
         }
 
         drawIdle() {
-            const heights = new Array(this.config.barCount).fill(0.1);
+            const heights = new Array(this.config.barCount).fill(0.01);
             this.drawBars(heights);
         }
 
         async setMode(mode, stream = null) {
-            if (mode === this.mode && !stream) return;
+            if (mode === this.mode) { return; }
+            console.log(`🔉AudioVizualizer Setting mode to ${mode}`);
 
             this.mode = mode;
 
@@ -617,7 +574,10 @@
             micButton.id = 'vf-mic-button';
             micButton.dataset.state = 'idle';
             micButton.innerHTML = '<i class="bi bi-mic-fill"></i>';
-            micButton.addEventListener('click', () => this.controller.toggleRecording());
+            micButton.addEventListener('click', () => {
+                console.log('Mic button clicked');
+                this.controller.toggleRecording();
+            });
             micControl.appendChild(micButton);
 
             // Settings button
@@ -799,22 +759,21 @@
             }
         }
 
-
-        updateState(state) {
-            this.container.dataset.state = state.isListening ? 'listening' : 'idle';
-
+        setMicState(state) {
+            console.log('Setting mic state:', state);
             const micButton = this.container.querySelector('#vf-mic-button');
             if (micButton) {
-                micButton.dataset.state = state.isListening ? 'recording' : 'idle';
+                micButton.dataset.state = state;
+            } else{
+                console.error('Mic button not found');
             }
+        }
 
-            const SpeakerButton = this.container.querySelector('#vf-Speaker-button');
-            if (SpeakerButton) {
-                SpeakerButton.dataset.state = state.isSpeaking ? 'speaking' : 'idle';
-            }
-
-            if (state.hasError) {
-                this.showError(state.errorMessage);
+        setSpeakerState(state) {
+            console.log('Setting speaker state:', state);
+            const speakerButton = this.container.querySelector('#vf-Speaker-button');
+            if (speakerButton) {
+                speakerButton.dataset.state = state.isSpeaking ? 'speaking' : 'idle';
             }
         }
 
@@ -1130,15 +1089,14 @@
 
     class TranscriberComponent {
         constructor(visualizer) {
-            this.visualizer = visualizer;
             this.provider = null;
             this.handlers = null;
+            this.visualizer = visualizer;
         }
 
         async initialize(preferredType = "deepgram") {
             this.provider = await this.createProvider(preferredType);
             if (this.provider) {
-                this.provider.setVisualizer(this.visualizer);
                 this.provider.setHandlers(this.handlers);
             }
         }
@@ -1186,13 +1144,6 @@
             return this.provider;
         }
 
-        setVisualizer(visualizer) {
-            this.visualizer = visualizer;
-            if (this.provider && this.provider.setVisualizer) {
-                this.provider.setVisualizer(visualizer);
-            }
-        }
-
         setHandlers(handlers) {
             this.handlers = handlers;
             if (this.provider) {
@@ -1200,10 +1151,11 @@
             }
         }
 
-        // Delegate methods to provider
         async start() {
             if (!this.provider) throw new Error("🚨No transcriber provider initialized");
             try {
+                const stream = await this.provider.getAudioStream();
+                this.visualizer.setMode('listening', stream);
                 await this.provider.startTranscribing();
                 console.debug("🚨TranscriberComponent started, isListening:", this.isListening);
             } catch (error) {
@@ -1211,37 +1163,33 @@
             }
         }
 
+
         async stop() {
             if (this.provider) {
+                this.visualizer.setMode('idle');
                 await this.provider.stopTranscribing();
                 console.debug("🚨TranscriberComponent stopped, isListening:", this.isListening);
             }
         }
 
         get isListening() {
-            if (this.provider) {
-                return this.provider?.isListening;
-            } else {
-                console.warn("TranscriberComponent.isListening querieed but no provider is initialized");
+            if (!this.provider) {
+                console.warn("TranscriberComponent.isListening queried but no provider is initialized");
                 return false;
             }
+            return this.provider.isListening;
         }
 
         set isListening(value) {
-            if (this.provider) {
-                this.provider.isListening = value;
-            } else {
+            if (!this.provider) {
                 console.warn("TranscriberComponent.isListening set but no provider is initialized");
+                return;
             }
+            this.provider.isListening = value;
         }
 
         cleanup() {
-            if (this.provider) {
-                this.provider.stop();
-            }
-            if (this.visualizer) {
-                this.visualizer.cleanup();
-            }
+            this.provider?.stop();
         }
     }
 
@@ -1267,7 +1215,6 @@
     class BaseTranscriberProvider extends TranscriberProvider {
         constructor() {
             super();
-            this.visualizer = null;
             this._isListening = false;
             this.audioStream = null;
             this.handlers = null;
@@ -1280,13 +1227,10 @@
 
         set isListening(value) {
             if (this._isListening !== value) {
+                const newState = value ? 'listening' : 'idle';
                 this._isListening = value;
-                this._handleStateChange(value ? 'listening' : 'idle');
+                this._handleStateChange(newState);
             }
-        }
-
-        setVisualizer(visualizer) {
-            this.visualizer = visualizer;
         }
 
         async getAudioStream() {
@@ -1294,23 +1238,6 @@
                 this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             }
             return this.audioStream;
-        }
-
-        async startVisualization() {
-            if (this.visualizer) {
-                const stream = await this.getAudioStream();
-                await this.visualizer.setMode('listening', stream);
-            }
-        }
-
-        async stopVisualization() {
-            if (this.visualizer) {
-                await this.visualizer.setMode('idle');
-            }
-            if (this.audioStream) {
-                this.audioStream.getTracks().forEach(track => track.stop());
-                this.audioStream = null;
-            }
         }
 
         // Abstract methods to be implemented by subclasses
@@ -1462,14 +1389,14 @@
             this.connectionState = ConnectionState.CLOSED;
 
         }
-        // Use super to access base class isListening
-        get isListening() {
-            return super.isListening;
-        }
+        // // Use super to access base class isListening
+        // get isListening() {
+        //     return super.isListening;
+        // }
 
-        set isListening(value) {
-            super.isListening = value;
-        }
+        // set isListening(value) {
+        //     super.isListening = value;
+        // }
 
         async isAvailable() {
             try {
@@ -1489,22 +1416,23 @@
                 await this.stopTranscribing();
                 return;
             }
-            // Reset state
-            this.connectionAttempt = 0;
-            this.connectionState = ConnectionState.CONNECTING;
-            this.setupWebSocket();
-            this.isListening = true;
 
+            // Reset state
             try {
                 // Get and setup audio stream
                 const stream = await this.getAudioStream();
                 this.setupMediaRecorder(stream);
+                this.isListening = true;
             } catch (error) {
+                this.isListening = false;
                 this._handleError(error);
                 throw error;
             }
 
-            // this.connectionState = ConnectionState.CONNECTED;
+            this.connectionAttempt = 0;
+            this.connectionState = ConnectionState.CONNECTING;
+            await this.setupWebSocket();
+
 
         }
 
@@ -1579,12 +1507,12 @@
             };
             const keywords = ["keywords=KwizIQ:2"].join("&");
             const deepgramUrl = `${deepgramBaseURL}?${new URLSearchParams(deepgramOptions)}&${keywords}`;
-            console.debug(`\u{1F310} Connecting DeepGram WebSocket (attempt ${this.connectionAttempt}/${this.config.maxRetries}):`, deepgramUrl);
+            console.debug(`🚀 Connecting DeepGram WebSocket (attempt ${this.connectionAttempt}/${this.config.maxRetries}):`, deepgramUrl);
             try {
                 this.ws = new WebSocket(deepgramUrl, ["token", secrets.deepgramApiKey]);
                 this.connectionTimeout = setTimeout(() => {
                     if (this.ws?.readyState !== WebSocket.OPEN) {
-                        console.warn(`\u26A0\uFE0F WebSocket connection timeout (attempt ${this.connectionAttempt})`);
+                        console.warn(`⌛ WebSocket connection timeout (attempt ${this.connectionAttempt})`);
                         this.handleConnectionFailure();
                     }
                 }, this.config.connectionTimeout);
@@ -1597,12 +1525,12 @@
                     this.processBufferedAudio();
                 };
                 this.ws.onclose = () => {
-                    console.debug("\u{1F3AF} DeepGram WebSocket closed");
+                    console.debug("🧹 DeepGram WebSocket closed");
                     this.connectionState = ConnectionState.CLOSED;
                     this.handleConnectionFailure();
                 };
                 this.ws.onerror = (error) => {
-                    console.error("\u{1F534} DeepGram WebSocket error:", error);
+                    console.error("🚨 DeepGram WebSocket error:", error);
                     this.handleConnectionFailure();
                 };
                 this.ws.onmessage = (event) => {
@@ -1617,7 +1545,7 @@
                     }
                 };
             } catch (error) {
-                console.error("\u{1F534} Error creating WebSocket:", error);
+                console.error("🚨 Error creating WebSocket:", error);
                 this.handleConnectionFailure();
             }
         }
@@ -1931,7 +1859,7 @@
         }
     }
 
-    class SpeechComponent extends EventEmitter {
+    class SpeakerComponent extends EventEmitter {
         constructor(visualizer) {
             super();
             this.audio = new Audio();
@@ -2115,6 +2043,7 @@
 
     // Plugin interface for Speaker
     window.VOICEFASTER_stream_voice_audio = async (params, userSettings) => {
+        console.log("Received stream request:", params);
         if (!window.voiceFaster) {
             throw new Error("VoiceFaster not initialized");
         }
@@ -2122,6 +2051,7 @@
     };
 
     window.addEventListener("message", (event) => {
+        console.log("Received message:", event.data);
         if (event.data.type === "QUEUE_AUDIO_STREAM" && window.voiceFaster?.speakerComponent) {
             window.voiceFaster.speakerComponent.queueAudioStream(event.data.payload);
         }

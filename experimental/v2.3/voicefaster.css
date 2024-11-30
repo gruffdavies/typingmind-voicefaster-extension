@@ -217,10 +217,6 @@
     }
 }
 
-.vf-mic .vf-button[data-state="recording"] {
-    color: var(--vf-mic-active);
-    animation: listening-pulse 2s infinite;
-}
 
 /* Settings button specifically */
 .vf-settings-btn {
@@ -255,8 +251,9 @@
 }
 
 /* Button States */
-.vf-mic .vf-button[data-state="recording"] {
+.vf-mic .vf-button[data-state="listening"] {
     color: var(--vf-mic-active);
+    animation: listening-pulse 2s infinite;
     box-shadow: var(--vf-glow-mic);
 }
 
