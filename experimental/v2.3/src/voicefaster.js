@@ -45,18 +45,17 @@ class EventEmitter {
     }
 }
 
-
 // VoiceFasterController.js
 class VoiceFasterController {
     constructor(config = {}) {
         this.config = {
-            defaultTranscriberProvider: 'deepgram',
-            defaultVoiceId: 'LKzEuRvwo37aJ6JFMnxk',
+            defaultTranscriberProvider: "deepgram",
+            defaultVoiceId: "LKzEuRvwo37aJ6JFMnxk",
             maxQueueSize: 100,
             maxQueueAge: 3600000,
             targetElement: null,
             transcribeToStagingArea: true,
-            ...config
+            ...config,
         };
 
         this.speakerComponent = null;
@@ -87,19 +86,28 @@ class VoiceFasterController {
     }
 
     getAPIKeys() {
-        const pluginSettings = JSON.parse(window.localStorage.getItem("TM_useUserPluginSettings"));
+        const pluginSettings = JSON.parse(
+            window.localStorage.getItem("TM_useUserPluginSettings")
+        );
         const deepFind = (obj, key) =>
-            key in obj ? obj[key]
-                : Object.values(obj).reduce((acc, val) =>
-                    acc !== undefined ? acc
-                        : typeof val === 'object' && val !== null ? deepFind(val, key)
-                            : undefined
-                    , undefined);
+            key in obj
+                ? obj[key]
+                : Object.values(obj).reduce(
+                    (acc, val) =>
+                        acc !== undefined
+                            ? acc
+                            : typeof val === "object" && val !== null
+                                ? deepFind(val, key)
+                                : undefined,
+                    undefined
+                );
 
-        this.deepgramApiKey = deepFind(pluginSettings, 'deepgramApiKey');
-        this.elevenLabsApiKey = deepFind(pluginSettings, 'elevenLabsApiKey');
-        console.log("VoiceFasterController: API keys retrieved", { deepgramApiKey: this.deepgramApiKey, elevenLabsApiKey: this.elevenLabsApiKey });
-
+        this.deepgramApiKey = deepFind(pluginSettings, "deepgramApiKey");
+        this.elevenLabsApiKey = deepFind(pluginSettings, "elevenLabsApiKey");
+        console.log("VoiceFasterController: API keys retrieved", {
+            deepgramApiKey: this.deepgramApiKey,
+            elevenLabsApiKey: this.elevenLabsApiKey,
+        });
     }
 
     async initializeUI() {
@@ -121,7 +129,7 @@ class VoiceFasterController {
             fftSize: 128,
             xAxisPos: iconXAxisPos,
             yAxisPos: iconYAxisPos,
-            xOffset: 0
+            xOffset: 0,
         });
 
         // Create Speaker visualizer
@@ -132,12 +140,16 @@ class VoiceFasterController {
             fftSize: 2048,
             xAxisPos: iconXAxisPos,
             yAxisPos: iconYAxisPos,
-            xOffset: 1 / iconsVizBarCount
+            xOffset: 1 / iconsVizBarCount,
         });
 
         // Mount visualizers after UI is initialized
-        this.micVisualizer.mount(this.uiComponent.container.querySelector('#vf-mic-button'));
-        this.voicerVisualizer.mount(this.uiComponent.container.querySelector('#vf-speaker-button'));
+        this.micVisualizer.mount(
+            this.uiComponent.container.querySelector("#vf-mic-button")
+        );
+        this.voicerVisualizer.mount(
+            this.uiComponent.container.querySelector("#vf-speaker-button")
+        );
     }
 
     async initializeTranscriber() {
@@ -160,7 +172,6 @@ class VoiceFasterController {
         this.speakerComponent.queue.addObserver(this.uiComponent.queueUIManager);
     }
 
-
     async switchTranscriberProvider() {
         const wasRecording = this.transcriberComponent.isListening;
         if (wasRecording) {
@@ -173,28 +184,29 @@ class VoiceFasterController {
     setupTranscriberHandlers() {
         this.transcriberComponent.setHandlers({
             onTranscript: (text, isFinal) => {
-                console.debug("Transcript received:", { text, isFinal });  // Add logging
+                console.debug("Transcript received:", { text, isFinal }); // Add logging
                 this.handleTranscript(text, isFinal);
             },
             onStateChange: (state) => {
-                console.debug("Transcriber state changed:", state);  // Add logging
+                console.debug("Transcriber state changed:", state); // Add logging
                 this.handleTranscriberStateChange(state);
             },
-            onError: (error) => this.handleError(error)
+            onError: (error) => this.handleError(error),
         });
     }
 
     setupSpeakerHandlers() {
-        this.speakerComponent.on('stateChange', state => {
-            this.uiComponent.setSpeakerState(this.speakerComponent.isSpeaking ? 'speaking' : 'idle');
+        this.speakerComponent.on("stateChange", (state) => {
+            this.uiComponent.setSpeakerState(
+                this.speakerComponent.isSpeaking ? "speaking" : "idle"
+            );
         });
 
-        this.speakerComponent.on('error', error => this.handleError(error));
+        this.speakerComponent.on("error", (error) => this.handleError(error));
     }
 
-
     handleTranscript(text, isFinal) {
-        console.debug("Handling transcript:", { text, isFinal });  // Add logging
+        console.debug("Handling transcript:", { text, isFinal }); // Add logging
         // if (this.config.targetElement && isFinal) {
         //     const currentText = this.config.targetElement.value;
         //     const spacer = currentText && !currentText.endsWith(' ') ? ' ' : '';
@@ -209,30 +221,34 @@ class VoiceFasterController {
         this.uiComponent.setMicState(state);
     }
 
-
     handleError(error) {
         this.state.hasError = true;
-        this.state.errorMessage = error.message || 'Unknown error occurred';
+        this.state.errorMessage = error.message || "Unknown error occurred";
 
         // Auto-clear error after 5 seconds
         setTimeout(() => {
             this.state.hasError = false;
-            this.state.errorMessage = '';
+            this.state.errorMessage = "";
         }, 5000);
     }
-
 
     // Public API methods
     async toggleRecording() {
         if (this.transcriberComponent.isListening) {
-            console.debug("stopping transcribing because toggleRecording called and this.transcriber.isListening is", this.transcriberComponent.isListening);
+            console.debug(
+                "stopping transcribing because toggleRecording called and this.transcriber.isListening is",
+                this.transcriberComponent.isListening
+            );
             await this.transcriberComponent.stop();
-            this.uiComponent.setMicState('idle');
+            this.uiComponent.setMicState("idle");
         } else {
-            console.debug("starting transcribing because toggleRecording called and this.transcriber.isListening is", this.transcriberComponent.isListening);
+            console.debug(
+                "starting transcribing because toggleRecording called and this.transcriber.isListening is",
+                this.transcriberComponent.isListening
+            );
             this.uiComponent.showTranscriptArea();
             await this.transcriberComponent.start();
-            this.uiComponent.setMicState('listening');
+            this.uiComponent.setMicState("listening");
         }
     }
 
@@ -251,10 +267,7 @@ class VoiceFasterController {
         this.voicerVisualizer?.cleanup();
         this.uiComponent?.cleanup();
     }
-
 }
-
-
 
 // AudioVisualizer.js
 class AudioVisualizer {
@@ -262,23 +275,27 @@ class AudioVisualizer {
         this.config = {
             fftSize: config.fftSize || 256,
             barCount: config.barCount || 64,
-            className: config.className || '',
-            color: config.color || '--vf-accent',
+            className: config.className || "",
+            color: config.color || "--vf-accent",
             xAxisPos: config.xAxisPos || 0,
             xOffset: config.xOffset || 0,
             yAxisPos: config.yAxisPos || 0.5,
             heightScale: config.heightScale || 1,
-            ...config
+            ...config,
         };
 
-        if (this.config.xAxisPos == null || this.config.yAxisPos == null || this.config.xOffset === null) {
-            throw new Error('xAxisPos, yAxisPos, and xOffset are mandatory');
+        if (
+            this.config.xAxisPos == null ||
+            this.config.yAxisPos == null ||
+            this.config.xOffset === null
+        ) {
+            throw new Error("xAxisPos, yAxisPos, and xOffset are mandatory");
         }
 
         this.container = null;
         this.canvas = null;
         this.ctx = null;
-        this.mode = 'idle';
+        this.mode = "idle";
         this.styles = getComputedStyle(document.documentElement);
         this.analyser = null;
         this.dataArray = null;
@@ -287,23 +304,25 @@ class AudioVisualizer {
         this.vizParams = null;
         this.audioContext = null;
         this.mediaElementSource = null;
-
     }
 
     createCanvas() {
         const canvas = document.createElement("canvas");
-        canvas.className = `vf-canvas ${this.config.className === 'human-speech' ? 'vf-canvas--human' : 'vf-canvas--agent'}`;
-        canvas.style.position = 'absolute';
-        canvas.style.top = '0';
-        canvas.style.left = '0';
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
+        canvas.className = `vf-canvas ${this.config.className === "human-speech"
+                ? "vf-canvas--human"
+                : "vf-canvas--agent"
+            }`;
+        canvas.style.position = "absolute";
+        canvas.style.top = "0";
+        canvas.style.left = "0";
+        canvas.style.width = "100%";
+        canvas.style.height = "100%";
         return canvas;
     }
 
     mount(container) {
         if (!container) {
-            throw new Error('Container element must be provided to mount visualizer');
+            throw new Error("Container element must be provided to mount visualizer");
         }
 
         if (this.isInitialized) {
@@ -311,10 +330,10 @@ class AudioVisualizer {
         }
 
         this.container = container;
-        this.container.style.position = 'relative';
+        this.container.style.position = "relative";
 
         this.canvas = this.createCanvas();
-        this.ctx = this.canvas.getContext('2d', { alpha: true });
+        this.ctx = this.canvas.getContext("2d", { alpha: true });
         this.container.appendChild(this.canvas);
 
         this.initializeCanvas();
@@ -341,7 +360,6 @@ class AudioVisualizer {
         this.isInitialized = false;
     }
 
-
     #computeVizParams() {
         if (!this.ctx || !this.canvasWidth || !this.canvasHeight) return null;
 
@@ -353,7 +371,7 @@ class AudioVisualizer {
         return {
             barWidth,
             xBarOffset,
-            xStart: (this.canvasWidth * this.config.xAxisPos) + xBarOffset,
+            xStart: this.canvasWidth * this.config.xAxisPos + xBarOffset,
             yAxisPos: this.config.yAxisPos,
             maxHeight,
         };
@@ -396,7 +414,7 @@ class AudioVisualizer {
             } else if (yAxisPos === 0.0) {
                 y = 0;
             } else {
-                y = (yAxisPos * this.canvasHeight) - (barHeight / 2);
+                y = yAxisPos * this.canvasHeight - barHeight / 2;
             }
 
             this.ctx.beginPath();
@@ -433,7 +451,7 @@ class AudioVisualizer {
 
     startAnimation() {
         const animate = () => {
-            if (this.mode !== 'idle') {
+            if (this.mode !== "idle") {
                 this.updateVisualization();
             }
             this.animationFrame = requestAnimationFrame(animate);
@@ -450,13 +468,14 @@ class AudioVisualizer {
         this.drawBars(heights);
     }
 
-
     async setMode(mode, stream = null) {
-        if (mode === this.mode) { return; }
+        if (mode === this.mode) {
+            return;
+        }
         console.log(`🔉AudioVizualizer Setting mode to ${mode}`);
 
         this.mode = mode;
-        if (mode === 'idle') {
+        if (mode === "idle") {
             this.undrawBars();
             return;
         }
@@ -464,7 +483,8 @@ class AudioVisualizer {
         if (stream) {
             try {
                 if (!this.audioContext) {
-                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.audioContext = new (window.AudioContext ||
+                        window.webkitAudioContext)();
                 }
 
                 if (this.audioContext.state === "suspended") {
@@ -478,7 +498,8 @@ class AudioVisualizer {
                 if (stream instanceof HTMLMediaElement) {
                     // Reuse existing MediaElementSource if it exists
                     if (!this.mediaElementSource) {
-                        this.mediaElementSource = this.audioContext.createMediaElementSource(stream);
+                        this.mediaElementSource =
+                            this.audioContext.createMediaElementSource(stream);
                     }
 
                     // Disconnect any existing connections
@@ -498,7 +519,7 @@ class AudioVisualizer {
 
                 return true;
             } catch (err) {
-                console.error('Error in setMode:', err);
+                console.error("Error in setMode:", err);
                 return false;
             }
         } else {
@@ -535,11 +556,7 @@ class AudioVisualizer {
         this.analyser = null;
         this.audioContext = null;
     }
-
 }
-
-
-
 
 // UIManager.js
 class UIComponent {
@@ -566,17 +583,17 @@ class UIComponent {
     }
 
     createMainContainer() {
-        this.container = document.createElement('div');
-        this.container.className = 'vf-widget';
-        this.container.dataset.state = 'idle';
+        this.container = document.createElement("div");
+        this.container.className = "vf-widget";
+        this.container.dataset.state = "idle";
     }
 
     createHeader() {
-        const header = document.createElement('div');
-        header.className = 'vf-dragbar';
+        const header = document.createElement("div");
+        header.className = "vf-dragbar";
 
-        const handle = document.createElement('div');
-        handle.className = 'vf-dragbar-handle';
+        const handle = document.createElement("div");
+        handle.className = "vf-dragbar-handle";
 
         header.appendChild(handle);
         this.container.appendChild(header);
@@ -594,14 +611,14 @@ class UIComponent {
                 <path d="M11.536 14.01A8.47 8.47 0 0 0 14.026 8a8.47 8.47 0 0 0-2.49-6.01l-.708.707A7.48 7.48 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303z"/>
                 <path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.48 5.48 0 0 1 11.025 8a5.48 5.48 0 0 1-1.61 3.89z"/>
                 <path d="M8.707 11.182A4.5 4.5 0 0 0 10.025 8a4.5 4.5 0 0 0-1.318-3.182L8 5.525A3.5 3.5 0 0 1 9.025 8 3.5 3.5 0 0 1 8 10.475zM6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06"/>
-            </svg>`
+            </svg>`;
     }
 
     gearIconHTML() {
         return `<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
                 <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/>
                 <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/>
-            </svg>`
+            </svg>`;
     }
 
     closeIconHTML() {
@@ -611,36 +628,36 @@ class UIComponent {
     }
 
     createControls() {
-        const controls = document.createElement('div');
-        controls.className = 'vf-controls';
+        const controls = document.createElement("div");
+        controls.className = "vf-controls";
 
         // Mic control
-        const micControl = document.createElement('div');
-        micControl.className = 'vf-mic';
-        const micButton = document.createElement('button');
-        micButton.className = 'vf-button vf-button-mic';
-        micButton.id = 'vf-mic-button';
-        micButton.dataset.state = 'idle';
+        const micControl = document.createElement("div");
+        micControl.className = "vf-mic";
+        const micButton = document.createElement("button");
+        micButton.className = "vf-button vf-button-mic";
+        micButton.id = "vf-mic-button";
+        micButton.dataset.state = "idle";
         micButton.innerHTML = this.micIconHTML();
-        micButton.addEventListener('click', () => {
-            console.log('Mic button clicked');
+        micButton.addEventListener("click", () => {
+            console.log("Mic button clicked");
             this.controller.toggleRecording();
         });
         micControl.appendChild(micButton);
 
         // Settings button
-        const settingsBtn = document.createElement('button');
-        settingsBtn.className = 'vf-settings-btn';
+        const settingsBtn = document.createElement("button");
+        settingsBtn.className = "vf-settings-btn";
         settingsBtn.innerHTML = this.gearIconHTML();
-        settingsBtn.addEventListener('click', () => this.toggleSettings());
+        settingsBtn.addEventListener("click", () => this.toggleSettings());
 
         // Speaker control
-        const SpeakerControl = document.createElement('div');
-        SpeakerControl.className = 'vf-speaker';
-        const SpeakerButton = document.createElement('button');
-        SpeakerButton.className = 'vf-button vf-button-tts';
-        SpeakerButton.id = 'vf-speaker-button';
-        SpeakerButton.dataset.state = 'idle';
+        const SpeakerControl = document.createElement("div");
+        SpeakerControl.className = "vf-speaker";
+        const SpeakerButton = document.createElement("button");
+        SpeakerButton.className = "vf-button vf-button-tts";
+        SpeakerButton.id = "vf-speaker-button";
+        SpeakerButton.dataset.state = "idle";
         SpeakerButton.innerHTML = this.speakerIconHTML();
         SpeakerControl.appendChild(SpeakerButton);
 
@@ -651,18 +668,17 @@ class UIComponent {
         this.container.appendChild(controls);
     }
 
-
     createInfo() {
-        const info = document.createElement('div');
+        const info = document.createElement("div");
         const version = VOICEFASTER_VERSION;
-        info.className = 'vf-info';
+        info.className = "vf-info";
         info.innerHTML = `<span>VoiceFaster</span><span>v${version}</span>`;
         this.container.appendChild(info);
     }
 
     createBubbleTray() {
-        this.queueVisualizerContainer = document.createElement('div');
-        this.queueVisualizerContainer.className = 'vf-bubble-tray';
+        this.queueVisualizerContainer = document.createElement("div");
+        this.queueVisualizerContainer.className = "vf-bubble-tray";
         this.container.appendChild(this.queueVisualizerContainer);
 
         // Initialize QueueUIManager
@@ -670,11 +686,10 @@ class UIComponent {
         this.queueUIManager.mount(this.queueVisualizerContainer);
     }
 
-
     // In UIManager.js, modify the createSettings method:
     async createSettings() {
-        const settings = document.createElement('div');
-        settings.className = 'vf-settings';
+        const settings = document.createElement("div");
+        settings.className = "vf-settings";
         settings.hidden = true;
 
         const header = this.createSettingsHeader();
@@ -686,22 +701,22 @@ class UIComponent {
     }
 
     createSettingsHeader() {
-        const header = document.createElement('div');
-        header.className = 'vf-settings-header';
+        const header = document.createElement("div");
+        header.className = "vf-settings-header";
         header.innerHTML = `<span>SETTINGS</span>
         <button class="vf-settings-close">${this.closeIconHTML()}</button>`;
 
-        const closeBtn = header.querySelector('.vf-settings-close');
-        closeBtn.addEventListener('click', () => {
-            const settings = this.container.querySelector('.vf-settings');
+        const closeBtn = header.querySelector(".vf-settings-close");
+        closeBtn.addEventListener("click", () => {
+            const settings = this.container.querySelector(".vf-settings");
             settings.hidden = true;
         });
         return header;
     }
 
     createTranscriberSettingsSection() {
-        const section = document.createElement('div');
-        section.className = 'vf-settings-section';
+        const section = document.createElement("div");
+        section.className = "vf-settings-section";
         section.innerHTML = `<h3 class="vf-settings-title">Transcription Settings</h3>
                             <div class="vf-settings-controls">
                             <select class="vf-transcriber-provider-select">
@@ -713,26 +728,33 @@ class UIComponent {
                             </label>
                             </div>`;
 
-        const providerSelect = section.querySelector('.vf-transcriber-provider-select');
+        const providerSelect = section.querySelector(
+            ".vf-transcriber-provider-select"
+        );
 
-        providerSelect.addEventListener('change', async (e) => {
+        providerSelect.addEventListener("change", async (e) => {
             try {
                 await this.controller.switchTranscriberProvider();
-                this.showNotification('Speech recognition provider switched successfully');
+                this.showNotification(
+                    "Speech recognition provider switched successfully"
+                );
             } catch (error) {
-                console.error('Failed to switch provider:', error);
-                providerSelect.value = this.controller.transcriberComponent.provider instanceof DeepGramTranscriber ? 'deepgram' : 'webspeech';
-                this.showError('Failed to switch provider: ' + error.message);
+                console.error("Failed to switch provider:", error);
+                providerSelect.value =
+                    this.controller.transcriberComponent.provider instanceof
+                        DeepGramTranscriber
+                        ? "deepgram"
+                        : "webspeech";
+                this.showError("Failed to switch provider: " + error.message);
             }
         });
 
         return section;
     }
 
-
     createSpeakerSettingsSection() {
-        const section = document.createElement('div');
-        section.className = 'vf-settings-section';
+        const section = document.createElement("div");
+        section.className = "vf-settings-section";
         section.innerHTML = `<h3 class="vf-settings-title">Agent Speech Settings</h3>
     <div class="vf-settings-controls">
       <select class="vf-speaker-provider-select">
@@ -749,53 +771,54 @@ class UIComponent {
         <label>Bubbles Per Line: <input type="number" value="9" min="1" max="20"></label>
       </div>
     </div>
-                    ` ;
+                    `;
 
-        const providerSelect = section.querySelector('.vf-speaker-provider-select');
+        const providerSelect = section.querySelector(".vf-speaker-provider-select");
 
-        providerSelect.addEventListener('change', async (e) => {
+        providerSelect.addEventListener("change", async (e) => {
             try {
                 await this.controller.switchSpeakerProvider();
-                this.showNotification('Text to speech provider switched successfully');
+                this.showNotification("Text to speech provider switched successfully");
             } catch (error) {
-                console.error('Failed to switch provider:', error);
-                providerSelect.value = this.controller.speaker.provider instanceof ElevenLabsSpeaker ? 'elevenlabs' : 'webspeech';
-                this.showError('Failed to switch provider: ' + error.message);
+                console.error("Failed to switch provider:", error);
+                providerSelect.value =
+                    this.controller.speaker.provider instanceof ElevenLabsSpeaker
+                        ? "elevenlabs"
+                        : "webspeech";
+                this.showError("Failed to switch provider: " + error.message);
             }
         });
-
 
         return section;
     }
     // Add notification method
     showNotification(message) {
-        console.log('Showing notification:', message);
-        const notification = document.createElement('div');
-        notification.className = 'vf-notification';
+        console.log("Showing notification:", message);
+        const notification = document.createElement("div");
+        notification.className = "vf-notification";
         notification.textContent = message;
         this.container.appendChild(notification);
         setTimeout(() => notification.remove(), 3000);
     }
 
-
     createTranscriptArea() {
-        const transcript = document.createElement('div');
-        transcript.className = 'vf-transcript';
+        const transcript = document.createElement("div");
+        transcript.className = "vf-transcript";
         transcript.hidden = true;
 
-        const header = document.createElement('div');
-        header.className = 'vf-transcript-header';
+        const header = document.createElement("div");
+        header.className = "vf-transcript-header";
         header.innerHTML = `
         <span>Transcript</span>
         <button class="vf-transcript-close">${this.closeIconHTML()}</button>
     `;
 
-        const content = document.createElement('div');
-        content.className = 'vf-transcript-content';
+        const content = document.createElement("div");
+        content.className = "vf-transcript-content";
         content.innerHTML = `<span class="vf-text--final"></span><span class="vf-text--interim"></span>`;
 
-        const actions = document.createElement('div');
-        actions.className = 'vf-transcript-actions';
+        const actions = document.createElement("div");
+        actions.className = "vf-transcript-actions";
         actions.innerHTML = `
         <button class="vf-button--copy">Copy</button>
         <button class="vf-button--send">Send</button>
@@ -819,83 +842,156 @@ class UIComponent {
     }
 
     clearTranscriptArea() {
-        this.transcriptArea.querySelector('.vf-text--interim').textContent = '';
-        this.transcriptArea.querySelector('.vf-text--final').textContent = '';
+        this.transcriptArea.querySelector(".vf-text--interim").textContent = "";
+        this.transcriptArea.querySelector(".vf-text--final").textContent = "";
     }
 
-    copyTranscriptToClipboard(){
+    copyTranscriptToClipboard() {
         const transcript = this.getTranscript();
         navigator.clipboard.writeText(transcript);
-        console.log('Transcript copied to clipboard:', transcript);
+        console.log("Transcript copied to clipboard:", transcript);
     }
 
-    getTranscript(){
-        const finalText = this.transcriptArea.querySelector('.vf-text--final').textContent;
-        const interimText = this.transcriptArea.querySelector('.vf-text--interim').textContent;
-        const transcript = ' ' + finalText + ' ' + interimText;
+    getTranscript() {
+        const finalText =
+            this.transcriptArea.querySelector(".vf-text--final").textContent;
+        const interimText =
+            this.transcriptArea.querySelector(".vf-text--interim").textContent;
+        const transcript = " " + finalText + " " + interimText;
         return transcript;
     }
 
-    sendTranscriptToTargetElement() {
-        const targetElement = document.getElementById(this.controller.config.targetElementId);
-        console.log('🎯Target element:', targetElement);
-        const transcript = this.getTranscript();
+    appendTargetElementTextReactSafe(transcript) {
+        const targetElement = this.getTargetElement();
 
-        // Create a clipboard event with the text data
-        const pasteEvent = new ClipboardEvent('paste', {
-            bubbles: true,
-            cancelable: true,
-            composed: true,
-            clipboardData: new DataTransfer()
+        // Find React props
+        const propsKey = Object.keys(targetElement).find((key) =>
+            key.startsWith("__reactProps$")
+        );
+        const props = targetElement[propsKey];
+
+        console.log("🔍 React props:", props);
+
+        // Store original handlers
+        const originalOnChange = props?.onChange;
+        const originalOnFocus = props?.onFocus;
+
+        // Set the value
+        targetElement.value = transcript;
+
+        // Create a change event that maintains the value
+        const changeEvent = {
+            target: targetElement,
+            currentTarget: targetElement,
+            type: "change",
+            preventDefault: () => { },
+            persist: () => { },
+        };
+
+        // Create a focus event
+        const focusEvent = {
+            target: targetElement,
+            currentTarget: targetElement,
+            type: "focus",
+            preventDefault: () => { },
+            persist: () => { },
+        };
+
+        // Call both handlers if they exist
+        try {
+            if (originalOnChange) {
+                console.log("📡 Calling onChange");
+                originalOnChange(changeEvent);
+            }
+
+            if (originalOnFocus) {
+                console.log("📡 Calling onFocus");
+                originalOnFocus(focusEvent);
+            }
+
+            // Also dispatch DOM events
+            targetElement.dispatchEvent(new Event("change", { bubbles: true }));
+            targetElement.dispatchEvent(new Event("input", { bubbles: true }));
+
+            console.log("✅ Events dispatched");
+        } catch (error) {
+            console.error("Error:", error);
+        }
+
+        // Add a MutationObserver to monitor for value changes
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (
+                    mutation.type === "attributes" ||
+                    mutation.type === "characterData" ||
+                    targetElement.value !== transcript
+                ) {
+                    // React has changed the value, so restore it
+                    console.log("🔄 Value changed by React, restoring...");
+                    targetElement.value = transcript;
+
+                    // Redispatch events
+                    if (originalOnChange) originalOnChange(changeEvent);
+                    targetElement.dispatchEvent(new Event("change", { bubbles: true }));
+                    targetElement.dispatchEvent(new Event("input", { bubbles: true }));
+                }
+            });
         });
 
-        // Set the clipboard data
-        pasteEvent.clipboardData.setData('text/plain', transcript);
-
-        // Focus the element
-        targetElement.focus();
-
-        // Dispatch the paste event
-        targetElement.dispatchEvent(pasteEvent);
-
-        // Since React might prevent default, we also update the value directly
-        const startPos = targetElement.selectionStart;
-        const currentValue = targetElement.value;
-        const newValue = currentValue.slice(0, startPos) + transcript + currentValue.slice(startPos);
-        targetElement.value = newValue;
-
-        // Trigger input event after paste
-        const inputEvent = new InputEvent('input', {
-            bubbles: true,
-            cancelable: true,
-            composed: true,
-            inputType: 'insertFromPaste',
-            data: textToAdd
+        observer.observe(targetElement, {
+            attributes: true,
+            characterData: true,
+            childList: true,
+            subtree: true,
         });
-        targetElement.dispatchEvent(inputEvent);
+
+        // Cleanup observer after 2 seconds
+        setTimeout(() => {
+            observer.disconnect();
+            console.log("👋 Observer disconnected");
+        }, 2000);
     }
 
+    // basic DOM manipulation but react may overwrite
+    appendTargetElementText(transcript) {
+        this.targetElement.value = targetElement.value + ' ' + transcript;
+    }
+
+    getTargetElement() {
+        this.targetElement = document.getElementById(this.controller.config.targetElementId);
+        return this.targetElement;
+    }
+
+    sendTranscriptToTargetElement() {
+        const targetElement = this.getTargetElement();
+        console.log("🎯Target element:", targetElement);
+        const transcript = this.getTranscript();
+
+        // this should work for react and normal DOM elements
+        this.appendTargetElementTextReactSafe(transcript);
+
+    }
 
     setupTranscriptHandlers(transcript) {
-        const closeBtn = transcript.querySelector('.vf-transcript-close');
-        const copyBtn = transcript.querySelector('.vf-button--copy');
-        const sendBtn = transcript.querySelector('.vf-button--send');
-        const clearBtn = transcript.querySelector('.vf-button--clear');
+        const closeBtn = transcript.querySelector(".vf-transcript-close");
+        const copyBtn = transcript.querySelector(".vf-button--copy");
+        const sendBtn = transcript.querySelector(".vf-button--send");
+        const clearBtn = transcript.querySelector(".vf-button--clear");
 
-        copyBtn.addEventListener('click', () => {
-            console.debug('copy button clicked');
+        copyBtn.addEventListener("click", () => {
+            console.debug("copy button clicked");
             this.copyTranscriptToClipboard();
         });
 
-        closeBtn.addEventListener('click', () => {
+        closeBtn.addEventListener("click", () => {
             this.hideTranscriptArea();
             if (this.controller.transcriberComponent.isListening) {
                 this.controller.toggleRecording();
             }
         });
 
-        sendBtn.addEventListener('click', () => {
-            console.debug('Send button clicked');
+        sendBtn.addEventListener("click", () => {
+            console.debug("Send button clicked");
             this.sendTranscriptToTargetElement();
             this.clearTranscriptArea();
             this.hideTranscriptArea();
@@ -904,7 +1000,7 @@ class UIComponent {
             }
         });
 
-        clearBtn.addEventListener('click', () => {
+        clearBtn.addEventListener("click", () => {
             this.clearTranscriptArea();
             if (this.controller.transcriberComponent.isListening) {
                 this.controller.toggleRecording();
@@ -913,46 +1009,46 @@ class UIComponent {
     }
 
     updateTranscript(text, isFinal) {
-        const transcript = this.container.querySelector('.vf-transcript');
+        const transcript = this.container.querySelector(".vf-transcript");
         if (!transcript) return;
 
         transcript.hidden = false;
-        const contentArea = transcript.querySelector('.vf-transcript-content');
-        const interimSpan = contentArea.querySelector('.vf-text--interim');
-        const finalSpan = contentArea.querySelector('.vf-text--final');
+        const contentArea = transcript.querySelector(".vf-transcript-content");
+        const interimSpan = contentArea.querySelector(".vf-text--interim");
+        const finalSpan = contentArea.querySelector(".vf-text--final");
 
         if (isFinal) {
-            finalSpan.textContent += text + ' ';
-            interimSpan.textContent = '';
+            finalSpan.textContent += text + " ";
+            interimSpan.textContent = "";
         } else {
             interimSpan.textContent = text;
         }
     }
 
     setMicState(state) {
-        console.log('Setting mic state:', state);
-        const micButton = this.container.querySelector('#vf-mic-button');
+        console.log("Setting mic state:", state);
+        const micButton = this.container.querySelector("#vf-mic-button");
         if (micButton) {
             micButton.dataset.state = state;
         } else {
-            console.error('Mic button not found');
+            console.error("Mic button not found");
         }
     }
 
     setSpeakerState(state) {
-        console.log('Setting speaker state:', state);
-        const speakerButton = this.container.querySelector('#vf-speaker-button');
+        console.log("Setting speaker state:", state);
+        const speakerButton = this.container.querySelector("#vf-speaker-button");
         if (speakerButton) {
-            speakerButton.dataset.state = state.isSpeaking ? 'speaking' : 'idle';
+            speakerButton.dataset.state = state.isSpeaking ? "speaking" : "idle";
         }
     }
 
     showError(message) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'vf-error';
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "vf-error";
         errorDiv.textContent = message;
 
-        const existingError = this.container.querySelector('.vf-error');
+        const existingError = this.container.querySelector(".vf-error");
         if (existingError) {
             existingError.remove();
         }
@@ -962,7 +1058,7 @@ class UIComponent {
     }
 
     makeDraggable() {
-        const dragHandle = this.container.querySelector('.vf-dragbar');
+        const dragHandle = this.container.querySelector(".vf-dragbar");
         let isDragging = false;
         let startX, startY;
         let startRight; // Track distance from right edge
@@ -974,9 +1070,11 @@ class UIComponent {
 
                 const rect = this.container.getBoundingClientRect();
                 // Calculate distance from right edge of viewport
-                startRight = window.innerWidth - (rect.right);
-                startX = (e.type === "mousedown" ? e.clientX : e.touches[0].clientX);
-                startY = (e.type === "mousedown" ? e.clientY : e.touches[0].clientY) - rect.top;
+                startRight = window.innerWidth - rect.right;
+                startX = e.type === "mousedown" ? e.clientX : e.touches[0].clientX;
+                startY =
+                    (e.type === "mousedown" ? e.clientY : e.touches[0].clientY) -
+                    rect.top;
             }
         };
 
@@ -992,23 +1090,32 @@ class UIComponent {
             const newY = clientY - startY;
 
             // Get transcript dimensions if visible
-            const transcript = this.container.querySelector('.vf-transcript');
-            const transcriptWidth = transcript && !transcript.hidden ?
-                transcript.offsetWidth : this.container.offsetWidth;
+            const transcript = this.container.querySelector(".vf-transcript");
+            const transcriptWidth =
+                transcript && !transcript.hidden
+                    ? transcript.offsetWidth
+                    : this.container.offsetWidth;
 
             // Use the wider of the two widths for constraints
-            const effectiveWidth = Math.max(this.container.offsetWidth, transcriptWidth);
+            const effectiveWidth = Math.max(
+                this.container.offsetWidth,
+                transcriptWidth
+            );
 
             // Constrain to viewport considering the effective width
             const maxRight = window.innerWidth - effectiveWidth;
-            const maxY = window.innerHeight - (this.container.offsetHeight +
-                (transcript && !transcript.hidden ? transcript.offsetHeight + 8 : 0));
+            const maxY =
+                window.innerHeight -
+                (this.container.offsetHeight +
+                    (transcript && !transcript.hidden ? transcript.offsetHeight + 8 : 0));
 
             // Apply new position
-            this.container.style.right = `${Math.max(0, Math.min(maxRight, newRight))}px`;
+            this.container.style.right = `${Math.max(
+                0,
+                Math.min(maxRight, newRight)
+            )}px`;
             this.container.style.top = `${Math.max(0, Math.min(maxY, newY))}px`;
         };
-
 
         const keepInView = () => {
             const rect = this.container.getBoundingClientRect();
@@ -1016,13 +1123,13 @@ class UIComponent {
             const maxRight = window.innerWidth - rect.width;
 
             if (rightDistance < 0) {
-                this.container.style.right = '0px';
+                this.container.style.right = "0px";
             } else if (rightDistance > maxRight) {
                 this.container.style.right = `${maxRight}px`;
             }
 
             if (rect.top < 0) {
-                this.container.style.top = '0px';
+                this.container.style.top = "0px";
             } else if (rect.bottom > window.innerHeight) {
                 this.container.style.top = `${window.innerHeight - rect.height}px`;
             }
@@ -1040,7 +1147,7 @@ class UIComponent {
 
         // Add window resize listener with debounce
         let resizeTimeout;
-        window.addEventListener('resize', () => {
+        window.addEventListener("resize", () => {
             if (resizeTimeout) clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(() => {
                 if (!isDragging) keepInView();
@@ -1056,11 +1163,8 @@ class UIComponent {
         document.addEventListener("touchend", dragEnd);
     }
 
-
-
-
     toggleSettings() {
-        const settings = this.container.querySelector('.vf-settings');
+        const settings = this.container.querySelector(".vf-settings");
         if (settings) {
             settings.hidden = !settings.hidden;
         }
@@ -1092,7 +1196,7 @@ class QueueUIManager {
 
     mount(container) {
         if (!container) {
-            console.error('QueueUIManager: No container provided for mounting');
+            console.error("QueueUIManager: No container provided for mounting");
             return;
         }
         this.container = container;
@@ -1133,8 +1237,8 @@ class QueueUIManager {
     }
 
     createBubble(item) {
-        const bubble = document.createElement('div');
-        bubble.className = 'vf-bubble';
+        const bubble = document.createElement("div");
+        bubble.className = "vf-bubble";
         bubble.dataset.state = item.state;
         bubble.dataset.id = item.id;
         bubble.title = item.getDetailsString();
@@ -1142,7 +1246,7 @@ class QueueUIManager {
         // Create and store the click handler
         const clickHandler = this.createBubbleClickHandler(item);
         this.bubbleClickHandlers.set(bubble, clickHandler);
-        bubble.addEventListener('click', clickHandler);
+        bubble.addEventListener("click", clickHandler);
 
         return bubble;
     }
@@ -1153,22 +1257,26 @@ class QueueUIManager {
 
             try {
                 switch (item.state) {
-                    case 'queued':
+                    case "queued":
                         if (!current) {
                             await this.controller.speaker.processNextInQueue();
                         }
                         break;
 
-                    case 'playing':
+                    case "playing":
                         await this.controller.speaker.pause();
                         break;
 
-                    case 'completed':
-                        console.error('QueueUIManager: Attempted to play completed item which is not yet implemented');
+                    case "completed":
+                        console.error(
+                            "QueueUIManager: Attempted to play completed item which is not yet implemented"
+                        );
                         break;
 
-                    case 'error':
-                        console.warn('QueueUIManager: Attempted to play error item which is not yet implemented');
+                    case "error":
+                        console.warn(
+                            "QueueUIManager: Attempted to play error item which is not yet implemented"
+                        );
                         break;
 
                     default:
@@ -1176,7 +1284,7 @@ class QueueUIManager {
                         break;
                 }
             } catch (error) {
-                console.error('Error handling bubble click:', error);
+                console.error("Error handling bubble click:", error);
                 // Optionally show error to user via controller's error handling
                 if (this.controller.handleError) {
                     this.controller.handleError(error);
@@ -1193,13 +1301,15 @@ class QueueUIManager {
         bubble.title = item.getDetailsString();
 
         // Update ARIA attributes for accessibility
-        bubble.setAttribute('aria-label', `Audio item ${item.id} - ${item.state}`);
-        bubble.setAttribute('role', 'button');
+        bubble.setAttribute("aria-label", `Audio item ${item.id} - ${item.state}`);
+        bubble.setAttribute("role", "button");
 
         // Add appropriate cursor style based on state
-        bubble.style.cursor = ['queued', 'playing', 'completed', 'error'].includes(item.state)
-            ? 'pointer'
-            : 'default';
+        bubble.style.cursor = ["queued", "playing", "completed", "error"].includes(
+            item.state
+        )
+            ? "pointer"
+            : "default";
     }
 
     cleanupBubble(bubble) {
@@ -1208,7 +1318,7 @@ class QueueUIManager {
         // Remove event listener if it exists
         const handler = this.bubbleClickHandlers.get(bubble);
         if (handler) {
-            bubble.removeEventListener('click', handler);
+            bubble.removeEventListener("click", handler);
             this.bubbleClickHandlers.delete(bubble);
         }
     }
@@ -1217,12 +1327,12 @@ class QueueUIManager {
         if (!this.container) return;
 
         // Clean up all bubbles
-        Array.from(this.container.children).forEach(bubble => {
+        Array.from(this.container.children).forEach((bubble) => {
             this.cleanupBubble(bubble);
         });
 
         // Clear the container
-        this.container.innerHTML = '';
+        this.container.innerHTML = "";
 
         // Clear the handler map
         this.bubbleClickHandlers.clear();
@@ -1232,14 +1342,13 @@ class QueueUIManager {
     }
 }
 
-
 /* Speech Recognition and Transcription Classes */
 const ConnectionState = {
-    CLOSED: 'closed',
-    CONNECTING: 'connecting',
-    CONNECTED: 'connected',
-    RECONNECTING: 'reconnecting',
-    FAILED: 'failed'
+    CLOSED: "closed",
+    CONNECTING: "connecting",
+    CONNECTED: "connected",
+    RECONNECTING: "reconnecting",
+    FAILED: "failed",
 };
 
 class TranscriberComponent {
@@ -1267,7 +1376,9 @@ class TranscriberComponent {
                     console.debug("Using DeepGram Transcriber");
                     return provider;
                 }
-                console.warn("DeepGram provider not available, falling back to WebSpeech");
+                console.warn(
+                    "DeepGram provider not available, falling back to WebSpeech"
+                );
             }
 
             const webSpeech = new WebSpeechTranscriber();
@@ -1289,8 +1400,8 @@ class TranscriberComponent {
             await this.stop();
         }
 
-        const newType = this.provider instanceof DeepGramTranscriber ?
-            "webspeech" : "deepgram";
+        const newType =
+            this.provider instanceof DeepGramTranscriber ? "webspeech" : "deepgram";
 
         this.provider = await this.createProvider(newType);
         this.provider.setHandlers(this.handlers);
@@ -1310,30 +1421,39 @@ class TranscriberComponent {
     }
 
     async start() {
-        if (!this.provider) throw new Error("🚨No transcriber provider initialized");
-        if (!this.visualizer) throw new Error("🚨No transcriber visualizer assigner");
+        if (!this.provider)
+            throw new Error("🚨No transcriber provider initialized");
+        if (!this.visualizer)
+            throw new Error("🚨No transcriber visualizer assigner");
         try {
             const stream = await this.provider.getAudioStream();
-            this.visualizer.setMode('listening', stream);
+            this.visualizer.setMode("listening", stream);
             await this.provider.startTranscribing();
-            console.debug("🚨TranscriberComponent started, isListening:", this.isListening);
+            console.debug(
+                "🚨TranscriberComponent started, isListening:",
+                this.isListening
+            );
         } catch (error) {
             throw error;
         }
     }
 
-
     async stop() {
         if (this.provider) {
-            this.visualizer.setMode('idle');
+            this.visualizer.setMode("idle");
             await this.provider.stopTranscribing();
-            console.debug("🚨TranscriberComponent stopped, isListening:", this.isListening);
+            console.debug(
+                "🚨TranscriberComponent stopped, isListening:",
+                this.isListening
+            );
         }
     }
 
     get isListening() {
         if (!this.provider) {
-            console.warn("TranscriberComponent.isListening queried but no provider is initialized");
+            console.warn(
+                "TranscriberComponent.isListening queried but no provider is initialized"
+            );
             return false;
         }
         return this.provider.isListening;
@@ -1341,7 +1461,9 @@ class TranscriberComponent {
 
     set isListening(value) {
         if (!this.provider) {
-            console.warn("TranscriberComponent.isListening set but no provider is initialized");
+            console.warn(
+                "TranscriberComponent.isListening set but no provider is initialized"
+            );
             return;
         }
         this.provider.isListening = value;
@@ -1377,7 +1499,7 @@ class BaseTranscriberProvider extends TranscriberProvider {
         this._isListening = false;
         this.audioStream = null;
         this.handlers = null;
-        this.finalTranscript = '';
+        this.finalTranscript = "";
     }
 
     get isListening() {
@@ -1386,7 +1508,7 @@ class BaseTranscriberProvider extends TranscriberProvider {
 
     set isListening(value) {
         if (this._isListening !== value) {
-            const newState = value ? 'listening' : 'idle';
+            const newState = value ? "listening" : "idle";
             this._isListening = value;
             this._handleStateChange(newState);
         }
@@ -1394,7 +1516,9 @@ class BaseTranscriberProvider extends TranscriberProvider {
 
     async getAudioStream() {
         if (!this.audioStream) {
-            this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            this.audioStream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+            });
         }
         return this.audioStream;
     }
@@ -1410,7 +1534,7 @@ class BaseTranscriberProvider extends TranscriberProvider {
 
     _processTranscript(text, isFinal) {
         if (isFinal) {
-            this.finalTranscript += text + ' ';
+            this.finalTranscript += text + " ";
         }
         this.handlers?.onTranscript?.(text, isFinal);
     }
@@ -1420,7 +1544,7 @@ class BaseTranscriberProvider extends TranscriberProvider {
     }
 
     _handleError(error) {
-        console.error('Transcriber Error:', error);
+        console.error("Transcriber Error:", error);
         this.handlers?.onError?.(error);
     }
 
@@ -1429,22 +1553,21 @@ class BaseTranscriberProvider extends TranscriberProvider {
     }
 }
 
-
 // WebSpeechTranscriber.js
 class WebSpeechTranscriber extends BaseTranscriberProvider {
     constructor() {
         super();
-        if (!('webkitSpeechRecognition' in window)) {
-            throw new Error('Web Speech API not supported');
+        if (!("webkitSpeechRecognition" in window)) {
+            throw new Error("Web Speech API not supported");
         }
 
         this.recognition = new webkitSpeechRecognition();
         this.handlers = null;
-        this.finalTranscript = '';
+        this.finalTranscript = "";
 
         this.recognition.continuous = true;
         this.recognition.interimResults = true;
-        this.recognition.lang = 'en-GB';
+        this.recognition.lang = "en-GB";
 
         this.setupRecognitionHandlers();
     }
@@ -1466,9 +1589,9 @@ class WebSpeechTranscriber extends BaseTranscriberProvider {
         };
 
         this.recognition.onresult = (event) => {
-            let interimTranscript = '';
+            let interimTranscript = "";
 
-            if (typeof event.results === 'undefined') {
+            if (typeof event.results === "undefined") {
                 this.recognition.onend = null;
                 this.recognition.stop();
                 return;
@@ -1483,18 +1606,19 @@ class WebSpeechTranscriber extends BaseTranscriberProvider {
         };
 
         this.recognition.onerror = (event) => {
-            let errorMessage = '';
+            let errorMessage = "";
             switch (event.error) {
-                case 'no-speech':
-                    errorMessage = 'No speech detected';
+                case "no-speech":
+                    errorMessage = "No speech detected";
                     break;
-                case 'audio-capture':
-                    errorMessage = 'No microphone detected';
+                case "audio-capture":
+                    errorMessage = "No microphone detected";
                     break;
-                case 'not-allowed':
-                    errorMessage = event.timeStamp < 100 ?
-                        'Microphone blocked' :
-                        'Microphone permission denied';
+                case "not-allowed":
+                    errorMessage =
+                        event.timeStamp < 100
+                            ? "Microphone blocked"
+                            : "Microphone permission denied";
                     break;
                 default:
                     errorMessage = `Speech recognition error: ${event.error}`;
@@ -1504,7 +1628,7 @@ class WebSpeechTranscriber extends BaseTranscriberProvider {
     }
 
     async startTranscribing() {
-        this.finalTranscript = '';
+        this.finalTranscript = "";
         this.recognition.start();
     }
 
@@ -1513,7 +1637,7 @@ class WebSpeechTranscriber extends BaseTranscriberProvider {
     }
 
     async isAvailable() {
-        return 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+        return "webkitSpeechRecognition" in window || "SpeechRecognition" in window;
     }
 
     setHandlers(handlers) {
@@ -1521,15 +1645,14 @@ class WebSpeechTranscriber extends BaseTranscriberProvider {
     }
 }
 
-
 // DeepGramTranscriber.js
 class DeepGramTranscriber extends BaseTranscriberProvider {
     constructor(config = {}) {
-        console.log('DeepGramTranscriber constructor called with config:', config);
+        console.log("DeepGramTranscriber constructor called with config:", config);
         super();
         this.config = {
-            model: 'nova-2',
-            language: 'en-GB',
+            model: "nova-2",
+            language: "en-GB",
             smart_format: true,
             interim_results: true,
             vad_events: true,
@@ -1537,7 +1660,7 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
             maxRetries: 3,
             connectionTimeout: 1000,
             maxBufferSize: 50,
-            ...config
+            ...config,
         };
 
         this.ws = null;
@@ -1547,15 +1670,17 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
         this.reconnectTimeout = null;
         this.mediaRecorder = null;
         this.connectionState = ConnectionState.CLOSED;
-        console.log('DeepGramTranscriber constructor finished. Config:', this.config);
-
+        console.log(
+            "DeepGramTranscriber constructor finished. Config:",
+            this.config
+        );
     }
 
     async isAvailable() {
         try {
             return Boolean(this.config?.deepgramApiKey);
         } catch (e) {
-            console.warn('DeepGram availability check failed:', e);
+            console.warn("DeepGram availability check failed:", e);
             return false;
         }
     }
@@ -1585,8 +1710,6 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
         this.connectionAttempt = 0;
         this.connectionState = ConnectionState.CONNECTING;
         await this.setupWebSocket();
-
-
     }
 
     async stopTranscribing() {
@@ -1606,7 +1729,7 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
             try {
                 await this.closeWebSocket();
             } catch (error) {
-                console.warn('Error during WebSocket closure:', error);
+                console.warn("Error during WebSocket closure:", error);
             }
         }
 
@@ -1624,17 +1747,17 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
             }
 
             const onClose = () => {
-                this.ws.removeEventListener('close', onClose);
+                this.ws.removeEventListener("close", onClose);
                 resolve();
             };
 
             const onError = (error) => {
-                this.ws.removeEventListener('error', onError);
+                this.ws.removeEventListener("error", onError);
                 reject(error);
             };
 
-            this.ws.addEventListener('close', onClose);
-            this.ws.addEventListener('error', onError);
+            this.ws.addEventListener("close", onClose);
+            this.ws.addEventListener("error", onError);
 
             // Initiate close
             try {
@@ -1656,16 +1779,26 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
             smart_format: this.config.smart_format,
             interim_results: this.config.interim_results,
             vad_events: this.config.vad_events,
-            endpointing: this.config.endpointing
+            endpointing: this.config.endpointing,
         };
         const keywords = ["keywords=KwizIQ:2"].join("&");
-        const deepgramUrl = `${deepgramBaseURL}?${new URLSearchParams(deepgramOptions)}&${keywords}`;
-        console.debug(`🚀 Connecting DeepGram WebSocket (attempt ${this.connectionAttempt}/${this.config.maxRetries}):`, deepgramUrl);
+        const deepgramUrl = `${deepgramBaseURL}?${new URLSearchParams(
+            deepgramOptions
+        )}&${keywords}`;
+        console.debug(
+            `🚀 Connecting DeepGram WebSocket (attempt ${this.connectionAttempt}/${this.config.maxRetries}):`,
+            deepgramUrl
+        );
         try {
-            this.ws = new WebSocket(deepgramUrl, ["token", this.config.deepgramApiKey]);
+            this.ws = new WebSocket(deepgramUrl, [
+                "token",
+                this.config.deepgramApiKey,
+            ]);
             this.connectionTimeout = setTimeout(() => {
                 if (this.ws?.readyState !== WebSocket.OPEN) {
-                    console.warn(`⌛ WebSocket connection timeout (attempt ${this.connectionAttempt})`);
+                    console.warn(
+                        `⌛ WebSocket connection timeout (attempt ${this.connectionAttempt})`
+                    );
                     this.handleConnectionFailure();
                 }
             }, this.config.connectionTimeout);
@@ -1674,7 +1807,7 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
                 this.clearTimeouts();
                 this.connectionAttempt = 0;
                 this.connectionState = ConnectionState.CONNECTED; // <- this needed to be here
-                this._handleStateChange('listening');
+                this._handleStateChange("listening");
                 this.processBufferedAudio();
             };
             this.ws.onclose = () => {
@@ -1689,7 +1822,7 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
             this.ws.onmessage = (event) => {
                 try {
                     const response = JSON.parse(event.data);
-                    if (response.type === 'Results') {
+                    if (response.type === "Results") {
                         const transcript = response.channel.alternatives[0].transcript;
                         this._processTranscript(transcript, response.is_final);
                     }
@@ -1717,10 +1850,14 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
     }
 
     processBufferedAudio() {
-        if (this.connectionState !== ConnectionState.CONNECTED)
-            return;
-        console.debug(`Processing buffered audio: ${this.audioBuffer.length} chunks`);
-        while (this.audioBuffer.length > 0 && this.ws?.readyState === WebSocket.OPEN) {
+        if (this.connectionState !== ConnectionState.CONNECTED) return;
+        console.debug(
+            `Processing buffered audio: ${this.audioBuffer.length} chunks`
+        );
+        while (
+            this.audioBuffer.length > 0 &&
+            this.ws?.readyState === WebSocket.OPEN
+        ) {
             const audioData = this.audioBuffer.shift();
             try {
                 this.ws.send(audioData);
@@ -1733,29 +1870,47 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
         }
     }
     processAudioData(audioData) {
-        console.debug(`DeepGram.processAudioData called, connection state: ${this.connectionState}`);
-        if (this.connectionState === ConnectionState.CONNECTED && this.ws?.readyState === WebSocket.OPEN) {
+        console.debug(
+            `DeepGram.processAudioData called, connection state: ${this.connectionState}`
+        );
+        if (
+            this.connectionState === ConnectionState.CONNECTED &&
+            this.ws?.readyState === WebSocket.OPEN
+        ) {
             try {
                 this.ws.send(audioData);
-                console.debug("Audio data sent to DeepGram, size:", audioData.byteLength);
+                console.debug(
+                    "Audio data sent to DeepGram, size:",
+                    audioData.byteLength
+                );
             } catch (error) {
                 console.error("Error sending audio to DeepGram:", error);
                 if (this.connectionState === ConnectionState.CONNECTED) {
                     this.bufferAudioData(audioData);
                 }
             }
-        } else if (this.connectionState === ConnectionState.CONNECTING || this.connectionState === ConnectionState.RECONNECTING) {
-            console.debug(`WebSocket connecting/reconnecting, buffering audio data. State: ${this.connectionState}`);
+        } else if (
+            this.connectionState === ConnectionState.CONNECTING ||
+            this.connectionState === ConnectionState.RECONNECTING
+        ) {
+            console.debug(
+                `WebSocket connecting/reconnecting, buffering audio data. State: ${this.connectionState}`
+            );
             this.bufferAudioData(audioData);
         } else {
-            console.warn(` WebSocket in terminal state (${this.connectionState}), discarding audio data`);
+            console.warn(
+                ` WebSocket in terminal state (${this.connectionState}), discarding audio data`
+            );
         }
     }
 
     bufferAudioData(audioData) {
         if (this.audioBuffer.length < this.config.maxBufferSize) {
             this.audioBuffer.push(audioData);
-            console.debug("🎯 Audio data buffered, buffer size:", this.audioBuffer.length);
+            console.debug(
+                "🎯 Audio data buffered, buffer size:",
+                this.audioBuffer.length
+            );
         } else {
             console.warn("⚠️ Audio buffer full, dropping oldest chunk");
             this.audioBuffer.shift();
@@ -1768,8 +1923,14 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
 
         if (this.connectionAttempt < this.config.maxRetries) {
             this.connectionState = ConnectionState.RECONNECTING;
-            console.debug(`🔄 Scheduling reconnection attempt ${this.connectionAttempt + 1}/${this.config.maxRetries}`);
-            const backoffTime = Math.min(1000 * Math.pow(2, this.connectionAttempt - 1), 5000);
+            console.debug(
+                `🔄 Scheduling reconnection attempt ${this.connectionAttempt + 1}/${this.config.maxRetries
+                }`
+            );
+            const backoffTime = Math.min(
+                1000 * Math.pow(2, this.connectionAttempt - 1),
+                5000
+            );
 
             this.reconnectTimeout = setTimeout(() => {
                 if (this.isListening) {
@@ -1777,17 +1938,21 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
                 }
             }, backoffTime);
 
-            this._handleError(new Error(
-                `Connection attempt ${this.connectionAttempt} failed, retrying in ${backoffTime / 1000} seconds...`
-            ));
+            this._handleError(
+                new Error(
+                    `Connection attempt ${this.connectionAttempt} failed, retrying in ${backoffTime / 1000
+                    } seconds...`
+                )
+            );
         } else {
             this.connectionState = ConnectionState.FAILED;
             this.isListening = false;
-            this._handleError(new Error('Failed to establish connection after maximum attempts'));
-            this._handleStateChange('idle');
+            this._handleError(
+                new Error("Failed to establish connection after maximum attempts")
+            );
+            this._handleStateChange("idle");
         }
     }
-
 
     clearTimeouts() {
         if (this.connectionTimeout) {
@@ -1801,9 +1966,7 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
     }
 }
 
-
 /* Text to Speech Classes */
-
 
 // speechAPIRequest.js
 class SpeechAPIRequest {
@@ -1843,10 +2006,12 @@ class SpeechQueueItem {
         this.startTime = new Date();
         this.endTime = null;
         this.duration = null;
-        this.stateHistory = [{
-            state: "queued",
-            timestamp: this.startTime
-        }];
+        this.stateHistory = [
+            {
+                state: "queued",
+                timestamp: this.startTime,
+            },
+        ];
         this.errors = [];
     }
 
@@ -1870,7 +2035,7 @@ class SpeechQueueItem {
         this.stateHistory.push({
             state: newState,
             timestamp: now,
-            previousState: oldState
+            previousState: oldState,
         });
 
         switch (newState) {
@@ -1890,23 +2055,24 @@ class SpeechQueueItem {
         if (newState === "error" && errorMessage) {
             this.errors.push({
                 timestamp: now,
-                message: errorMessage
+                message: errorMessage,
             });
         }
     }
 
     getDurationString() {
-        if (!this.duration) return 'N/A';
+        if (!this.duration) return "N/A";
         const seconds = Math.floor(this.duration / 1000);
         return `${seconds}s`;
     }
 
     getStateHistoryString() {
         return this.stateHistory
-            .map(({ state, timestamp }) =>
-                `${state} at ${timestamp.toLocaleTimeString()}`
+            .map(
+                ({ state, timestamp }) =>
+                    `${state} at ${timestamp.toLocaleTimeString()}`
             )
-            .join('\n');
+            .join("\n");
     }
 
     getDetailsString() {
@@ -1916,18 +2082,20 @@ class SpeechQueueItem {
             `Created: ${this.startTime.toLocaleTimeString()}`,
             `Duration: ${this.getDurationString()}`,
             `Text: "${this.text}"`,
-            '\nState History:',
-            this.getStateHistoryString()
+            "\nState History:",
+            this.getStateHistoryString(),
         ];
 
         if (this.errors.length > 0) {
-            details.push('\nErrors:');
-            details.push(...this.errors.map(err =>
-                `${err.timestamp.toLocaleTimeString()}: ${err.message}`
-            ));
+            details.push("\nErrors:");
+            details.push(
+                ...this.errors.map(
+                    (err) => `${err.timestamp.toLocaleTimeString()}: ${err.message}`
+                )
+            );
         }
 
-        return details.join('\n');
+        return details.join("\n");
     }
 }
 
@@ -2026,9 +2194,9 @@ class SpeakerComponent extends EventEmitter {
     setupAudioHandlers() {
         this.audio.onended = async () => {
             this.isPlaying = false;
-            this.emit('stateChange', 'stopped');
+            this.emit("stateChange", "stopped");
             if (this.visualizer) {
-                await this.visualizer.setMode('idle');
+                await this.visualizer.setMode("idle");
             }
 
             const currentItem = this.queue.getCurrentPlayingItem();
@@ -2040,29 +2208,28 @@ class SpeakerComponent extends EventEmitter {
 
         this.audio.onplay = async () => {
             this.isPlaying = true;
-            this.emit('stateChange', 'playing');
+            this.emit("stateChange", "playing");
             if (this.visualizer) {
-                await this.visualizer.setMode('playing', this.audio);
+                await this.visualizer.setMode("playing", this.audio);
             }
         };
 
         this.audio.onpause = async () => {
             this.isPlaying = false;
-            this.emit('stateChange', 'paused');
+            this.emit("stateChange", "paused");
             if (this.visualizer) {
-                await this.visualizer.setMode('idle');
+                await this.visualizer.setMode("idle");
             }
         };
     }
-
 
     async processNextInQueue() {
         const nextItem = this.queue.getNextQueuedItem();
         if (!nextItem) {
             this.isPlaying = false;
-            this.emit('stateChange', 'stopped');
+            this.emit("stateChange", "stopped");
             if (this.visualizer) {
-                await this.visualizer.setMode('idle');
+                await this.visualizer.setMode("idle");
             }
             return;
         }
@@ -2088,25 +2255,22 @@ class SpeakerComponent extends EventEmitter {
             // Update state to playing through queue
             this.queue.updateItemState(nextItem.id, "playing");
 
-            this.emit('stateChange', 'playing');
+            this.emit("stateChange", "playing");
 
             this.audio.src = audioUrl;
             await this.audio.play();
-
         } catch (error) {
             console.error("Error in processNextInQueue:", error);
             this.queue.updateItemState(nextItem.id, "error");
             this.isPlaying = false;
-            this.emit('stateChange', 'stopped');
+            this.emit("stateChange", "stopped");
             if (this.visualizer) {
-                await this.visualizer.setMode('idle');
+                await this.visualizer.setMode("idle");
             }
-            this.emit('error', error);
+            this.emit("error", error);
             await this.processNextInQueue();
         }
     }
-
-
 
     async queueAudioItem(speechAPIRequest) {
         console.log("Queueing audio item:", speechAPIRequest);
@@ -2119,24 +2283,23 @@ class SpeakerComponent extends EventEmitter {
 
         return {
             message: "Audio item request queued",
-            id: queueItem.id
+            id: queueItem.id,
         };
     }
 
     async queueText(text) {
         console.warn("queueText not implemented yet but called with text:", text);
-
     }
 
     pause() {
         this.audio.pause();
-        this.emit('stateChange', 'paused');
+        this.emit("stateChange", "paused");
     }
 
     stop() {
         this.audio.pause();
         this.audio.currentTime = 0;
-        this.emit('stateChange', 'stopped');
+        this.emit("stateChange", "stopped");
     }
 
     cleanup() {

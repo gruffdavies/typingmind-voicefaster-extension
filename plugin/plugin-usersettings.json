@@ -1,0 +1,21 @@
+[
+    {
+      "name": "deepgramApiKey",
+      "type": "password",
+      "label": "Deepgram API Key",
+      "required": true
+    },
+    {
+      "name": "elevenLabsApiKey",
+      "type": "password",
+      "label": "Eleven Labs API Key",
+      "required": true
+    },
+    {
+      "name": "defaultVoiceId",
+      "type": "text",
+      "label": "Default Voice ID",
+      "required": true,
+      "description": "The default voice ID to use if not specified in the function call"
+    }
+  ]

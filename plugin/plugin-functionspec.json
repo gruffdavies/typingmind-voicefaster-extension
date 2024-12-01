@@ -1,0 +1,20 @@
+{
+    "name": "VOICEFASTER_stream_voice_audio",
+    "parameters": {
+      "type": "object",
+      "required": [
+        "text"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "The text to be converted to speech"
+        },
+        "voice_id": {
+          "type": "string",
+          "description": "The ID of the voice to use for speech. If not provided, the default voice ID from user settings will be used."
+        }
+      }
+    },
+    "description": "Generate voice audio using Eleven Labs API and stream it to the audio player."
+  }
