@@ -619,6 +619,7 @@ class MockSTT {
         }
 
         const words = this.transcriptText.split(' ');
+        const CHUNK_SIZE = 3; // Number of words to finalize at once
 
         // Show transcript area immediately when starting
         this.transcript.hidden = false;
@@ -629,19 +630,30 @@ class MockSTT {
 
         this.transcriptInterval = setInterval(() => {
             if (this.transcriptIndex < words.length) {
-                const currentText = words.slice(0, this.transcriptIndex + 1).join(' ');
-                this.transcriptInterim.textContent = currentText;
+                // Calculate the chunk boundary
+                const chunkBoundary = Math.floor(this.transcriptIndex / CHUNK_SIZE) * CHUNK_SIZE;
+
+                // Words that should be final (complete chunks)
+                const finalWords = words.slice(0, chunkBoundary);
+                // Words that should be interim (current incomplete chunk plus new word)
+                const interimWords = words.slice(chunkBoundary, this.transcriptIndex + 1);
+
+                // Update the display
+                this.transcriptFinal.textContent = finalWords.join(' ');
+                this.transcriptInterim.textContent = interimWords.join(' ');
+
                 this.transcriptIndex++;
             } else {
                 clearInterval(this.transcriptInterval);
-                // Move completed transcription to final
-                this.transcriptFinal.textContent = this.transcriptInterim.textContent;
+                // Finalize all remaining text
+                this.transcriptFinal.textContent = words.join(' ');
                 this.transcriptInterim.textContent = '';
                 // Show send/clear buttons
                 document.querySelector('.vf-transcript-actions').classList.add('active');
             }
         }, 400);
     }
+
 
 
     clearTranscript() {
@@ -672,8 +684,8 @@ class MockSTT {
         if (this.transcriptFinal) {
             document.querySelector('.vf-transcript-actions')?.classList.add('active');
         }
-        this.clearTranscript();
-        this.transcript.hidden = true;
+        // this.clearTranscript();
+        // this.transcript.hidden = true;
     }
 }
 

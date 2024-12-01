@@ -336,19 +336,27 @@
 }
 
 .vf-transcript-content {
-  padding: var(--vf-padding-l);
-  min-height: 60px;
-  max-height: 200px;
-  overflow-y: auto;
+    padding: var(--vf-padding-l);
+    min-height: 60px;
+    max-height: 200px;
+    overflow-y: auto;
+    display: inline-block;
+    flex-direction: row;
+}
+
+.vf-text--final,
+.vf-text--interim {
+    display: inline;
+    width: fit-content;
 }
 
 .vf-text--interim {
-  color: var(--vf-human-muted);
-  font-style: italic;
+    color: var(--vf-human-muted);
+    font-style: italic;
 }
 
 .vf-text--final {
-  color: var(--vf-human);
+    color: var(--vf-human);
 }
 
 .vf-transcript-actions {
@@ -390,12 +398,6 @@
   color: var(--vf-text);
 }
 
-/* Make transcript content layout better */
-.vf-transcript-content {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 
 /* Settings Panel */
 .vf-settings {
