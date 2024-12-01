@@ -863,6 +863,8 @@ class UIComponent {
 
     appendTargetElementTextReactSafe(transcript) {
         const targetElement = this.getTargetElement();
+        const currentValue = targetElement.value;  // Store current value
+        const newValue = currentValue + ' ' + transcript;  // Create new value once
 
         // Find React props
         const propsKey = Object.keys(targetElement).find((key) =>
@@ -877,15 +879,18 @@ class UIComponent {
         const originalOnFocus = props?.onFocus;
 
         // Set the value
-        this.appendTargetElementText(transcript)
+        targetElement.value = newValue;  // Use newValue instead of appending
 
         // Create a change event that maintains the value
         const changeEvent = {
-            target: targetElement,
+            target: {
+                ...targetElement,
+                value: newValue  // Use newValue in event
+            },
             currentTarget: targetElement,
             type: "change",
-            preventDefault: () => { },
-            persist: () => { },
+            preventDefault: () => {},
+            persist: () => {},
         };
 
         // Create a focus event
@@ -893,15 +898,19 @@ class UIComponent {
             target: targetElement,
             currentTarget: targetElement,
             type: "focus",
-            preventDefault: () => { },
-            persist: () => { },
+            preventDefault: () => {},
+            persist: () => {},
         };
+
+        let isHandlingChange = false;  // Add flag to prevent loops
 
         // Call both handlers if they exist
         try {
-            if (originalOnChange) {
+            if (originalOnChange && !isHandlingChange) {
                 console.log("📡 Calling onChange");
+                isHandlingChange = true;
                 originalOnChange(changeEvent);
+                isHandlingChange = false;
             }
 
             if (originalOnFocus) {
@@ -916,24 +925,29 @@ class UIComponent {
             console.log("✅ Events dispatched");
         } catch (error) {
             console.error("Error:", error);
+            isHandlingChange = false;  // Reset flag on error
         }
 
         // Add a MutationObserver to monitor for value changes
         const observer = new MutationObserver((mutations) => {
+            if (isHandlingChange) return;  // Skip if we're handling a change
+
             mutations.forEach((mutation) => {
                 if (
-                    mutation.type === "attributes" ||
-                    mutation.type === "characterData" ||
-                    targetElement.value !== transcript
+                    (mutation.type === "attributes" ||
+                    mutation.type === "characterData") &&
+                    targetElement.value !== newValue  // Compare with newValue
                 ) {
                     // React has changed the value, so restore it
                     console.log("🔄 Value changed by React, restoring...");
-                    this.appendTargetElementText(transcript)
+                    isHandlingChange = true;
+                    targetElement.value = newValue;  // Use newValue
 
                     // Redispatch events
                     if (originalOnChange) originalOnChange(changeEvent);
                     targetElement.dispatchEvent(new Event("change", { bubbles: true }));
                     targetElement.dispatchEvent(new Event("input", { bubbles: true }));
+                    isHandlingChange = false;
                 }
             });
         });
@@ -950,12 +964,6 @@ class UIComponent {
             observer.disconnect();
             console.log("👋 Observer disconnected");
         }, 2000);
-    }
-
-    // basic DOM manipulation but react may overwrite
-    appendTargetElementText(transcript) {
-        this.getTargetElement();
-        this.targetElement.value = this.targetElement.value + ' ' + transcript;
     }
 
     getTargetElement() {
