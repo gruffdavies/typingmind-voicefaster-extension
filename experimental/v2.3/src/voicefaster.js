@@ -648,7 +648,8 @@ class UIComponent {
         const info = document.createElement('div');
         const version = VOICEFASTER_VERSION;
         info.className = 'vf-info';
-        info.innerHTML = `<span>VoiceFaster</span><span>v{version}</span>`;
+        info.innerHTML = `<span>VoiceFaster</span><span>v${version}</span>`;
+        this.container.appendChild(info);
     }
 
     createBubbleTray() {

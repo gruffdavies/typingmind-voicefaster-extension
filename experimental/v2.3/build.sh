@@ -13,6 +13,9 @@ def extract_version(version_content):
         return match.group(1)
     raise ValueError("Could not find version in version.js")
 
+def write_file(filename, content):
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write(content)
 try:
     # Read the version first
     version_content = read_file('config/version.js')
@@ -22,7 +25,8 @@ try:
     os.makedirs('dist', exist_ok=True)
 
     # Set output filename
-    output_filename = f'dist/voicefaster-extension-v{version}.js'
+    versioned_filename = f'dist/voicefaster-extension-v{version}.js'
+    test_filename = 'voicefaster.js'
 
     # Read other files
     css_content = read_file('src/voicefaster.css')
@@ -35,10 +39,10 @@ try:
     output = output.replace('{{voicefaster-classes.js}}', js_content)
 
     # Write the result
-    with open(output_filename, 'w', encoding='utf-8') as f:
-        f.write(output)
+    write_file(versioned_filename, output)
+    write_file(test_filename, output)
 
-    print(f"Build completed successfully! Output: {output_filename}")
+    print(f"Build completed successfully! Output: {versioned_filename}")
 
 except FileNotFoundError as e:
     print(f"Error: Could not find file: {e.filename}")
