@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.34';
+    const VOICEFASTER_VERSION = '2.3.37';
 
     class EventEmitter {
     constructor() {
@@ -718,6 +718,7 @@ class UIComponent {
         return header;
     }
 
+
     createTranscriberSettingsSection() {
         const section = document.createElement("div");
         section.className = "vf-settings-section";
@@ -814,6 +815,7 @@ class UIComponent {
         header.className = "vf-transcript-header";
         header.innerHTML = `
         <span>Transcript</span>
+        <div class="vf-provider-info">Default</div>
         <button class="vf-transcript-close">${this.closeIconHTML()}</button>
     `;
 
@@ -838,12 +840,30 @@ class UIComponent {
         this.transcriptArea = transcript;
     }
 
+    setTranscriberProviderInfo(providerName) {
+        const providerInfo = this.transcriptArea.querySelector(".vf-provider-info");
+        providerInfo.textContent = providerName;
+    }
+
     hideTranscriptArea() {
         this.transcriptArea.hidden = true;
     }
+
+    getProviderName(){
+        const transcriber = this.controller.transcriberComponent.provider;
+        console.log("🤖Transcriber:", transcriber);
+        const name = this.controller.transcriberComponent.provider?.getName();
+        console.log("Transcriber Provider name:", name);
+        return name;
+    }
+
     showTranscriptArea() {
+        this.setTranscriberProviderInfo(this.getProviderName());
         this.transcriptArea.hidden = false;
     }
+
+    setTranscriber
+
 
     clearTranscriptArea() {
         this.transcriptArea.querySelector(".vf-text--interim").textContent = "";
@@ -867,6 +887,8 @@ class UIComponent {
 
     appendTargetElementTextReactSafe(transcript) {
         const targetElement = this.getTargetElement();
+        const currentValue = targetElement.value;  // Store current value
+        const newValue = currentValue + ' ' + transcript;  // Create new value once
 
         // Find React props
         const propsKey = Object.keys(targetElement).find((key) =>
@@ -881,15 +903,18 @@ class UIComponent {
         const originalOnFocus = props?.onFocus;
 
         // Set the value
-        this.appendTargetElementText(transcript)
+        targetElement.value = newValue;  // Use newValue instead of appending
 
         // Create a change event that maintains the value
         const changeEvent = {
-            target: targetElement,
+            target: {
+                ...targetElement,
+                value: newValue  // Use newValue in event
+            },
             currentTarget: targetElement,
             type: "change",
-            preventDefault: () => { },
-            persist: () => { },
+            preventDefault: () => {},
+            persist: () => {},
         };
 
         // Create a focus event
@@ -897,15 +922,19 @@ class UIComponent {
             target: targetElement,
             currentTarget: targetElement,
             type: "focus",
-            preventDefault: () => { },
-            persist: () => { },
+            preventDefault: () => {},
+            persist: () => {},
         };
+
+        let isHandlingChange = false;  // Add flag to prevent loops
 
         // Call both handlers if they exist
         try {
-            if (originalOnChange) {
+            if (originalOnChange && !isHandlingChange) {
                 console.log("📡 Calling onChange");
+                isHandlingChange = true;
                 originalOnChange(changeEvent);
+                isHandlingChange = false;
             }
 
             if (originalOnFocus) {
@@ -920,24 +949,29 @@ class UIComponent {
             console.log("✅ Events dispatched");
         } catch (error) {
             console.error("Error:", error);
+            isHandlingChange = false;  // Reset flag on error
         }
 
         // Add a MutationObserver to monitor for value changes
         const observer = new MutationObserver((mutations) => {
+            if (isHandlingChange) return;  // Skip if we're handling a change
+
             mutations.forEach((mutation) => {
                 if (
-                    mutation.type === "attributes" ||
-                    mutation.type === "characterData" ||
-                    targetElement.value !== transcript
+                    (mutation.type === "attributes" ||
+                    mutation.type === "characterData") &&
+                    targetElement.value !== newValue  // Compare with newValue
                 ) {
                     // React has changed the value, so restore it
                     console.log("🔄 Value changed by React, restoring...");
-                    this.appendTargetElementText(transcript)
+                    isHandlingChange = true;
+                    targetElement.value = newValue;  // Use newValue
 
                     // Redispatch events
                     if (originalOnChange) originalOnChange(changeEvent);
                     targetElement.dispatchEvent(new Event("change", { bubbles: true }));
                     targetElement.dispatchEvent(new Event("input", { bubbles: true }));
+                    isHandlingChange = false;
                 }
             });
         });
@@ -954,12 +988,6 @@ class UIComponent {
             observer.disconnect();
             console.log("👋 Observer disconnected");
         }, 2000);
-    }
-
-    // basic DOM manipulation but react may overwrite
-    appendTargetElementText(transcript) {
-        this.getTargetElement();
-        this.targetElement.value = this.targetElement.value + ' ' + transcript;
     }
 
     getTargetElement() {
@@ -1495,6 +1523,10 @@ class TranscriberProvider {
     setHandlers(handlers) {
         throw new Error("Method 'setHandlers' must be implemented");
     }
+
+    getName() {
+        throw new Error("Method 'getName' must be implemented");
+    }
 }
 
 // BaseTranscriberProvider.js
@@ -1575,6 +1607,10 @@ class WebSpeechTranscriber extends BaseTranscriberProvider {
         this.recognition.lang = "en-GB";
 
         this.setupRecognitionHandlers();
+    }
+
+    getName() {
+        return "Web Speech Browser API";
     }
     get isListening() {
         return super.isListening;
@@ -1680,6 +1716,11 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
             this.config
         );
     }
+
+    getName() {
+        return "DeepGram Cloud API";
+    }
+
 
     async isAvailable() {
         try {
@@ -2588,7 +2629,7 @@ class SpeakerComponent extends EventEmitter {
 }
 
 /* Info Bar */
-.vf-info {
+.vf-info, .vf-provider-info{
     display: flex;
     justify-content: space-between;
     font-size: 0.7rem;

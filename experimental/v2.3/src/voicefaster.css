@@ -270,7 +270,7 @@
 }
 
 /* Info Bar */
-.vf-info {
+.vf-info, .vf-provider-info{
     display: flex;
     justify-content: space-between;
     font-size: 0.7rem;

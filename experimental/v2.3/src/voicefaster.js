@@ -714,6 +714,7 @@ class UIComponent {
         return header;
     }
 
+
     createTranscriberSettingsSection() {
         const section = document.createElement("div");
         section.className = "vf-settings-section";
@@ -810,6 +811,7 @@ class UIComponent {
         header.className = "vf-transcript-header";
         header.innerHTML = `
         <span>Transcript</span>
+        <div class="vf-provider-info">Default</div>
         <button class="vf-transcript-close">${this.closeIconHTML()}</button>
     `;
 
@@ -834,12 +836,30 @@ class UIComponent {
         this.transcriptArea = transcript;
     }
 
+    setTranscriberProviderInfo(providerName) {
+        const providerInfo = this.transcriptArea.querySelector(".vf-provider-info");
+        providerInfo.textContent = providerName;
+    }
+
     hideTranscriptArea() {
         this.transcriptArea.hidden = true;
     }
+
+    getProviderName(){
+        const transcriber = this.controller.transcriberComponent.provider;
+        console.log("🤖Transcriber:", transcriber);
+        const name = this.controller.transcriberComponent.provider?.getName();
+        console.log("Transcriber Provider name:", name);
+        return name;
+    }
+
     showTranscriptArea() {
+        this.setTranscriberProviderInfo(this.getProviderName());
         this.transcriptArea.hidden = false;
     }
+
+    setTranscriber
+
 
     clearTranscriptArea() {
         this.transcriptArea.querySelector(".vf-text--interim").textContent = "";
@@ -1499,6 +1519,10 @@ class TranscriberProvider {
     setHandlers(handlers) {
         throw new Error("Method 'setHandlers' must be implemented");
     }
+
+    getName() {
+        throw new Error("Method 'getName' must be implemented");
+    }
 }
 
 // BaseTranscriberProvider.js
@@ -1579,6 +1603,10 @@ class WebSpeechTranscriber extends BaseTranscriberProvider {
         this.recognition.lang = "en-GB";
 
         this.setupRecognitionHandlers();
+    }
+
+    getName() {
+        return "Web Speech Browser API";
     }
     get isListening() {
         return super.isListening;
@@ -1684,6 +1712,11 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
             this.config
         );
     }
+
+    getName() {
+        return "DeepGram Cloud API";
+    }
+
 
     async isAvailable() {
         try {
