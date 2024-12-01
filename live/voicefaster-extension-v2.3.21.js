@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.16';
+    const VOICEFASTER_VERSION = '2.3.21';
 
     class EventEmitter {
     constructor() {
@@ -199,12 +199,12 @@ class VoiceFasterController {
 
     handleTranscript(text, isFinal) {
         console.debug("Handling transcript:", { text, isFinal });  // Add logging
-        if (this.config.targetElement && isFinal) {
-            const currentText = this.config.targetElement.value;
-            const spacer = currentText && !currentText.endsWith(' ') ? ' ' : '';
-            this.config.targetElement.value = currentText + spacer + text;
-            this.config.targetElement.dispatchEvent(new Event('change'));
-        }
+        // if (this.config.targetElement && isFinal) {
+        //     const currentText = this.config.targetElement.value;
+        //     const spacer = currentText && !currentText.endsWith(' ') ? ' ' : '';
+        //     this.config.targetElement.value = currentText + spacer + text;
+        //     this.config.targetElement.dispatchEvent(new Event('change'));
+        // }
 
         this.uiComponent.updateTranscript(text, isFinal);
     }
@@ -234,6 +234,7 @@ class VoiceFasterController {
             this.uiComponent.setMicState('idle');
         } else {
             console.debug("starting transcribing because toggleRecording called and this.transcriber.isListening is", this.transcriberComponent.isListening);
+            this.uiComponent.showTranscriptArea();
             await this.transcriberComponent.start();
             this.uiComponent.setMicState('listening');
         }
@@ -607,6 +608,12 @@ class UIComponent {
             </svg>`
     }
 
+    closeIconHTML(){
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x" viewBox="0 0 16 16">
+                <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/>
+                </svg>`;
+    }
+
     createControls() {
         const controls = document.createElement('div');
         controls.className = 'vf-controls';
@@ -675,8 +682,8 @@ class UIComponent {
         settings.hidden = true;
 
         const header = this.createSettingsHeader();
-        const transcriberSection = this.createTranscriberSection();
-        const speakerSection = this.createSpeakerSection();
+        const transcriberSection = this.createTranscriberSettingsSection();
+        const speakerSection = this.createSpeakerSettingsSection();
 
         settings.append(header, transcriberSection, speakerSection);
         this.container.appendChild(settings);
@@ -686,7 +693,7 @@ class UIComponent {
         const header = document.createElement('div');
         header.className = 'vf-settings-header';
         header.innerHTML =         `<span>SETTINGS</span>
-        <button class="vf-settings-close"><i class="bi bi-x"></i></button>`;
+        <button class="vf-settings-close">${this.closeIconHTML()}</button>`;
 
         const closeBtn = header.querySelector('.vf-settings-close');
         closeBtn.addEventListener('click', () => {
@@ -696,7 +703,7 @@ class UIComponent {
         return header;
     }
 
-    createTranscriberSection() {
+    createTranscriberSettingsSection() {
         const section = document.createElement('div');
         section.className = 'vf-settings-section';
         section.innerHTML = `<h3 class="vf-settings-title">Transcription Settings</h3>
@@ -727,7 +734,7 @@ class UIComponent {
     }
 
 
-  createSpeakerSection() {
+  createSpeakerSettingsSection() {
         const section = document.createElement('div');
         section.className = 'vf-settings-section';
         section.innerHTML = `<h3 class="vf-settings-title">Agent Speech Settings</h3>
@@ -784,7 +791,7 @@ class UIComponent {
         header.className = 'vf-transcript-header';
         header.innerHTML = `
         <span>Transcript</span>
-        <button class="vf-transcript-close"><i class="bi bi-x"></i></button>
+        <button class="vf-transcript-close">${this.closeIconHTML()}</button>
     `;
 
         const content = document.createElement('div');
@@ -819,13 +826,22 @@ class UIComponent {
         this.transcriptArea.querySelector('.vf-text--final').textContent = '';
     }
 
+    sendTranscriptToTargetElement() {
+        const targetElement = document.getElementById(this.controller.config.targetElementId);
+        console.log('🎯Target element:', targetElement);
+        const finalText = this.transcriptArea.querySelector('.vf-text--final').textContent;
+        const interimText = this.transcriptArea.querySelector('.vf-text--interim').textContent;
+        targetElement.value += ' ' + finalText + ' ' + interimText;
+        targetElement.dispatchEvent(new Event('change'));
+    }
+
     setupTranscriptHandlers(transcript) {
         const closeBtn = transcript.querySelector('.vf-transcript-close');
         const sendBtn = transcript.querySelector('.vf-button--send');
         const clearBtn = transcript.querySelector('.vf-button--clear');
 
         closeBtn.addEventListener('click', () => {
-            transcript.hidden = true;
+            this.hideTranscriptArea();
             if (this.controller.transcriberComponent.isListening) {
                 this.controller.toggleRecording();
             }
@@ -833,22 +849,15 @@ class UIComponent {
 
         sendBtn.addEventListener('click', () => {
             console.debug('Send button clicked');
-            const targetElement = document.getElementById(this.controller.config.targetElementId);
-            console.log('🎯Target element:', targetElement);
-            // Handle send action
-            const finalText = transcript.querySelector('.vf-text--final').textContent;
-            if (finalText && targetElement) {
-                targetElement.value += ' ' + finalText;
-                transcript.hidden = true;
-                if (this.controller.transcriberComponent.isListening) {
-                    this.controller.toggleRecording();
-                }
+            this.sendTranscriptToTargetElement();
+            this.clearTranscriptArea();
+            this.hideTranscriptArea();
+            if (this.controller.transcriberComponent.isListening) {
+                this.controller.toggleRecording();
             }
         });
 
         clearBtn.addEventListener('click', () => {
-            // transcript.querySelector('.vf-text--interim').textContent = '';
-            // transcript.querySelector('.vf-text--final').textContent = '';
             this.clearTranscriptArea();
             if (this.controller.transcriberComponent.isListening) {
                 this.controller.toggleRecording();
