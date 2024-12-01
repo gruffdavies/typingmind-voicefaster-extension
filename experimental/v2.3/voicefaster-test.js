@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.24';
+    const VOICEFASTER_VERSION = '2.3.28';
 
     class EventEmitter {
     constructor() {
@@ -801,7 +801,7 @@ class UIComponent {
         const actions = document.createElement('div');
         actions.className = 'vf-transcript-actions';
         actions.innerHTML = `
-        <button class="vf-button--send">Copy</button>
+        <button class="vf-button--copy">Copy</button>
         <button class="vf-button--send">Send</button>
         <button class="vf-button--clear">Clear</button>
     `;
@@ -827,36 +827,23 @@ class UIComponent {
         this.transcriptArea.querySelector('.vf-text--final').textContent = '';
     }
 
-    getTranscript() {
+    copyTranscriptToClipboard(){
+        const transcript = this.getTranscript();
+        navigator.clipboard.writeText(transcript);
+        console.log('Transcript copied to clipboard:', transcript);
+    }
+
+    getTranscript(){
         const finalText = this.transcriptArea.querySelector('.vf-text--final').textContent;
         const interimText = this.transcriptArea.querySelector('.vf-text--interim').textContent;
         const transcript = ' ' + finalText + ' ' + interimText;
         return transcript;
     }
 
-    copyTranscript(){
-        const transcript = this.getTranscript();
-        navigator.clipboard.writeText(transcript);
-    }
-
-    // sendTranscriptToTargetElement() {
-    //     const targetElement = document.getElementById(this.controller.config.targetElementId);
-    //     console.log('🎯Target element:', targetElement);
-    //     const finalText = this.transcriptArea.querySelector('.vf-text--final').textContent;
-    //     const interimText = this.transcriptArea.querySelector('.vf-text--interim').textContent;
-    //     targetElement.value += ' ' + finalText + ' ' + interimText;
-    //     // Trigger all relevant events that frameworks listen for
-    //     targetElement.dispatchEvent(new Event('input', { bubbles: true }));
-    //     targetElement.dispatchEvent(new Event('change', { bubbles: true }));
-
-    //     // Optional: also trigger a keyup event as some frameworks listen for this
-    //     targetElement.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-    // }
-
     sendTranscriptToTargetElement() {
         const targetElement = document.getElementById(this.controller.config.targetElementId);
         console.log('🎯Target element:', targetElement);
-        const textToAdd = this.getTranscript();
+        const transcript = this.getTranscript();
 
         // Create a clipboard event with the text data
         const pasteEvent = new ClipboardEvent('paste', {
@@ -867,7 +854,7 @@ class UIComponent {
         });
 
         // Set the clipboard data
-        pasteEvent.clipboardData.setData('text/plain', textToAdd);
+        pasteEvent.clipboardData.setData('text/plain', transcript);
 
         // Focus the element
         targetElement.focus();
@@ -878,7 +865,7 @@ class UIComponent {
         // Since React might prevent default, we also update the value directly
         const startPos = targetElement.selectionStart;
         const currentValue = targetElement.value;
-        const newValue = currentValue.slice(0, startPos) + textToAdd + currentValue.slice(startPos);
+        const newValue = currentValue.slice(0, startPos) + transcript + currentValue.slice(startPos);
         targetElement.value = newValue;
 
         // Trigger input event after paste
@@ -895,8 +882,14 @@ class UIComponent {
 
     setupTranscriptHandlers(transcript) {
         const closeBtn = transcript.querySelector('.vf-transcript-close');
+        const copyBtn = transcript.querySelector('.vf-button--copy');
         const sendBtn = transcript.querySelector('.vf-button--send');
         const clearBtn = transcript.querySelector('.vf-button--clear');
+
+        copyBtn.addEventListener('click', () => {
+            console.debug('copy button clicked');
+            this.copyTranscriptToClipboard();
+        });
 
         closeBtn.addEventListener('click', () => {
             this.hideTranscriptArea();

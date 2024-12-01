@@ -26,7 +26,7 @@ try:
 
     # Set output filename
     versioned_filename = f'dist/voicefaster-extension-v{version}.js'
-    test_filename = 'voicefaster.js'
+    test_filename = 'voicefaster-test.js'
 
     # Read other files
     css_content = read_file('src/voicefaster.css')
