@@ -54,11 +54,18 @@
 
     /* Bubble States */
     --vf-bubble-requesting: white;
+    --vf-bubble-queued: yellow;
+    --vf-bubble-playing: blue;
+    --vf-bubble-completed: green;
+    --vf-bubble-error: #ff0000;
+    --vf-bubble-stale: #9e9e9e;
+
+    /* --vf-bubble-requesting: white;
     --vf-bubble-queued: var(--vf-agent-muted);
     --vf-bubble-playing: var(--vf-widget-primary);
     --vf-bubble-completed: var(--vf-agent-subtle);
     --vf-bubble-error: var(--vf-agent);
-    --vf-bubble-stale: var(--vf-text-dim);
+    --vf-bubble-stale: var(--vf-text-dim); */
 
     /* Effects */
     --vf-blur: blur(12px);
@@ -370,12 +377,12 @@
     padding: var(--vf-padding-l);
     min-height: 60px;
     max-height: 200px;
-    overflow: hidden;
-    /* overflow-y: auto; */
+    overflow-y: auto;
 }
 
 .vf-text--interim {
     color: var(--vf-human-muted);
+    font-style: italic;
 }
 
 .vf-text--final {
@@ -431,10 +438,10 @@
 
 /* Settings Panel */
 .vf-settings {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
+    position: relative;
+    right: 100%;
+    /* bottom: 100%; */
+    /* transform: translate(-50%, -50%); */
     background: var(--vf-surface-deep);
     border-radius: 8px;
     border: var(--vf-border);

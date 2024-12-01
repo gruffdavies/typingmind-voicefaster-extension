@@ -65,7 +65,7 @@
 
             this.speakerComponent = null;
             this.transcriberComponent = null;
-            this.ui = null;
+            this.uiComponent = null;
 
             this.initialize();
         }
@@ -73,10 +73,13 @@
         async initialize() {
             try {
                 console.log("VoiceFasterController: Initializing...");
-                await this.initializeUI();
-                await this.initializeVisualizers();
                 await this.initializeTranscriber();
                 await this.initializeSpeaker();
+                await this.initializeUI();
+                await this.initializeVisualizers();
+                this.assignVisualizers();
+                this.addObservers();
+
                 console.log("VoiceFasterController: Initialization complete");
             } catch (error) {
                 console.error("VoiceFasterController: Initialization failed:", error);
@@ -84,8 +87,8 @@
             }
         }
         async initializeUI() {
-            this.ui = new UIManager(this);
-            await this.ui.initialize();
+            this.uiComponent = new UIComponent(this);
+            await this.uiComponent.initialize();
         }
 
         // In VoiceFasterController.js
@@ -106,7 +109,7 @@
             });
 
             // Create Speaker visualizer
-            this.speakerVisualizer = new AudioVisualizer({
+            this.voicerVisualizer = new AudioVisualizer({
                 className: "agent-speech",
                 color: "--vf-agent",
                 barCount: iconsVizBarCount,
@@ -117,26 +120,29 @@
             });
 
             // Mount visualizers after UI is initialized
-            this.micVisualizer.mount(this.ui.container.querySelector('#vf-mic-button'));
-            this.speakerVisualizer.mount(this.ui.container.querySelector('#vf-Speaker-button'));
+            this.micVisualizer.mount(this.uiComponent.container.querySelector('#vf-mic-button'));
+            this.voicerVisualizer.mount(this.uiComponent.container.querySelector('#vf-speaker-button'));
         }
 
         async initializeTranscriber() {
-            this.transcriberComponent = new TranscriberComponent(this.micVisualizer);
+            this.transcriberComponent = new TranscriberComponent();
             await this.transcriberComponent.initialize();
             this.setupTranscriberHandlers();
         }
 
         async initializeSpeaker() {
-            this.speakerComponent = new SpeakerComponent(this.speakerVisualizer);
+            this.speakerComponent = new SpeakerComponent(this.voicerVisualizer);
             this.setupSpeakerHandlers();
-
-            if (this.ui?.queueUIManager) {
-                this.speakerComponent.queue.addObserver(this.ui.queueUIManager);
-            }
         }
 
+        assignVisualizers() {
+            this.transcriberComponent.visualizer = this.micVisualizer;
+            this.speakerComponent.visualizer = this.voicerVisualizer;
+        }
 
+        addObservers() {
+            this.speakerComponent.queue.addObserver(this.uiComponent.queueUIManager);
+        }
 
 
         async switchTranscriberProvider() {
@@ -164,7 +170,7 @@
 
         setupSpeakerHandlers() {
             this.speakerComponent.on('stateChange', state => {
-                this.ui.setSpeakerState(this.speakerComponent.isSpeaking ? 'speaking' : 'idle');
+                this.uiComponent.setSpeakerState(this.speakerComponent.isSpeaking ? 'speaking' : 'idle');
             });
 
             this.speakerComponent.on('error', error => this.handleError(error));
@@ -180,11 +186,11 @@
                 this.config.targetElement.dispatchEvent(new Event('change'));
             }
 
-            this.ui.updateTranscript(text, isFinal);
+            this.uiComponent.updateTranscript(text, isFinal);
         }
 
         handleTranscriberStateChange(state) {
-            this.ui.setMicState(state);
+            this.uiComponent.setMicState(state);
             // this.state.isListening = state === 'listening';
 
             // // Show transcript immediately when recording starts if staging is enabled
@@ -212,13 +218,13 @@
         // Public API methods
         async toggleRecording() {
             if (this.transcriberComponent.isListening) {
-                console.debug("stopping transcribing because toggleRecording called and this.transcriberComponent.isListening is", this.transcriberComponent.isListening);
+                console.debug("stopping transcribing because toggleRecording called and this.transcriber.isListening is", this.transcriberComponent.isListening);
                 await this.transcriberComponent.stop();
-                this.ui.setMicState('idle');
+                this.uiComponent.setMicState('idle');
             } else {
-                console.debug("starting transcribing because toggleRecording called and this.transcriberComponent.isListening is", this.transcriberComponent.isListening);
+                console.debug("starting transcribing because toggleRecording called and this.transcriber.isListening is", this.transcriberComponent.isListening);
                 await this.transcriberComponent.start();
-                this.ui.setMicState('listening');
+                this.uiComponent.setMicState('listening');
             }
         }
 
@@ -234,8 +240,8 @@
             this.transcriberComponent?.stop();
             this.speakerComponent?.cleanup();
             this.micVisualizer?.cleanup();
-            this.speakerVisualizer?.cleanup();
-            this.ui?.cleanup();
+            this.voicerVisualizer?.cleanup();
+            this.uiComponent?.cleanup();
         }
 
     }
@@ -273,6 +279,7 @@
             this.vizParams = null;
             this.audioContext = null;
             this.mediaElementSource = null;
+
         }
 
         createCanvas() {
@@ -418,10 +425,8 @@
 
         startAnimation() {
             const animate = () => {
-                if (this.mode === 'listening' || this.mode === 'playing') {
+                if (this.mode !== 'idle' ) {
                     this.updateVisualization();
-                } else {
-                    this.drawIdle();
                 }
                 this.animationFrame = requestAnimationFrame(animate);
             };
@@ -432,16 +437,21 @@
             return this.styles.getPropertyValue(varName).trim();
         }
 
-        drawIdle() {
-            const heights = new Array(this.config.barCount).fill(0.01);
+        undrawBars() {
+            const heights = new Array(this.config.barCount).fill(0);
             this.drawBars(heights);
         }
+
 
         async setMode(mode, stream = null) {
             if (mode === this.mode) { return; }
             console.log(`🔉AudioVizualizer Setting mode to ${mode}`);
 
             this.mode = mode;
+            if (mode === 'idle') {
+                this.undrawBars();
+                return;
+            }
 
             if (stream) {
                 try {
@@ -524,7 +534,7 @@
 
 
     // UIManager.js
-    class UIManager {
+    class UIComponent {
         constructor(controller) {
             this.controller = controller;
             this.container = null;
@@ -537,9 +547,10 @@
             this.createMainContainer();
             this.createHeader();
             this.createControls();
-            this.createVisualizerContainer();
+            // this.createVisualizerContainer();
             this.createQueueUI();
             this.createTranscriptArea();
+            this.createSettings();
             this.makeDraggable();
 
             document.body.appendChild(this.container);
@@ -573,7 +584,7 @@
             micButton.className = 'vf-button';
             micButton.id = 'vf-mic-button';
             micButton.dataset.state = 'idle';
-            micButton.innerHTML = '<i class="bi bi-mic-fill"></i>';
+            micButton.innerHTML = ' <i class="bi bi-mic-fill vf-button-mic"></i>';
             micButton.addEventListener('click', () => {
                 console.log('Mic button clicked');
                 this.controller.toggleRecording();
@@ -588,12 +599,12 @@
 
             // Speaker control
             const SpeakerControl = document.createElement('div');
-            SpeakerControl.className = 'vf-Speaker';
+            SpeakerControl.className = 'vf-speaker';
             const SpeakerButton = document.createElement('button');
             SpeakerButton.className = 'vf-button';
-            SpeakerButton.id = 'vf-Speaker-button';
+            SpeakerButton.id = 'vf-speaker-button';
             SpeakerButton.dataset.state = 'idle';
-            SpeakerButton.innerHTML = '<i class="bi bi-volume-up-fill"></i>';
+            SpeakerButton.innerHTML = '<i class="bi bi-volume-up-fill vf-button-tts"></i>';
             SpeakerControl.appendChild(SpeakerButton);
 
             controls.appendChild(micControl);
@@ -626,28 +637,42 @@
             settings.className = 'vf-settings';
             settings.hidden = true;
 
+            const header = this.createSettingsHeader();
+            const transcriberSection = this.createTranscriberSection();
+            const speakerSection = this.createSpeakerSection();
+
+            settings.append(header, transcriberSection, speakerSection);
+            this.container.appendChild(settings);
+        }
+
+        createSettingsHeader() {
             const header = document.createElement('div');
             header.className = 'vf-settings-header';
-            header.innerHTML = `
-        <span>SETTINGS</span>
-        <button class="vf-settings-close"><i class="bi bi-x"></i></button>
-    `;
+            header.innerHTML =         `<span>SETTINGS</span>
+            <button class="vf-settings-close"><i class="bi bi-x"></i></button>`;
 
-            const TranscriberSection = document.createElement('div');
-            TranscriberSection.className = 'vf-settings-section';
-            TranscriberSection.innerHTML = `
-        <h3 class="vf-settings-title">Speech Recognition</h3>
-        <div class="vf-settings-controls">
-            <select class="vf-Transcriber-provider-select">
-                <option value="deepgram">DeepGram</option>
-                <option value="webspeech">Web Speech</option>
-            </select>
-        </div>
-    `;
+            const closeBtn = header.querySelector('.vf-settings-close');
+            closeBtn.addEventListener('click', () => {
+                settings.hidden = true;
+            });
+            return header;
+        }
 
-            // Add provider switching logic
-            const providerSelect = TranscriberSection.querySelector('.vf-Transcriber-provider-select');
-            providerSelect.value = this.controller.transcriberComponent.provider instanceof DeepGramTranscriber ? 'deepgram' : 'webspeech';
+        createTranscriberSection() {
+            const section = document.createElement('div');
+            section.className = 'vf-settings-section';
+            section.innerHTML = `<h3 class="vf-settings-title">Transcription Settings</h3>
+                                <div class="vf-settings-controls">
+                                <select class="vf-transcriber-provider-select">
+                                    <option value="deepgram">DeepGram</option>
+                                    <option value="webspeech">WebSpeech</option>
+                                </select>
+                                <label class="vf-settings-item">
+                                    <input type="checkbox" checked=""> TTS Staging Area
+                                </label>
+                                </div>`;
+
+            const providerSelect = section.querySelector('.vf-transcriber-provider-select');
 
             providerSelect.addEventListener('change', async (e) => {
                 try {
@@ -655,16 +680,52 @@
                     this.showNotification('Speech recognition provider switched successfully');
                 } catch (error) {
                     console.error('Failed to switch provider:', error);
-                    // Revert select value
-                    providerSelect.value = this.controller.transcriberComponent.provider instanceof DeepGramTranscriber ? 'deepgram' : 'webspeech';
+                    providerSelect.value = this.controller.transcriber.provider instanceof DeepGramTranscriber ? 'deepgram' : 'webspeech';
                     this.showError('Failed to switch provider: ' + error.message);
                 }
             });
 
-            settings.append(header, TranscriberSection);
-            this.container.appendChild(settings);
+            return section;
         }
 
+
+      createSpeakerSection() {
+            const section = document.createElement('div');
+            section.className = 'vf-settings-section';
+            section.innerHTML = `<h3 class="vf-settings-title">Agent Speech Settings</h3>
+        <div class="vf-settings-controls">
+          <select class="vf-speaker-provider-select">
+            <option value="elevenlabs">ElevenLabs</option>
+            <option value="webspeech">WebSpeech (Free)</option>
+          </select>
+          <label class="vf-settings-item">
+            <input type="checkbox" checked=""> Show History Bubbles
+          </label>
+          <div class="vf-settings-item">
+            <label>Bubble Lines: <input type="number" value="2" min="1" max="5"></label>
+          </div>
+          <div class="vf-settings-item">
+            <label>Bubbles Per Line: <input type="number" value="9" min="1" max="20"></label>
+          </div>
+        </div>
+                        ` ;
+
+            const providerSelect = section.querySelector('.vf-speaker-provider-select');
+
+            providerSelect.addEventListener('change', async (e) => {
+                try {
+                    await this.controller.switchSpeakerProvider();
+                    this.showNotification('Text to speech provider switched successfully');
+                } catch (error) {
+                    console.error('Failed to switch provider:', error);
+                    providerSelect.value = this.controller.speaker.provider instanceof ElevenLabsSpeaker ? 'elevenlabs' : 'webspeech';
+                    this.showError('Failed to switch provider: ' + error.message);
+                }
+            });
+
+
+            return section;
+        }
         // Add notification method
         showNotification(message) {
             console.log('Showing notification:', message);
@@ -714,7 +775,7 @@
 
             closeBtn.addEventListener('click', () => {
                 transcript.hidden = true;
-                if (this.controller.transcriberComponent.isListening) {
+                if (this.controller.transcriber.isListening) {
                     this.controller.toggleRecording();
                 }
             });
@@ -726,7 +787,7 @@
                 if (finalText && this.controller.config.targetElement) {
                     this.controller.config.targetElement.value += ' ' + finalText;
                     transcript.hidden = true;
-                    if (this.controller.transcriberComponent.isListening) {
+                    if (this.controller.transcriber.isListening) {
                         this.controller.toggleRecording();
                     }
                 }
@@ -735,7 +796,7 @@
             clearBtn.addEventListener('click', () => {
                 transcript.querySelector('.vf-text--interim').textContent = '';
                 transcript.querySelector('.vf-text--final').textContent = '';
-                if (this.controller.transcriberComponent.isListening) {
+                if (this.controller.transcriber.isListening) {
                     this.controller.toggleRecording();
                 }
             });
@@ -771,7 +832,7 @@
 
         setSpeakerState(state) {
             console.log('Setting speaker state:', state);
-            const speakerButton = this.container.querySelector('#vf-Speaker-button');
+            const speakerButton = this.container.querySelector('#vf-speaker-button');
             if (speakerButton) {
                 speakerButton.dataset.state = state.isSpeaking ? 'speaking' : 'idle';
             }
@@ -979,18 +1040,18 @@
 
         createBubbleClickHandler(item) {
             return async () => {
-                const current = this.controller.speakerComponent.queue.getCurrentPlayingItem();
+                const current = this.controller.speaker.queue.getCurrentPlayingItem();
 
                 try {
                     switch (item.state) {
                         case 'queued':
                             if (!current) {
-                                await this.controller.speakerComponent.processNextInQueue();
+                                await this.controller.speaker.processNextInQueue();
                             }
                             break;
 
                         case 'playing':
-                            await this.controller.speakerComponent.pause();
+                            await this.controller.speaker.pause();
                             break;
 
                         case 'completed':
@@ -1073,10 +1134,10 @@
     };
 
     class TranscriberComponent {
-        constructor(visualizer) {
+        constructor() {
             this.provider = null;
             this.handlers = null;
-            this.visualizer = visualizer;
+            this.visualizer = null;
         }
 
         async initialize(preferredType = "deepgram") {
@@ -1138,6 +1199,7 @@
 
         async start() {
             if (!this.provider) throw new Error("🚨No transcriber provider initialized");
+            if (!this.visualizer) throw new Error("🚨No transcriber visualizer assigner");
             try {
                 const stream = await this.provider.getAudioStream();
                 this.visualizer.setMode('listening', stream);
@@ -1849,7 +1911,7 @@
             super();
             this.audio = new Audio();
             this.queue = new SpeechQueue();
-            this.visualizer = visualizer;
+            this.visualizer = null;
             this.isPlaying = false;
 
             this.setupAudioHandlers();
@@ -1941,6 +2003,7 @@
 
 
         async queueAudioItem(speechAPIRequest) {
+            console.log("Queueing audio item:", speechAPIRequest);
             const queueItem = new SpeechQueueItem(speechAPIRequest);
             this.queue.append(queueItem);
 
@@ -2028,11 +2091,11 @@
     //     if (!window.voiceFaster) {
     //         throw new Error("VoiceFaster not initialized");
     //     }
-    //     return window.voiceFaster.speakerComponent.queueText(params.text);
+    //     return window.voiceFaster.speaker.queueText(params.text);
     // };
 
     window.addEventListener("message", (event) => {
-        console.log("Received message:", event.data);
+        console.log("Window received message:", event.data);
         if (event.data.type === "QUEUE_AUDIO_STREAM" && window.voiceFaster?.speakerComponent) {
             window.voiceFaster.speakerComponent.queueAudioItem(event.data.payload);
         }
