@@ -548,6 +548,7 @@ class UIComponent {
         this.visualizerContainer = null;
         this.queueVisualizerContainer = null;
         this.queueUIManager = null;
+        this.transcriptArea = null;
     }
 
     async initialize() {
@@ -713,7 +714,7 @@ class UIComponent {
                 this.showNotification('Speech recognition provider switched successfully');
             } catch (error) {
                 console.error('Failed to switch provider:', error);
-                providerSelect.value = this.controller.transcriber.provider instanceof DeepGramTranscriber ? 'deepgram' : 'webspeech';
+                providerSelect.value = this.controller.transcriberComponent.provider instanceof DeepGramTranscriber ? 'deepgram' : 'webspeech';
                 this.showError('Failed to switch provider: ' + error.message);
             }
         });
@@ -799,6 +800,19 @@ class UIComponent {
 
         this.container.appendChild(transcript);
         this.setupTranscriptHandlers(transcript);
+        this.transcriptArea = transcript;
+    }
+
+    hideTranscriptArea()   {
+        this.transcriptArea.hidden = true;
+    }
+    showTranscriptArea() {
+        this.transcriptArea.hidden = false;
+    }
+
+    clearTranscriptArea(){
+        this.transcriptArea.querySelector('.vf-text--interim').textContent = '';
+        this.transcriptArea.querySelector('.vf-text--final').textContent = '';
     }
 
     setupTranscriptHandlers(transcript) {
@@ -807,34 +821,36 @@ class UIComponent {
         const clearBtn = transcript.querySelector('.vf-button--clear');
 
         closeBtn.addEventListener('click', () => {
-            transcript.hidden = true;
-            if (this.controller.transcriber.isListening) {
+            this.hideTranscriptArea();
+            if (this.controller.transcriberComponent.isListening) {
                 this.controller.toggleRecording();
             }
         });
 
         sendBtn.addEventListener('click', () => {
             console.debug('Send button clicked');
+            const targetElement = document.getElementById(this.controller.config.targetElementId);
+            console.log('🎯Target element:', targetElement);
             // Handle send action
             const finalText = transcript.querySelector('.vf-text--final').textContent;
-            if (finalText && this.controller.config.targetElement) {
-                this.controller.config.targetElement.value += ' ' + finalText;
-                transcript.hidden = true;
-                if (this.controller.transcriber.isListening) {
+            if (finalText && targetElement) {
+                targetElement.value += ' ' + finalText;
+                this.hideTranscriptArea();
+                if (this.controller.transcriberComponent.isListening) {
                     this.controller.toggleRecording();
                 }
             }
         });
 
         clearBtn.addEventListener('click', () => {
-            transcript.querySelector('.vf-text--interim').textContent = '';
-            transcript.querySelector('.vf-text--final').textContent = '';
-            if (this.controller.transcriber.isListening) {
+            // transcript.querySelector('.vf-text--interim').textContent = '';
+            // transcript.querySelector('.vf-text--final').textContent = '';
+            this.clearTranscriptArea();
+            if (this.controller.transcriberComponent.isListening) {
                 this.controller.toggleRecording();
             }
         });
     }
-
 
     updateTranscript(text, isFinal) {
         const transcript = this.container.querySelector('.vf-transcript');

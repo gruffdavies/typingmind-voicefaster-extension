@@ -19,12 +19,9 @@
     function createVoiceFaster() {
         injectStyles();
         try {
-            // Look for existing text input
-            const targetElement = document.getElementById('chat-input-textbox');
-            console.log('Target element:', targetElement);
-
+            const targetElementId = 'chat-input-textbox';
             voiceFaster = new VoiceFasterController({
-                targetElement,
+                targetElementId,
                 transcribeToStagingArea: true
             });
 

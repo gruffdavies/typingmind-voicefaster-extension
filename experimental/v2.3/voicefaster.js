@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.14';
+    const VOICEFASTER_VERSION = '2.3.16';
 
     class EventEmitter {
     constructor() {
@@ -552,6 +552,7 @@ class UIComponent {
         this.visualizerContainer = null;
         this.queueVisualizerContainer = null;
         this.queueUIManager = null;
+        this.transcriptArea = null;
     }
 
     async initialize() {
@@ -717,7 +718,7 @@ class UIComponent {
                 this.showNotification('Speech recognition provider switched successfully');
             } catch (error) {
                 console.error('Failed to switch provider:', error);
-                providerSelect.value = this.controller.transcriber.provider instanceof DeepGramTranscriber ? 'deepgram' : 'webspeech';
+                providerSelect.value = this.controller.transcriberComponent.provider instanceof DeepGramTranscriber ? 'deepgram' : 'webspeech';
                 this.showError('Failed to switch provider: ' + error.message);
             }
         });
@@ -803,6 +804,19 @@ class UIComponent {
 
         this.container.appendChild(transcript);
         this.setupTranscriptHandlers(transcript);
+        this.transcriptArea = transcript;
+    }
+
+    hideTranscriptArea()   {
+        this.transcriptArea.hidden = true;
+    }
+    showTranscriptArea() {
+        this.transcriptArea.hidden = false;
+    }
+
+    clearTranscriptArea(){
+        this.transcriptArea.querySelector('.vf-text--interim').textContent = '';
+        this.transcriptArea.querySelector('.vf-text--final').textContent = '';
     }
 
     setupTranscriptHandlers(transcript) {
@@ -812,33 +826,35 @@ class UIComponent {
 
         closeBtn.addEventListener('click', () => {
             transcript.hidden = true;
-            if (this.controller.transcriber.isListening) {
+            if (this.controller.transcriberComponent.isListening) {
                 this.controller.toggleRecording();
             }
         });
 
         sendBtn.addEventListener('click', () => {
             console.debug('Send button clicked');
+            const targetElement = document.getElementById(this.controller.config.targetElementId);
+            console.log('🎯Target element:', targetElement);
             // Handle send action
             const finalText = transcript.querySelector('.vf-text--final').textContent;
-            if (finalText && this.controller.config.targetElement) {
-                this.controller.config.targetElement.value += ' ' + finalText;
+            if (finalText && targetElement) {
+                targetElement.value += ' ' + finalText;
                 transcript.hidden = true;
-                if (this.controller.transcriber.isListening) {
+                if (this.controller.transcriberComponent.isListening) {
                     this.controller.toggleRecording();
                 }
             }
         });
 
         clearBtn.addEventListener('click', () => {
-            transcript.querySelector('.vf-text--interim').textContent = '';
-            transcript.querySelector('.vf-text--final').textContent = '';
-            if (this.controller.transcriber.isListening) {
+            // transcript.querySelector('.vf-text--interim').textContent = '';
+            // transcript.querySelector('.vf-text--final').textContent = '';
+            this.clearTranscriptArea();
+            if (this.controller.transcriberComponent.isListening) {
                 this.controller.toggleRecording();
             }
         });
     }
-
 
     updateTranscript(text, isFinal) {
         const transcript = this.container.querySelector('.vf-transcript');
@@ -2661,12 +2677,9 @@ class SpeakerComponent extends EventEmitter {
     function createVoiceFaster() {
         injectStyles();
         try {
-            // Look for existing text input
-            const targetElement = document.getElementById('chat-input-textbox');
-            console.log('Target element:', targetElement);
-
+            const targetElementId = 'chat-input-textbox';
             voiceFaster = new VoiceFasterController({
-                targetElement,
+                targetElementId,
                 transcribeToStagingArea: true
             });
 

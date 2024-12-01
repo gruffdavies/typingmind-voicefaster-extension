@@ -58,6 +58,7 @@ class VoiceFasterController {
             defaultVoiceId: 'LKzEuRvwo37aJ6JFMnxk',
             maxQueueSize: 100,
             maxQueueAge: 3600000,
+            targetElementId: null,
             targetElement: null,
             transcribeToStagingArea: true,
             ...config
@@ -819,10 +820,12 @@ class UIComponent {
 
         sendBtn.addEventListener('click', () => {
             console.debug('Send button clicked');
+            const targetElement = document.getElementById(this.controller.config.targetElementId);
+            console.log('🎯Target element:', targetElement);
             // Handle send action
             const finalText = transcript.querySelector('.vf-text--final').textContent;
-            if (finalText && this.controller.config.targetElement) {
-                this.controller.config.targetElement.value += ' ' + finalText;
+            if (finalText && targetElement) {
+                targetElement.value += ' ' + finalText;
                 transcript.hidden = true;
                 if (this.controller.transcriber.isListening) {
                     this.controller.toggleRecording();
@@ -2661,12 +2664,9 @@ class SpeakerComponent extends EventEmitter {
     function createVoiceFaster() {
         injectStyles();
         try {
-            // Look for existing text input
-            const targetElement = document.getElementById('chat-input-textbox');
-            console.log('Target element:', targetElement);
-
+            const targetElementId = 'chat-input-textbox';
             voiceFaster = new VoiceFasterController({
-                targetElement,
+                targetElementId,
                 transcribeToStagingArea: true
             });
 
