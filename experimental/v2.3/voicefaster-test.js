@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.33';
+    const VOICEFASTER_VERSION = '2.3.34';
 
     class EventEmitter {
     constructor() {
@@ -958,7 +958,8 @@ class UIComponent {
 
     // basic DOM manipulation but react may overwrite
     appendTargetElementText(transcript) {
-        this.targetElement.value = targetElement.value + ' ' + transcript;
+        this.getTargetElement();
+        this.targetElement.value = this.targetElement.value + ' ' + transcript;
     }
 
     getTargetElement() {
@@ -967,8 +968,8 @@ class UIComponent {
     }
 
     sendTranscriptToTargetElement() {
-        const targetElement = this.getTargetElement();
-        console.log("🎯Target element:", targetElement);
+        this.getTargetElement();
+        console.log("🎯Target element:", this.targetElement);
         const transcript = this.getTranscript();
 
         // this should work for react and normal DOM elements
