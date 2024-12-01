@@ -653,6 +653,7 @@
 
             const closeBtn = header.querySelector('.vf-settings-close');
             closeBtn.addEventListener('click', () => {
+                const settings = this.container.querySelector('.vf-settings');
                 settings.hidden = true;
             });
             return header;
