@@ -939,53 +939,52 @@
                 this.container.removeChild(bubble);
             }
 
-            // Get current streams
-            const streams = Array.from(queue);
+            const items = Array.from(queue);
 
-            // Remove bubbles for non-existent streams
+            // Remove bubbles for non-existent items
             Array.from(this.container.children).forEach((bubble, index) => {
-                if (!streams[index]) {
+                if (!items[index]) {
                     this.cleanupBubble(bubble);
                     this.container.removeChild(bubble);
                 }
             });
 
             // Update existing bubbles and create new ones
-            streams.forEach((stream, index) => {
+            items.forEach((item, index) => {
                 let bubble = this.container.children[index];
 
                 if (bubble) {
-                    this.updateBubble(bubble, stream);
+                    this.updateBubble(bubble, item);
                 } else {
-                    bubble = this.createBubble(stream);
+                    bubble = this.createBubble(item);
                     this.container.appendChild(bubble);
                 }
             });
         }
 
-        createBubble(stream) {
+        createBubble(item) {
             const bubble = document.createElement('div');
             bubble.className = 'vf-bubble';
-            bubble.dataset.state = stream.state;
-            bubble.dataset.id = stream.id;
-            bubble.title = stream.getDetailsString();
+            bubble.dataset.state = item.state;
+            bubble.dataset.id = item.id;
+            bubble.title = item.getDetailsString();
 
             // Create and store the click handler
-            const clickHandler = this.createBubbleClickHandler(stream);
+            const clickHandler = this.createBubbleClickHandler(item);
             this.bubbleClickHandlers.set(bubble, clickHandler);
             bubble.addEventListener('click', clickHandler);
 
             return bubble;
         }
 
-        createBubbleClickHandler(stream) {
+        createBubbleClickHandler(item) {
             return async () => {
-                const currentStream = this.controller.speakerComponent.queue.getCurrentPlayingStream();
+                const current = this.controller.speakerComponent.queue.getCurrentPlayingItem();
 
                 try {
-                    switch (stream.state) {
+                    switch (item.state) {
                         case 'queued':
-                            if (!currentStream) {
+                            if (!current) {
                                 await this.controller.speakerComponent.processNextInQueue();
                             }
                             break;
@@ -995,29 +994,15 @@
                             break;
 
                         case 'completed':
-                            // Create new stream with same content for replay
-                            const replayStream = new SpeechQueueItem({
-                                url: stream.url,
-                                method: stream.method,
-                                headers: stream.headers,
-                                body: stream.body
-                            });
-                            this.controller.speakerComponent.queue.addStream(replayStream);
-                            if (!currentStream) {
-                                await this.controller.speakerComponent.processNextInQueue();
-                            }
+                            console.error('QueueUIManager: Attempted to play completed item which is not yet implemented');
                             break;
 
                         case 'error':
-                            // Retry the failed stream
-                            this.controller.speakerComponent.queue.updateStreamState(stream.id, "queued");
-                            if (!currentStream) {
-                                await this.controller.speakerComponent.processNextInQueue();
-                            }
+                            console.warn('QueueUIManager: Attempted to play error item which is not yet implemented');
                             break;
 
                         default:
-                            console.warn(`Unhandled stream state: ${stream.state}`);
+                            console.warn(`Unhandled item state: ${item.state}`);
                             break;
                     }
                 } catch (error) {
@@ -1030,19 +1015,19 @@
             };
         }
 
-        updateBubble(bubble, stream) {
-            if (!bubble || !stream) return;
+        updateBubble(bubble, item) {
+            if (!bubble || !item) return;
 
             // Update state and tooltip
-            bubble.dataset.state = stream.state;
-            bubble.title = stream.getDetailsString();
+            bubble.dataset.state = item.state;
+            bubble.title = item.getDetailsString();
 
             // Update ARIA attributes for accessibility
-            bubble.setAttribute('aria-label', `Audio stream ${stream.id} - ${stream.state}`);
+            bubble.setAttribute('aria-label', `Audio item ${item.id} - ${item.state}`);
             bubble.setAttribute('role', 'button');
 
             // Add appropriate cursor style based on state
-            bubble.style.cursor = ['queued', 'playing', 'completed', 'error'].includes(stream.state)
+            bubble.style.cursor = ['queued', 'playing', 'completed', 'error'].includes(item.state)
                 ? 'pointer'
                 : 'default';
         }
@@ -1652,8 +1637,8 @@
     /* Text to Speech Classes */
 
 
-    // StreamRequestResponse.js
-    class StreamRequestResponse {
+    // speechAPIRequest.js
+    class SpeechAPIRequest {
         #initializeMembers({ url, method, headers, body }) {
             this.url = url;
             this.method = method || "GET";
@@ -1672,12 +1657,12 @@
 
     // SpeakerQueueItem.js
     class SpeechQueueItem {
-        constructor(streamRequestResponse) {
+        constructor(speechAPIRequest) {
             this.id = new Date().getTime().toString();
-            this.url = streamRequestResponse.url;
-            this.headers = streamRequestResponse.headers;
-            this.method = streamRequestResponse.method;
-            this.body = streamRequestResponse.body;
+            this.url = speechAPIRequest.url;
+            this.headers = speechAPIRequest.headers;
+            this.method = speechAPIRequest.method;
+            this.body = speechAPIRequest.body;
 
             try {
                 this.text = JSON.parse(this.body).text || "No text available";
@@ -1780,58 +1765,58 @@
 
     // SpeakerAudioQueue.js
     class SpeechQueue {
-        #streams;
+        #items;
         #maxSize;
         #maxAge;
         #observers;
 
         constructor(maxSize = 100, maxAge = 3600000) {
-            this.#streams = [];
+            this.#items = [];
             this.#maxSize = maxSize;
             this.#maxAge = maxAge;
             this.#observers = [];
         }
 
-        addStream(stream) {
-            this.#streams.push(stream);
+        append(item) {
+            this.#items.push(item);
             this.notifyObservers();
         }
 
-        removeStream(id) {
-            const index = this.#streams.findIndex((stream) => stream.id === id);
+        removeItem(id) {
+            const index = this.#items.findIndex((item) => item.id === id);
             if (index !== -1) {
-                this.#streams.splice(index, 1);
+                this.#items.splice(index, 1);
                 this.notifyObservers();
                 return true;
             }
             return false;
         }
 
-        getNextQueuedStream() {
-            return this.#streams.find((stream) => stream.state === "queued") || null;
+        getNextQueuedItem() {
+            return this.#items.find((item) => item.state === "queued") || null;
         }
 
-        updateStreamState(id, newState) {
-            const stream = this.#streams.find((stream) => stream.id === id);
-            if (stream) {
-                stream.updateState(newState);
+        updateItemState(id, newState) {
+            const item = this.#items.find((item) => item.id === id);
+            if (item) {
+                item.updateState(newState);
                 this.notifyObservers();
             }
         }
 
         cleanup() {
-            for (const stream of this.#streams) {
-                stream.refreshState(this.#maxAge);
-                if (stream.isStale(this.#maxAge)) {
-                    this.removeStream(stream.id);
+            for (const item of this.#items) {
+                item.refreshState(this.#maxAge);
+                if (item.isStale(this.#maxAge)) {
+                    this.removeItem(item.id);
                 }
             }
             this.notifyObservers();
         }
 
         removeOldest() {
-            if (this.#streams.length > 0) {
-                this.#streams.shift();
+            if (this.#items.length > 0) {
+                this.#items.shift();
                 this.notifyObservers();
             }
         }
@@ -1846,16 +1831,16 @@
             }
         }
 
-        getCurrentPlayingStream() {
-            return this.#streams.find((stream) => stream.state === "playing") || null;
+        getCurrentPlayingItem() {
+            return this.#items.find((item) => item.state === "playing") || null;
         }
 
         [Symbol.iterator]() {
-            return this.#streams[Symbol.iterator]();
+            return this.#items[Symbol.iterator]();
         }
 
         get size() {
-            return this.#streams.length;
+            return this.#items.length;
         }
     }
 
@@ -1878,15 +1863,10 @@
                     await this.visualizer.setMode('idle');
                 }
 
-                const currentStream = this.queue.getCurrentPlayingStream();
-                if (currentStream) {
-                    this.queue.updateStreamState(currentStream.id, "completed");
-
-                    // Process next stream if available
-                    const nextStream = this.queue.getNextQueuedStream();
-                    if (nextStream) {
-                        await this.processNextInQueue();
-                    }
+                const currentItem = this.queue.getCurrentPlayingItem();
+                if (currentItem) {
+                    this.queue.updateItemState(currentItem.id, "completed");
+                    await this.processNextInQueue();
                 }
             };
 
@@ -1909,8 +1889,8 @@
 
 
         async processNextInQueue() {
-            const nextStream = this.queue.getNextQueuedStream();
-            if (!nextStream) {
+            const nextItem = this.queue.getNextQueuedItem();
+            if (!nextItem) {
                 this.isPlaying = false;
                 this.emit('stateChange', 'stopped');
                 if (this.visualizer) {
@@ -1919,14 +1899,15 @@
                 return;
             }
 
-            // Use queue's updateStreamState method consistently
-            this.queue.updateStreamState(nextStream.id, "requesting");
+            // Use queue's updateItemState method consistently
+            this.isPlaying = true;
+            this.queue.updateItemState(nextItem.id, "requesting");
 
             try {
-                const response = await fetch(nextStream.url, {
-                    method: nextStream.method,
-                    headers: nextStream.headers,
-                    body: nextStream.body,
+                const response = await fetch(nextItem.url, {
+                    method: nextItem.method,
+                    headers: nextItem.headers,
+                    body: nextItem.body,
                 });
 
                 if (!response.ok) {
@@ -1937,8 +1918,8 @@
                 const audioUrl = URL.createObjectURL(blob);
 
                 // Update state to playing through queue
-                this.queue.updateStreamState(nextStream.id, "playing");
-                this.isPlaying = true;
+                this.queue.updateItemState(nextItem.id, "playing");
+
                 this.emit('stateChange', 'playing');
 
                 this.audio.src = audioUrl;
@@ -1946,7 +1927,7 @@
 
             } catch (error) {
                 console.error("Error in processNextInQueue:", error);
-                this.queue.updateStreamState(nextStream.id, "error");
+                this.queue.updateItemState(nextItem.id, "error");
                 this.isPlaying = false;
                 this.emit('stateChange', 'stopped');
                 if (this.visualizer) {
@@ -1959,22 +1940,22 @@
 
 
 
-        async queueAudioStream(streamRequestResponse) {
-            const queueItem = new SpeechQueueItem(streamRequestResponse);
-            this.queue.addStream(queueItem);
+        async queueAudioItem(speechAPIRequest) {
+            const queueItem = new SpeechQueueItem(speechAPIRequest);
+            this.queue.append(queueItem);
 
             if (!this.isPlaying) {
                 await this.processNextInQueue();
             }
 
             return {
-                message: "Audio stream request queued",
+                message: "Audio item request queued",
                 id: queueItem.id
             };
         }
 
         async queueText(text) {
-            const streamInfo = new StreamRequestResponse({
+            const itemInfo = new SpeechAPIRequest({
                 url: `https://api.elevenlabs.io/v1/text-to-speech/${this.config.defaultVoiceId}/stream`,
                 method: "POST",
                 headers: {
@@ -1992,7 +1973,7 @@
                 })
             });
 
-            return this.queueAudioStream(streamInfo);
+            return this.queueAudioItem(itemInfo);
         }
 
         pause() {
@@ -2041,19 +2022,19 @@
         }
     });
 
-    // Plugin interface for Speaker
-    window.VOICEFASTER_stream_voice_audio = async (params, userSettings) => {
-        console.log("Received stream request:", params);
-        if (!window.voiceFaster) {
-            throw new Error("VoiceFaster not initialized");
-        }
-        return window.voiceFaster.speakerComponent.queueText(params.text);
-    };
+    // // Plugin interface for Speaker
+    // window.VOICEFASTER_stream_voice_audio = async (params, userSettings) => {
+    //     console.log("Received stream request:", params);
+    //     if (!window.voiceFaster) {
+    //         throw new Error("VoiceFaster not initialized");
+    //     }
+    //     return window.voiceFaster.speakerComponent.queueText(params.text);
+    // };
 
     window.addEventListener("message", (event) => {
         console.log("Received message:", event.data);
         if (event.data.type === "QUEUE_AUDIO_STREAM" && window.voiceFaster?.speakerComponent) {
-            window.voiceFaster.speakerComponent.queueAudioStream(event.data.payload);
+            window.voiceFaster.speakerComponent.queueAudioItem(event.data.payload);
         }
     });
 
