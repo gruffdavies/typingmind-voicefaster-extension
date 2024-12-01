@@ -1,5 +1,5 @@
 (() => {
-    const VOICEFASTER_VERSION = '2.3.4';
+    const VOICEFASTER_VERSION = '2.3.7';
 
     class EventEmitter {
         constructor() {
@@ -2646,6 +2646,7 @@
         styleElement.setAttribute('data-voicefaster-version', VOICEFASTER_VERSION)
         styleElement.textContent = voicefaster_css
         document.head.appendChild(styleElement)
+        console.log('VoiceFaster styles injected')
     }
 
     function createVoiceFaster() {
@@ -2664,6 +2665,7 @@
                 exports.VoiceFasterController = VoiceFasterController;
             }
             window.voiceFaster = voiceFaster;
+            console.log('VoiceFaster initialized:', voiceFaster);
 
         } catch (error) {
             console.error('VoiceFaster initialization failed:', error);
@@ -2673,8 +2675,7 @@
     let voiceFaster = null;
 
 
-    // Inject styles on DOM content loaded
-    document.addEventListener('DOMContentLoaded', createVoiceFaster)
+    createVoiceFaster();
 
     // add handler to for plugin to queue audio stream
     window.addEventListener("message", (event) => {
