@@ -90,11 +90,11 @@ class VoiceFasterController {
         const pluginSettings = JSON.parse(window.localStorage.getItem("TM_useUserPluginSettings"));
         const deepFind = (obj, key) =>
             key in obj ? obj[key]
-            : Object.values(obj).reduce((acc, val) =>
-                acc !== undefined ? acc
-                : typeof val === 'object' && val !== null ? deepFind(val, key)
-                : undefined
-            , undefined);
+                : Object.values(obj).reduce((acc, val) =>
+                    acc !== undefined ? acc
+                        : typeof val === 'object' && val !== null ? deepFind(val, key)
+                            : undefined
+                    , undefined);
 
         this.deepgramApiKey = deepFind(pluginSettings, 'deepgramApiKey');
         this.elevenLabsApiKey = deepFind(pluginSettings, 'elevenLabsApiKey');
@@ -433,7 +433,7 @@ class AudioVisualizer {
 
     startAnimation() {
         const animate = () => {
-            if (this.mode !== 'idle' ) {
+            if (this.mode !== 'idle') {
                 this.updateVisualization();
             }
             this.animationFrame = requestAnimationFrame(animate);
@@ -589,7 +589,7 @@ class UIComponent {
             </svg>`;
     }
 
-    speakerIconHTML(){
+    speakerIconHTML() {
         return `<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
                 <path d="M11.536 14.01A8.47 8.47 0 0 0 14.026 8a8.47 8.47 0 0 0-2.49-6.01l-.708.707A7.48 7.48 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303z"/>
                 <path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.48 5.48 0 0 1 11.025 8a5.48 5.48 0 0 1-1.61 3.89z"/>
@@ -597,14 +597,14 @@ class UIComponent {
             </svg>`
     }
 
-    gearIconHTML(){
+    gearIconHTML() {
         return `<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
                 <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/>
                 <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/>
             </svg>`
     }
 
-    closeIconHTML(){
+    closeIconHTML() {
         return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x" viewBox="0 0 16 16">
                 <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/>
                 </svg>`;
@@ -688,7 +688,7 @@ class UIComponent {
     createSettingsHeader() {
         const header = document.createElement('div');
         header.className = 'vf-settings-header';
-        header.innerHTML =         `<span>SETTINGS</span>
+        header.innerHTML = `<span>SETTINGS</span>
         <button class="vf-settings-close">${this.closeIconHTML()}</button>`;
 
         const closeBtn = header.querySelector('.vf-settings-close');
@@ -730,7 +730,7 @@ class UIComponent {
     }
 
 
-  createSpeakerSettingsSection() {
+    createSpeakerSettingsSection() {
         const section = document.createElement('div');
         section.className = 'vf-settings-section';
         section.innerHTML = `<h3 class="vf-settings-title">Agent Speech Settings</h3>
@@ -810,14 +810,14 @@ class UIComponent {
         this.transcriptArea = transcript;
     }
 
-    hideTranscriptArea()   {
+    hideTranscriptArea() {
         this.transcriptArea.hidden = true;
     }
     showTranscriptArea() {
         this.transcriptArea.hidden = false;
     }
 
-    clearTranscriptArea(){
+    clearTranscriptArea() {
         this.transcriptArea.querySelector('.vf-text--interim').textContent = '';
         this.transcriptArea.querySelector('.vf-text--final').textContent = '';
     }
@@ -828,7 +828,12 @@ class UIComponent {
         const finalText = this.transcriptArea.querySelector('.vf-text--final').textContent;
         const interimText = this.transcriptArea.querySelector('.vf-text--interim').textContent;
         targetElement.value += ' ' + finalText + ' ' + interimText;
-        targetElement.dispatchEvent(new Event('change'));
+        // Trigger all relevant events that frameworks listen for
+        targetElement.dispatchEvent(new Event('input', { bubbles: true }));
+        targetElement.dispatchEvent(new Event('change', { bubbles: true }));
+
+        // Optional: also trigger a keyup event as some frameworks listen for this
+        targetElement.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
     }
 
     setupTranscriptHandlers(transcript) {
@@ -883,7 +888,7 @@ class UIComponent {
         const micButton = this.container.querySelector('#vf-mic-button');
         if (micButton) {
             micButton.dataset.state = state;
-        } else{
+        } else {
             console.error('Mic button not found');
         }
     }
@@ -1209,7 +1214,7 @@ class TranscriberComponent {
     async createProvider(preferredType) {
         try {
             if (preferredType === "deepgram") {
-                const config = {deepgramApiKey: this.deepgramApiKey};
+                const config = { deepgramApiKey: this.deepgramApiKey };
                 console.log("🪄🧊 Creating DeepGram Transcriber with config:", config);
                 const provider = new DeepGramTranscriber(config);
                 if (await provider.isAvailable()) {
