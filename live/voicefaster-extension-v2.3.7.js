@@ -2653,7 +2653,7 @@
         injectStyles();
         try {
             // Look for existing text input
-            const targetElement = document.querySelector('textarea, input[type="text"]');
+            const targetElement = document.querySelector('#chat-input-textbox');
 
             voiceFaster = new VoiceFasterController({
                 targetElement,
