@@ -2,8 +2,8 @@
 // instead it sends the request to the parent window
 // and the VoiceFaster extension makes the call and handles the response
 async function VOICEFASTER_stream_voice_audio(params, userSettings) {
-  // 2024-Aug-11 - GD - Changed model_id to eleven_turbo_v2_5
-  const VOICEFASTER_VERSION = '1.1.8';
+  // min extension version: 2.3.x
+  const VOICEFASTER_VERSION = '2.3';
   console.log(`stream_voice_audio v${VOICEFASTER_VERSION} called with:`, params);
 
   // extract the params

@@ -1,75 +1,118 @@
-# Voice Faster Extension and Plugin For TypingMind
+# VoiceFaster Extension and Plugin for TypingMind
 
 ## Current Versions
 
-Extension: 1.2.34
+Extension: 2.3.37
+Plugin: 2.3
 
-(ExtensionLiveURI)[https://gruffdavies.github.io/typingmind-voicefaster-extension/live/voicefaster-extension-v1.2.34.js]
+Last updated: 2024-Dec-01 13:00 (UTC)
 
-Plugin: 1.1.7
+## Overview
 
-Last updated: 2024-Aug-11 01:43 (UTC) | 2024-Aug-11 02:43 (UK)
+VoiceFaster is an agent and user voice interaction interface, originally designed for use with [TypingMind](https://docs.typingmind.com/), but can be used in any web app context. It provides enhanced voice capabilities:
+
+- Fast Agent Text-to-Speech via ElevenLabs streaming API
+- Real-time Speech-to-Text via DeepGram or Web Speech API
+- Real-time audio visualization
+- Queueing system for voice responses
+- Drag-and-drop interface
+
+Agent Speech is provided as a plugin tool for TypingMind. I.e. the agent is aware of the tool and can use it according to its context instructions or  the user's instructions.
+
+This allows the agent to voice none, some or all of its text responses, or a summary of what is written on the screen.
+
+User voice is transribed and sent to the agent chat window as text in real time using the browser Web Speech API, or for better results, DeepGram Cloud API.
+
+## Components
+
+### Extension
+
+- Renders a floating UI widget with microphone and speaker controls
+- Handles audio streaming and playback
+- Manages speech recognition
+- Provides visual feedback through audio visualizers
+- Implements a queuing system for multiple voice responses
+
+### Plugin
+
+- Constructs API requests for ElevenLabs voice synthesis
+- Communicates with the extension via window messaging
+- Manages voice selection and settings
+- Handles error cases and fallbacks
+
+## Installation
+
+1. Set the extension URL in TypingMind:
+   - Navigate to Menu > Settings > Advanced Settings > Extensions
+   - Add: `https://gruffdavies.github.io/typingmind-voicefaster-extension/live/voicefaster-extension-v2.3.37.js`
+
+2. Configure API Keys in TypingMind settings:
+   - ElevenLabs API key (required for TTS)
+   - DeepGram API key (optional, enables enhanced STT)
+
+## Features
+
+- **Text-to-Speech**
+  - Streaming audio playback
+  - Multiple voice options
+  - Queue management for responses
+  - Visual feedback during playback
+
+- **Speech-to-Text**
+  - DeepGram integration (primary)
+  - Web Speech API fallback
+  - Real-time transcription
+  - Visual feedback during recording
+
+- **User Interface**
+  - Draggable widget
+  - Audio visualization
+  - Queue status indicators
+  - Settings panel
+  - Transcript view
+
+## Important Notes
+
+⚠️ **Security Considerations**
+
+- Live extensions are injected directly into the browser
+- Review code before implementation
+- Use at your own discretion
+- Consider maintaining your own fork
+
+## Development
+
+The repository is structured with three main branches:
+
+- `live/`: Production-ready versions
+- `test/`: Testing versions
+- `dev/`: Development versions
+
+Access raw code via:
+`https://gruffdavies.github.io/typingmind-voicefaster-extension/{branch}/voicefaster-extension-v{VERSION}.js`
 
 
-## Purpose
+## Version Compatibility
 
-VoiceFaster is an extension and plugin for [TypingMind](https://docs.typingmind.com/) that work together to provide a faster voice to text experience for TypingMind.
+- Extension and plugin versions are now synchronized (2.3.x)
+- Breaking changes are indicated by major version changes
+- Minor versions may add features but maintain compatibility
+- Patch versions fix bugs and maintain compatibility
 
-The plugin constructs a web request to call ElevenLabs API using the streaming API for the voice.
-The Extension renders an audio player in a sandboxed iFrame in the TypingMind UI (whether chrome or installed as a web app).
-The extension handles making (but not constructing) streaming web requests to the ElevenLabs API and handling the responses.
-It has a queue and receives request payloads from the plugin.
+## Support
 
-Set the live extension in the menu > settings > Advanced Settings > Extensions
-![alt text](image.png)
+This is an experimental project with no official support. Users are encouraged to:
 
-### Important
+- Review code before use
+- Fork the repository for stability
+- Report issues via GitHub
+- Test thoroughly in their environment
 
-- Live Extensions Are Injected Into The Browser and run immediately.
-- Use with extreme caution!
-- This code is an experiment and not written for other users and may change at any time.
-- You are welcome to fork this repo if you find it useful and are strongly advised to use your own fork.
-- Check the code thoroughly before using it.
-- This is 100% unsupported and you use it at your own risk.
+## License
 
-The repo uses GitHub Pages to publish the code in a way that makes the raw code visible publically.
+[Add appropriate license information]
 
-## Repo URIs vs raw code URIs
+---
 
-The repo's root web URI is : [https://github.com/gruffdavies/typingmind-voicefaster-extension]
-
-Use this to understand the code and repo structure.
-
-To read or use the raw code, instead use the following URI form:
-
-`https://gruffdavies.github.io/typingmind-voicefaster-extension/{folder}/voicefaster-extension-v{SEMVER}.js`
-
-e.g.
-[https://gruffdavies.github.io/typingmind-voicefaster-extension/live/voicefaster-extension-v1.2.34.js]
-
-## IMPORTANT
-
-- Live Extensions Are Injected Into The Browser and run immediately.
-- Use with caution!
-- Currently the live extension and plugin versions are unrelated. See [[Dev]].
-
-
-## Live URIs
-
-1. More than one version of the extension can be live at the same time.
-2. The version number is the semantic version of the extension.
-3. The version number in the URI should be the same as the version number in the code (but mistakes happen, so this is not guaranteed).
-4. A copy of the plugin code is in comments in the extension code along with its version.
-5. That version is tested to work with the extension. Later versions may not work.
-
-## Test Versions
-
-NB: Test versions are also visible publically and can be used to test versions of the extension.
-Note to see the public version of the test files replace `live` with `test` in the .io URI.
-
-## Dev Versions
-
-The dev version of the extension and plugin code are in the extension and plugin folders respectively.
-They may not work unless the SEMVER version in the URI matches the version in the code (or even then).
-Check the code is the same as the version in the URI to be sure.
-Note to see the public version of the dev files replace `live` with `extension` or `plugin` in the .io URI.
+For the latest code and documentation, visit:
+[https://github.com/gruffdavies/typingmind-voicefaster-extension]
