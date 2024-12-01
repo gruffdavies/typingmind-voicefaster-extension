@@ -822,19 +822,61 @@ class UIComponent {
         this.transcriptArea.querySelector('.vf-text--final').textContent = '';
     }
 
+    // sendTranscriptToTargetElement() {
+    //     const targetElement = document.getElementById(this.controller.config.targetElementId);
+    //     console.log('🎯Target element:', targetElement);
+    //     const finalText = this.transcriptArea.querySelector('.vf-text--final').textContent;
+    //     const interimText = this.transcriptArea.querySelector('.vf-text--interim').textContent;
+    //     targetElement.value += ' ' + finalText + ' ' + interimText;
+    //     // Trigger all relevant events that frameworks listen for
+    //     targetElement.dispatchEvent(new Event('input', { bubbles: true }));
+    //     targetElement.dispatchEvent(new Event('change', { bubbles: true }));
+
+    //     // Optional: also trigger a keyup event as some frameworks listen for this
+    //     targetElement.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+    // }
+
     sendTranscriptToTargetElement() {
         const targetElement = document.getElementById(this.controller.config.targetElementId);
         console.log('🎯Target element:', targetElement);
         const finalText = this.transcriptArea.querySelector('.vf-text--final').textContent;
         const interimText = this.transcriptArea.querySelector('.vf-text--interim').textContent;
-        targetElement.value += ' ' + finalText + ' ' + interimText;
-        // Trigger all relevant events that frameworks listen for
-        targetElement.dispatchEvent(new Event('input', { bubbles: true }));
-        targetElement.dispatchEvent(new Event('change', { bubbles: true }));
+        const textToAdd = ' ' + finalText + ' ' + interimText;
 
-        // Optional: also trigger a keyup event as some frameworks listen for this
-        targetElement.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+        // Create a clipboard event with the text data
+        const pasteEvent = new ClipboardEvent('paste', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            clipboardData: new DataTransfer()
+        });
+
+        // Set the clipboard data
+        pasteEvent.clipboardData.setData('text/plain', textToAdd);
+
+        // Focus the element
+        targetElement.focus();
+
+        // Dispatch the paste event
+        targetElement.dispatchEvent(pasteEvent);
+
+        // Since React might prevent default, we also update the value directly
+        const startPos = targetElement.selectionStart;
+        const currentValue = targetElement.value;
+        const newValue = currentValue.slice(0, startPos) + textToAdd + currentValue.slice(startPos);
+        targetElement.value = newValue;
+
+        // Trigger input event after paste
+        const inputEvent = new InputEvent('input', {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            inputType: 'insertFromPaste',
+            data: textToAdd
+        });
+        targetElement.dispatchEvent(inputEvent);
     }
+
 
     setupTranscriptHandlers(transcript) {
         const closeBtn = transcript.querySelector('.vf-transcript-close');
