@@ -2065,38 +2065,6 @@
     /* Bootstrapping Code */
 
     // Create global instance
-    let voiceFaster = null;
-
-    // Initialize on DOM load
-    document.addEventListener('DOMContentLoaded', async () => {
-        try {
-            // Look for existing text input
-            const targetElement = document.querySelector('textarea, input[type="text"]');
-
-            voiceFaster = new VoiceFasterController({
-                targetElement,
-                transcribeToStagingArea: true
-            });
-
-            // Export for both module and non-module environments
-            if (typeof exports !== 'undefined') {
-                exports.VoiceFasterController = VoiceFasterController;
-            }
-            window.voiceFaster = voiceFaster;
-
-        } catch (error) {
-            console.error('VoiceFaster initialization failed:', error);
-        }
-    });
-
-    window.addEventListener("message", (event) => {
-        console.log("Window received message:", event.data);
-        if (event.data.type === "QUEUE_AUDIO_STREAM" && window.voiceFaster?.speakerComponent) {
-            window.voiceFaster.speakerComponent.queueAudioItem(event.data.payload);
-        }
-    });
-
-
 
     let voicefaster_css = `
 :root {
@@ -2680,7 +2648,42 @@
         document.head.appendChild(styleElement)
     }
 
+    function createVoiceFaster() {
+        injectStyles();
+        try {
+            // Look for existing text input
+            const targetElement = document.querySelector('textarea, input[type="text"]');
+
+            voiceFaster = new VoiceFasterController({
+                targetElement,
+                transcribeToStagingArea: true
+            });
+
+            // Export for both module and non-module environments
+            if (typeof exports !== 'undefined') {
+                exports.VoiceFasterController = VoiceFasterController;
+            }
+            window.voiceFaster = voiceFaster;
+
+        } catch (error) {
+            console.error('VoiceFaster initialization failed:', error);
+        }
+    }
+
+    let voiceFaster = null;
+
+
     // Inject styles on DOM content loaded
-    document.addEventListener('DOMContentLoaded', injectStyles)
+    document.addEventListener('DOMContentLoaded', createVoiceFaster)
+
+    // add handler to for plugin to queue audio stream
+    window.addEventListener("message", (event) => {
+        console.log("Window received message:", event.data);
+        if (event.data.type === "QUEUE_AUDIO_STREAM" && window.voiceFaster?.speakerComponent) {
+            window.voiceFaster.speakerComponent.queueAudioItem(event.data.payload);
+        }
+    });
+
+
 
 })();
