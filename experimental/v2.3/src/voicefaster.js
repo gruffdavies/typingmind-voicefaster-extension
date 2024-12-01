@@ -877,7 +877,7 @@ class UIComponent {
         const originalOnFocus = props?.onFocus;
 
         // Set the value
-        targetElement.value = transcript;
+        this.appendTargetElementText(transcript)
 
         // Create a change event that maintains the value
         const changeEvent = {
@@ -928,7 +928,7 @@ class UIComponent {
                 ) {
                     // React has changed the value, so restore it
                     console.log("🔄 Value changed by React, restoring...");
-                    targetElement.value = transcript;
+                    this.appendTargetElementText(transcript)
 
                     // Redispatch events
                     if (originalOnChange) originalOnChange(changeEvent);
