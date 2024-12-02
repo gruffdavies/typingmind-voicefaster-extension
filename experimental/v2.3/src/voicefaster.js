@@ -1688,15 +1688,18 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
         console.log("DeepGramTranscriber constructor called with config:", config);
         super();
         this.config = {
-            model: "nova-2",
+            // DeepGram params
+            model: "nova-2-conversationalai",
             language: "en-GB",
             smart_format: true,
             interim_results: true,
             vad_events: true,
             endpointing: 1500,        // Increased from 300ms to 1.5s
-            utterance_end_ms: 1000,   // New parameter
-            dictation: true,          // New parameter
-            punctuate: true,          // New parameter
+            utterance_end_ms: 1000,
+            dictation: true,
+            punctuate: true,
+            smart_format: true,
+            // non-DeepGram params
             maxRetries: 3,
             connectionTimeout: 1000,
             maxBufferSize: 50,
@@ -1819,12 +1822,26 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
         this.connectionAttempt++;
         const deepgramBaseURL = "wss://api.deepgram.com/v1/listen";
         const deepgramOptions = {
+            // model: "nova-2-conversationalai",
+            // language: "en-GB",
+            // smart_format: true,
+            // interim_results: true,
+            // vad_events: true,
+            // endpointing: 1500,        // Increased from 300ms to 1.5s
             model: this.config.model,
             language: this.config.language,
             smart_format: this.config.smart_format,
             interim_results: this.config.interim_results,
             vad_events: this.config.vad_events,
             endpointing: this.config.endpointing,
+            // utterance_end_ms: 1000,
+            // dictation: true,
+            // punctuate: true,
+            // smart_format: true,
+            utterance_end_ms: this.config.utterance_end_ms,
+            dictation: this.config.dictation,
+            punctuate: this.config.punctuate,
+            smart_format: this.config.smart_format,
         };
         const keywords = ["keywords=KwizIQ:2"].join("&");
         const deepgramUrl = `${deepgramBaseURL}?${new URLSearchParams(
