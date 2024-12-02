@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.40';
+    const VOICEFASTER_VERSION = '2.3.41';
 
     class EventEmitter {
     constructor() {
@@ -888,7 +888,7 @@ class UIComponent {
     appendTargetElementTextReactSafe(transcript) {
         const targetElement = this.getTargetElement();
         const currentValue = targetElement.value;  // Store current value
-        const newValue = currentValue + ' ' + transcript;  // Create new value once
+        const newValue = (currentValue + ' ' + transcript).trim();  // Create new value once
 
         // Find React props
         const propsKey = Object.keys(targetElement).find((key) =>
@@ -1699,10 +1699,9 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
             interim_results: true,
             vad_events: true,
             endpointing: 1500,        // Increased from 300ms to 1.5s
-            utterance_end_ms: 1000,
+            utterance_end_ms: 1600,
             dictation: true,
             punctuate: true,
-            smart_format: true,
             // non-DeepGram params
             maxRetries: 3,
             connectionTimeout: 1000,
