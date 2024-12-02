@@ -1696,7 +1696,7 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
             vad_events: true,
             endpointing: 1500,        // Increased from 300ms to 1.5s
             utterance_end_ms: 1600,
-            dictation: true,
+            dictation: false,
             punctuate: true,
             // non-DeepGram params
             maxRetries: 3,
