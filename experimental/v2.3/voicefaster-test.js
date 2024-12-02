@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.37';
+    const VOICEFASTER_VERSION = '2.3.38';
 
     class EventEmitter {
     constructor() {
