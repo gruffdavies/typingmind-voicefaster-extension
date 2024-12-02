@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.38';
+    const VOICEFASTER_VERSION = '2.3.42';
 
     class EventEmitter {
     constructor() {
@@ -888,7 +888,7 @@ class UIComponent {
     appendTargetElementTextReactSafe(transcript) {
         const targetElement = this.getTargetElement();
         const currentValue = targetElement.value;  // Store current value
-        const newValue = currentValue + ' ' + transcript;  // Create new value once
+        const newValue = (currentValue + ' ' + transcript).trim();  // Create new value once
 
         // Find React props
         const propsKey = Object.keys(targetElement).find((key) =>
@@ -1692,21 +1692,19 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
         console.log("DeepGramTranscriber constructor called with config:", config);
         super();
         this.config = {
-            //  DeepGram params
+            // DeepGram params
             model: "nova-2-conversationalai",
             language: "en-GB",
             smart_format: true,
             interim_results: true,
             vad_events: true,
-            endpointing: 1500,
-            utterance_end_ms: 1000,
-            dictation: true,
+            endpointing: 1500,        // Increased from 300ms to 1.5s
+            utterance_end_ms: 1600,
+            dictation: false,
             punctuate: true,
-            smart_format: true,
-            // connection params
+            // non-DeepGram params
             maxRetries: 3,
             connectionTimeout: 1000,
-            // audiobuffer params
             maxBufferSize: 50,
             ...config,
         }
@@ -1827,16 +1825,26 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
         this.connectionAttempt++;
         const deepgramBaseURL = "wss://api.deepgram.com/v1/listen";
         const deepgramOptions = {
+            // model: "nova-2-conversationalai",
+            // language: "en-GB",
+            // smart_format: true,
+            // interim_results: true,
+            // vad_events: true,
+            // endpointing: 1500,        // Increased from 300ms to 1.5s
             model: this.config.model,
             language: this.config.language,
             smart_format: this.config.smart_format,
             interim_results: this.config.interim_results,
             vad_events: this.config.vad_events,
             endpointing: this.config.endpointing,
+            // utterance_end_ms: 1000,
+            // dictation: true,
+            // punctuate: true,
+            // smart_format: true,
             utterance_end_ms: this.config.utterance_end_ms,
             dictation: this.config.dictation,
             punctuate: this.config.punctuate,
-            smart_format: this.config.smart_format
+            smart_format: this.config.smart_format,
         };
         const keywords = ["keywords=KwizIQ:2"].join("&");
         const deepgramUrl = `${deepgramBaseURL}?${new URLSearchParams(
