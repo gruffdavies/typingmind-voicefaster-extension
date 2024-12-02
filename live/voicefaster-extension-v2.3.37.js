@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.37';
+    const VOICEFASTER_VERSION = '2.3.37b';
 
     class EventEmitter {
     constructor() {
@@ -881,7 +881,7 @@ class UIComponent {
             this.transcriptArea.querySelector(".vf-text--final").textContent;
         const interimText =
             this.transcriptArea.querySelector(".vf-text--interim").textContent;
-        const transcript = " " + finalText + " " + interimText;
+        const transcript = (finalText + " " + interimText).trim();
         return transcript;
     }
 
@@ -1697,12 +1697,15 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
             smart_format: true,
             interim_results: true,
             vad_events: true,
-            endpointing: 300,
+            endpointing: 1500,        // Increased from 300ms to 1.5s
+            utterance_end_ms: 1000,   // New parameter
+            dictation: true,          // New parameter
+            punctuate: true,          // New parameter
             maxRetries: 3,
             connectionTimeout: 1000,
             maxBufferSize: 50,
             ...config,
-        };
+        }
 
         this.ws = null;
         this.audioBuffer = [];
