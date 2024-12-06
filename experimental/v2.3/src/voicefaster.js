@@ -692,7 +692,7 @@ class TextAreaManager {
         this.setupValueProtection(newValue);
     }
 
-    appendText(text) {  // renamed from original for consistency
+    appendText(text) {
         if (!this.element) this.initialize();
         const currentValue = this.element.value;
         const newValue = (currentValue + ' ' + text).trim();
@@ -1162,18 +1162,21 @@ class UIComponent {
         });
 
         copyBtn.addEventListener("click", () => {
+            console.debug("Copy button clicked");
             this.copyTranscriptToClipboard();
         });
 
         clearBtn.addEventListener("click", () => {
-            console.debug("Clear transcript button clicked");
+            handleDestructiveAction(clearBtn, () => {
                 this.clearTranscriptArea();
                 if (this.controller.transcriberComponent.isListening) {
                     this.controller.toggleRecording();
                 }
+            });
         });
 
         prependBtn.addEventListener("click", () => {
+            console.debug("Prepend button clicked");
             const transcript = this.getTranscript();
             this.getTextAreaManager().prependText(transcript);
             this.clearTranscriptArea();
@@ -1184,6 +1187,7 @@ class UIComponent {
         });
 
         appendBtn.addEventListener("click", () => {
+            console.debug("Append button clicked");
             const transcript = this.getTranscript();
             this.getTextAreaManager().appendText(transcript);
             this.clearTranscriptArea();
@@ -1195,6 +1199,8 @@ class UIComponent {
 
         clearTargetBtn.addEventListener("click", () => {
             handleDestructiveAction(clearTargetBtn, () => {
+
+            console.debug("Clear target button clicked");
                 this.getTextAreaManager().clearTarget();
             });
         });
