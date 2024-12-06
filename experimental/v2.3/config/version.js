@@ -1,5 +1,5 @@
 const version = {
-    version: "2.3.45"
+    version: "2.3.48"
   };
 
   document.getElementById("demo-version").textContent = "v" + version.version;
