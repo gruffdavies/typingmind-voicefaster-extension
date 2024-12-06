@@ -883,6 +883,25 @@ class UIComponent {
 
     appendTargetElementTextReactSafe(transcript) {
         const targetElement = this.getTargetElement();
+
+        // 1. Clear state with blur
+        targetElement.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+
+        // 2. Focus
+        targetElement.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+
+        // 3. Input event (this is the crucial one that triggers React state update)
+        targetElement.value = transcript;  // Set value before input event
+        const inputEvent = new InputEvent('input', {
+            bubbles: true,
+            data: transcript,
+            inputType: 'insertFromPaste'  // Match paste behavior
+        });
+        targetElement.dispatchEvent(inputEvent);
+    }
+
+    appendTargetElementTextReactSafeOLD(transcript) {
+        const targetElement = this.getTargetElement();
         const currentValue = targetElement.value;  // Store current value
         const newValue = (currentValue + ' ' + transcript).trim();  // Create new value once
 
