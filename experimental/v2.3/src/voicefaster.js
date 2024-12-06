@@ -883,22 +883,103 @@ class UIComponent {
 
     appendTargetElementTextReactSafe(transcript) {
         const targetElement = this.getTargetElement();
+        const currentValue = targetElement.value;
+        const newValue = (currentValue + ' ' + transcript).trim();
 
-        // 1. Clear state with blur
-        targetElement.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+        // Find React props
+        const propsKey = Object.keys(targetElement).find((key) =>
+            key.startsWith("__reactProps$")
+        );
+        const props = targetElement[propsKey];
 
-        // 2. Focus
-        targetElement.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+        console.log("🔍 React props:", props);
 
-        // 3. Input event (this is the crucial one that triggers React state update)
-        targetElement.value = transcript;  // Set value before input event
-        const inputEvent = new InputEvent('input', {
-            bubbles: true,
-            data: transcript,
-            inputType: 'insertFromPaste'  // Match paste behavior
+        // Set the value first
+        targetElement.value = newValue;
+
+        let isHandlingChange = false;
+
+        // Create events once
+        const changeEvent = {
+            target: {
+                ...targetElement,
+                value: newValue
+            },
+            currentTarget: targetElement,
+            type: "change",
+            preventDefault: () => {},
+            persist: () => {},
+        };
+
+        const focusEvent = {
+            target: targetElement,
+            currentTarget: targetElement,
+            type: "focus",
+            preventDefault: () => {},
+            persist: () => {},
+        };
+
+        try {
+            // Handle React if present
+            if (props?.onChange && !isHandlingChange) {
+                console.log("📡 Calling onChange");
+                isHandlingChange = true;
+                props.onChange(changeEvent);
+                isHandlingChange = false;
+            }
+
+            if (props?.onFocus) {
+                console.log("📡 Calling onFocus");
+                props.onFocus(focusEvent);
+            }
+
+            // Always dispatch DOM events (works for both React and non-React)
+            targetElement.dispatchEvent(new Event("change", { bubbles: true }));
+            targetElement.dispatchEvent(new Event("input", { bubbles: true }));
+
+            console.log("✅ Events dispatched");
+        } catch (error) {
+            console.error("Error:", error);
+            isHandlingChange = false;
+        }
+
+        // Set up MutationObserver to handle React updates
+        const observer = new MutationObserver((mutations) => {
+            if (isHandlingChange) return;
+
+            mutations.forEach((mutation) => {
+                if (
+                    (mutation.type === "attributes" ||
+                    mutation.type === "characterData") &&
+                    targetElement.value !== newValue
+                ) {
+                    console.log("🔄 Value changed by React, restoring...");
+                    isHandlingChange = true;
+                    targetElement.value = newValue;
+
+                    // Redispatch events
+                    if (props?.onChange) props.onChange(changeEvent);
+                    targetElement.dispatchEvent(new Event("change", { bubbles: true }));
+                    targetElement.dispatchEvent(new Event("input", { bubbles: true }));
+                    isHandlingChange = false;
+                }
+            });
         });
-        targetElement.dispatchEvent(inputEvent);
+
+        observer.observe(targetElement, {
+            attributes: true,
+            characterData: true,
+            childList: true,
+            subtree: true,
+        });
+
+        // Cleanup observer after 2 seconds
+        setTimeout(() => {
+            observer.disconnect();
+            console.log("👋 Observer disconnected");
+        }, 2000);
     }
+
 
     appendTargetElementTextReactSafeOLD(transcript) {
         const targetElement = this.getTargetElement();
