@@ -1082,7 +1082,7 @@ class UIComponent {
         transcript.appendChild(actions);
 
         this.container.appendChild(transcript);
-        this.setupTranscriptHandlers(transcript);
+        this.setupTranscriptAreaButtonHandlers(transcript);
         this.transcriptArea = transcript;
     }
 
