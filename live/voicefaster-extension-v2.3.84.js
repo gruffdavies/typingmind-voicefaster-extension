@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.48';
+    const VOICEFASTER_VERSION = '2.3.84';
 
     class EventEmitter {
     constructor() {
@@ -93,6 +93,7 @@ class VoiceFasterController {
         const pluginSettings = JSON.parse(
             window.localStorage.getItem("TM_useUserPluginSettings")
         );
+        console.debug("VoiceFasterController: Plugin settings retrieved", pluginSettings);
         const deepFind = (obj, key) =>
             key in obj
                 ? obj[key]
@@ -774,7 +775,7 @@ class UIComponent {
     // Add this method
     getTextAreaManager() {
         if (!this.textAreaManager) {
-            this.textAreaManager = new ReactTextAreaManager(
+            this.textAreaManager = new TextAreaManager(
                 this.controller.config.targetElementId
             );
         }
@@ -1014,39 +1015,6 @@ class UIComponent {
         setTimeout(() => notification.remove(), 3000);
     }
 
-    // createTranscriptArea() {
-    //     const transcript = document.createElement("div");
-    //     transcript.className = "vf-transcript";
-    //     transcript.hidden = true;
-
-    //     const header = document.createElement("div");
-    //     header.className = "vf-transcript-header";
-    //     header.innerHTML = `
-    //     <span>Transcript</span>
-    //     <div class="vf-provider-info">Default</div>
-    //     <button class="vf-transcript-close">${this.closeIconHTML()}</button>
-    // `;
-
-    //     const content = document.createElement("div");
-    //     content.className = "vf-transcript-content";
-    //     content.innerHTML = `<span class="vf-text--final"></span><span class="vf-text--interim"></span>`;
-
-    //     const actions = document.createElement("div");
-    //     actions.className = "vf-transcript-actions";
-    //     actions.innerHTML = `
-    //     <button class="vf-button--copy">Copy</button>
-    //     <button class="vf-button--send">Send</button>
-    //     <button class="vf-button--clear">Clear</button>
-    // `;
-
-    //     transcript.appendChild(header);
-    //     transcript.appendChild(content);
-    //     transcript.appendChild(actions);
-
-    //     this.container.appendChild(transcript);
-    //     this.setupTranscriptHandlers(transcript);
-    //     this.transcriptArea = transcript;
-    // }
     createTranscriptArea() {
         const transcript = document.createElement("div");
         transcript.className = "vf-transcript";
@@ -1067,18 +1035,18 @@ class UIComponent {
         const actions = document.createElement("div");
         actions.className = "vf-transcript-actions";
         actions.innerHTML = `
-            <div class="vf-transcript-actions-row">
-                <button class="vf-button--copy">Copy</button>
-                <button class="vf-button--clear">Clear Transcript</button>
-            </div>
-            <div class="vf-transcript-actions-row">
-                <button class="vf-button--prepend">Prepend</button>
-                <button class="vf-button--append">Append</button>
-                <button class="vf-button--replace">Replace</button>
-            </div>
-            <div class="vf-transcript-actions-row">
-                <button class="vf-button--clear-target">Clear Target</button>
-            </div>
+                <div class="transcript-section-left">
+                    <span>This:</span>
+                    <button class="vf-button--copy">Copy</button>
+                    <button class="vf-button--clear">Clear</button>
+                </div>
+                <div class="transcript-section-right">
+                    <span>Target:</span>
+                    <button class="vf-button--clear-target">Clear</button>
+                    <button class="vf-button--replace">Replace</button>
+                    <button class="vf-button--prepend">Prepend</button>
+                    <button class="vf-button--append">Append</button>
+                </div>
         `;
 
         transcript.appendChild(header);
@@ -1086,7 +1054,7 @@ class UIComponent {
         transcript.appendChild(actions);
 
         this.container.appendChild(transcript);
-        this.setupTranscriptHandlers(transcript);
+        this.setupTranscriptAreaButtonHandlers(transcript);
         this.transcriptArea = transcript;
     }
 
@@ -1388,9 +1356,9 @@ class UIComponent {
     //         this.sendTranscriptToTargetElement();
     //         this.clearTranscriptArea();
     //         this.hideTranscriptArea();
-    //         if (this.controller.transcriberComponent.isListening) {
-    //             this.controller.toggleRecording();
-    //         }
+            // if (this.controller.transcriberComponent.isListening) {
+            //     this.controller.toggleRecording();
+            // }
     //     });
 
     //     clearBtn.addEventListener("click", () => {
@@ -1400,6 +1368,65 @@ class UIComponent {
     //         }
     //     });
     // }
+    // setupTranscriptAreaButtonHandlers(transcript) {
+    //     const closeBtn = transcript.querySelector(".vf-transcript-close");
+    //     const copyBtn = transcript.querySelector(".vf-button--copy");
+    //     const clearBtn = transcript.querySelector(".vf-button--clear");
+    //     const prependBtn = transcript.querySelector(".vf-button--prepend");
+    //     const appendBtn = transcript.querySelector(".vf-button--append");
+    //     const replaceBtn = transcript.querySelector(".vf-button--replace");
+    //     const clearTargetBtn = transcript.querySelector(".vf-button--clear-target");
+
+    //     copyBtn.addEventListener("click", () => {
+    //         console.debug("Copy button clicked");
+    //         this.copyTranscriptToClipboard();
+    //     });
+
+    //     clearBtn.addEventListener("click", () => {
+    //         console.debug("Clear transcript button clicked");
+    //         this.clearTranscriptArea();
+    //         if (this.controller.transcriberComponent.isListening) {
+    //             this.controller.toggleRecording();
+    //         }
+    //     });
+
+    //     prependBtn.addEventListener("click", () => {
+    //         console.debug("Prepend button clicked");
+    //         const transcript = this.getTranscript();
+    //         this.getTextAreaManager().prependText(transcript);
+    //         this.clearTranscriptArea();
+    //         this.hideTranscriptArea();
+    //     });
+
+    //     appendBtn.addEventListener("click", () => {
+    //         console.debug("Append button clicked");
+    //         const transcript = this.getTranscript();
+    //         this.getTextAreaManager().appendText(transcript);
+    //         this.clearTranscriptArea();
+    //         this.hideTranscriptArea();
+    //     });
+
+    //     replaceBtn.addEventListener("click", () => {
+    //         console.debug("Replace button clicked");
+    //         const transcript = this.getTranscript();
+    //         this.getTextAreaManager().replaceText(transcript);
+    //         this.clearTranscriptArea();
+    //         this.hideTranscriptArea();
+    //     });
+
+    //     clearTargetBtn.addEventListener("click", () => {
+    //         console.debug("Clear target button clicked");
+    //         this.getTextAreaManager().clearTarget();
+    //     });
+
+    //     closeBtn.addEventListener("click", () => {
+    //         this.hideTranscriptArea();
+    //         if (this.controller.transcriberComponent.isListening) {
+    //             this.controller.toggleRecording();
+    //         }
+    //     });
+    // }
+
     setupTranscriptAreaButtonHandlers(transcript) {
         const closeBtn = transcript.querySelector(".vf-transcript-close");
         const copyBtn = transcript.querySelector(".vf-button--copy");
@@ -1409,46 +1436,87 @@ class UIComponent {
         const replaceBtn = transcript.querySelector(".vf-button--replace");
         const clearTargetBtn = transcript.querySelector(".vf-button--clear-target");
 
+        // Helper function for destructive actions
+        const handleDestructiveAction = (button, action) => {
+            if (button.dataset.confirm !== "true") {
+                const originalText = button.textContent;
+                button.textContent = "Sure?";
+                button.dataset.confirm = "true";
+
+                const timer = setTimeout(() => {
+                    button.textContent = originalText;
+                    button.dataset.confirm = "false";
+                }, 2000);
+
+                button.addEventListener("mouseleave", () => {
+                    clearTimeout(timer);
+                    button.textContent = originalText;
+                    button.dataset.confirm = "false";
+                }, { once: true });
+
+                return;
+            }
+
+            // Perform the action if confirmed
+            action();
+            button.textContent = button.dataset.originalText;
+            button.dataset.confirm = "false";
+        };
+
+        // Store original text for destructive buttons
+        [clearBtn, clearTargetBtn, replaceBtn].forEach(btn => {
+            btn.dataset.originalText = btn.textContent;
+        });
+
         copyBtn.addEventListener("click", () => {
-            console.debug("Copy button clicked");
             this.copyTranscriptToClipboard();
         });
 
         clearBtn.addEventListener("click", () => {
-            console.debug("Clear transcript button clicked");
+            handleDestructiveAction(clearBtn, () => {
+                this.clearTranscriptArea();
+                if (this.controller.transcriberComponent.isListening) {
+                    this.controller.toggleRecording();
+                }
+            });
+        });
+
+        prependBtn.addEventListener("click", () => {
+            const transcript = this.getTranscript();
+            this.getTextAreaManager().prependText(transcript);
             this.clearTranscriptArea();
+            this.hideTranscriptArea();
             if (this.controller.transcriberComponent.isListening) {
                 this.controller.toggleRecording();
             }
         });
 
-        prependBtn.addEventListener("click", () => {
-            console.debug("Prepend button clicked");
-            const transcript = this.getTranscript();
-            this.getTextAreaManager().prependText(transcript);
-            this.clearTranscriptArea();
-            this.hideTranscriptArea();
-        });
-
         appendBtn.addEventListener("click", () => {
-            console.debug("Append button clicked");
             const transcript = this.getTranscript();
             this.getTextAreaManager().appendText(transcript);
             this.clearTranscriptArea();
             this.hideTranscriptArea();
+            if (this.controller.transcriberComponent.isListening) {
+                this.controller.toggleRecording();
+            }
         });
 
         replaceBtn.addEventListener("click", () => {
-            console.debug("Replace button clicked");
-            const transcript = this.getTranscript();
-            this.getTextAreaManager().replaceText(transcript);
-            this.clearTranscriptArea();
-            this.hideTranscriptArea();
+            handleDestructiveAction(replaceBtn, () => {
+                const transcript = this.getTranscript();
+                this.getTextAreaManager().replaceText(transcript);
+                this.clearTranscriptArea();
+                this.hideTranscriptArea();
+                if (this.controller.transcriberComponent.isListening) {
+                    this.controller.toggleRecording();
+                }
+            });
         });
 
         clearTargetBtn.addEventListener("click", () => {
-            console.debug("Clear target button clicked");
-            this.getTextAreaManager().clearTarget();
+            handleDestructiveAction(clearTargetBtn, () => {
+                this.getTextAreaManager().clearTarget();
+            });
         });
 
         closeBtn.addEventListener("click", () => {
@@ -1458,6 +1526,7 @@ class UIComponent {
             }
         });
     }
+
     updateTranscript(text, isFinal) {
         const transcript = this.container.querySelector(".vf-transcript");
         if (!transcript) return;
@@ -3001,7 +3070,7 @@ class SpeakerComponent extends EventEmitter {
 
 /* Center icons better */
 .vf-button i {
-    font-size: 22px;
+    font-size: 1.375rem;
     line-height: 1;
     position: absolute;
     top: 50%;
@@ -3145,9 +3214,11 @@ class SpeakerComponent extends EventEmitter {
 
 
 
+/* *************** */
 /* Transcript Area */
+/* *************** */
 
-
+/* Transcript Container */
 .vf-transcript {
     background: var(--vf-surface-deep);
     border-radius: 8px;
@@ -3155,17 +3226,19 @@ class SpeakerComponent extends EventEmitter {
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    /* Align with right edge */
     width: 26rem;
-    /* Fixed width */
     max-width: calc(100vw - 2rem);
-    /* Prevent overflow */
     box-shadow: var(--vf-shadow);
     color: var(--vf-text);
     overflow: hidden;
+    font-size: 0.8rem;
 }
 
+.vf-transcript[hidden] {
+    display: none;
+}
 
+/* Transcript Header */
 .vf-transcript-header {
     padding: var(--vf-padding-m) var(--vf-padding-l);
     border-bottom: var(--vf-border);
@@ -3174,6 +3247,20 @@ class SpeakerComponent extends EventEmitter {
     align-items: center;
 }
 
+.vf-transcript-close {
+    background: transparent;
+    border: none;
+    color: var(--vf-text-muted);
+    cursor: pointer;
+    padding: 4px;
+    transition: color var(--vf-transition-fast);
+}
+
+.vf-transcript-close:hover {
+    color: var(--vf-text);
+}
+
+/* Transcript Content */
 .vf-transcript-content {
     padding: var(--vf-padding-l);
     min-height: 60px;
@@ -3181,6 +3268,7 @@ class SpeakerComponent extends EventEmitter {
     overflow-y: auto;
     display: inline-block;
     flex-direction: row;
+    font-size: 0.7rem;
 }
 
 .vf-text--final,
@@ -3198,52 +3286,106 @@ class SpeakerComponent extends EventEmitter {
     color: var(--vf-human);
 }
 
+/* Transcript Actions Container */
 .vf-transcript-actions {
     display: flex;
-    justify-content: flex-end;
-    gap: var(--vf-padding-m);
+    align-items: center;
+    justify-content: space-between;
     padding: var(--vf-padding-m) var(--vf-padding-l);
     border-top: var(--vf-border);
 }
 
-.vf-transcript[hidden] {
-    display: none;
+.transcript-action-section-left,
+.transcript-action-section-right {
+    display: flex;
+    align-items: center;
+    gap: var(--vf-padding-m);
 }
 
-/* Add to vf-mock3.css */
+.transcript-action-section-right {
+    margin-left: auto; /* Push right section to the right */
+}
+
+/* Ensure buttons in right section stay together */
+.transcript-action-section-right button {
+    margin-right: var(--vf-padding-m);
+}
+
+.transcript-action-section-right button:last-child {
+    margin-right: 0;
+}
+
+/* Labels */
+.vf-transcript-actions span {
+    color: var(--vf-text-muted);
+    font-size: 0.7rem;
+}
+
+
+/* Base Button Styles */
 .vf-transcript-actions button {
+    padding: 4px 8px;
     background: var(--vf-button-surface);
     border: none;
     color: var(--vf-text);
-    padding: 4px 12px;
     border-radius: 4px;
     cursor: pointer;
     transition: all var(--vf-transition-fast);
+    font-size: 0.6rem;
+    min-width: fit-content;
 }
 
 .vf-transcript-actions button:hover {
     background: var(--vf-button-hover);
 }
 
-.vf-transcript-close {
-    background: transparent;
-    border: none;
-    color: var(--vf-text-muted);
-    cursor: pointer;
-    padding: 4px;
-    transition: color var(--vf-transition-fast);
+/* Primary Action Button */
+.vf-transcript-actions .vf-button--append {
+    background-color: #4CAF50;
+    color: white;
+    margin-left: auto; /* Push to right */
 }
 
-.vf-transcript-close:hover {
-    color: var(--vf-text);
+.vf-transcript-actions .vf-button--append:hover {
+    background-color: #45a049;
 }
 
+/* Destructive Action Buttons */
+
+.vf-transcript-actions .vf-button--clear-target[data-confirm="true"],
+.vf-transcript-actions .vf-button--clear[data-confirm="true"] {
+    background-color: #ff4444;
+    color: white;
+}
+
+/* Utility Buttons */
+.vf-transcript-actions .vf-button--copy,
+.vf-transcript-actions .vf-button--prepend {
+    background-color: var(--vf-button-surface);
+}
+
+/* Button Hover States */
+.vf-transcript-actions button:hover {
+    background-color: var(--vf-button-hover);
+}
+
+
+.vf-transcript-actions .vf-button--clear-target[data-confirm="true"]:hover,
+.vf-transcript-actions .vf-button--clear[data-confirm="true"]:hover,
+.vf-transcript-actions .vf-button--replace[data-confirm="true"]:hover {
+    background-color: #ff3333;
+}
+
+/* End transcript */
+
+
+/* ************** */
 /* Settings Panel */
+/* ************** */
+
 .vf-settings {
     position: relative;
     right: 100%;
-    /* bottom: 100%; */
-    /* transform: translate(-50%, -50%); */
     background: var(--vf-surface-deep);
     border-radius: 8px;
     border: var(--vf-border);
@@ -3251,6 +3393,7 @@ class SpeakerComponent extends EventEmitter {
     box-shadow: var(--vf-shadow);
     color: var(--vf-text);
     z-index: 1001;
+    font-size: 0.7rem;
 }
 
 /* Settings Header */
@@ -3260,7 +3403,7 @@ class SpeakerComponent extends EventEmitter {
     align-items: center;
     padding: var(--vf-padding-l);
     border-bottom: var(--vf-border);
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 500;
 }
 
@@ -3307,10 +3450,29 @@ class SpeakerComponent extends EventEmitter {
     display: flex;
     align-items: center;
     gap: var(--vf-padding-m);
-    font-size: 0.85rem;
+    /* font-size: 0.6rem; */
 }
 
 /* Dropdowns */
+.vf-settings select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 100%;
+    padding: 8px 32px 8px 12px;
+    font-size: 0.75rem;
+    line-height: 1.2;
+    border: var(--vf-border);
+    border-radius: 4px;
+    background: var(--vf-button-surface);
+    color: var(--vf-text);
+    cursor: pointer;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23f5ede3' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px;
+}
+
 .vf-settings-item select {
     background: var(--vf-button-surface);
     border: var(--vf-border);

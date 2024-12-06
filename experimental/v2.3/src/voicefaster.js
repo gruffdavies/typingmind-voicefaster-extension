@@ -89,6 +89,7 @@ class VoiceFasterController {
         const pluginSettings = JSON.parse(
             window.localStorage.getItem("TM_useUserPluginSettings")
         );
+        console.debug("VoiceFasterController: Plugin settings retrieved", pluginSettings);
         const deepFind = (obj, key) =>
             key in obj
                 ? obj[key]
@@ -1010,39 +1011,6 @@ class UIComponent {
         setTimeout(() => notification.remove(), 3000);
     }
 
-    // createTranscriptArea() {
-    //     const transcript = document.createElement("div");
-    //     transcript.className = "vf-transcript";
-    //     transcript.hidden = true;
-
-    //     const header = document.createElement("div");
-    //     header.className = "vf-transcript-header";
-    //     header.innerHTML = `
-    //     <span>Transcript</span>
-    //     <div class="vf-provider-info">Default</div>
-    //     <button class="vf-transcript-close">${this.closeIconHTML()}</button>
-    // `;
-
-    //     const content = document.createElement("div");
-    //     content.className = "vf-transcript-content";
-    //     content.innerHTML = `<span class="vf-text--final"></span><span class="vf-text--interim"></span>`;
-
-    //     const actions = document.createElement("div");
-    //     actions.className = "vf-transcript-actions";
-    //     actions.innerHTML = `
-    //     <button class="vf-button--copy">Copy</button>
-    //     <button class="vf-button--send">Send</button>
-    //     <button class="vf-button--clear">Clear</button>
-    // `;
-
-    //     transcript.appendChild(header);
-    //     transcript.appendChild(content);
-    //     transcript.appendChild(actions);
-
-    //     this.container.appendChild(transcript);
-    //     this.setupTranscriptHandlers(transcript);
-    //     this.transcriptArea = transcript;
-    // }
     createTranscriptArea() {
         const transcript = document.createElement("div");
         transcript.className = "vf-transcript";
@@ -1063,18 +1031,18 @@ class UIComponent {
         const actions = document.createElement("div");
         actions.className = "vf-transcript-actions";
         actions.innerHTML = `
-            <div class="vf-transcript-actions-row">
-                <button class="vf-button--copy">Copy</button>
-                <button class="vf-button--clear">Clear Transcript</button>
-            </div>
-            <div class="vf-transcript-actions-row">
-                <button class="vf-button--prepend">Prepend</button>
-                <button class="vf-button--append">Append</button>
-                <button class="vf-button--replace">Replace</button>
-            </div>
-            <div class="vf-transcript-actions-row">
-                <button class="vf-button--clear-target">Clear Target</button>
-            </div>
+                <div class="transcript-section-left">
+                    <span>This:</span>
+                    <button class="vf-button--copy">Copy</button>
+                    <button class="vf-button--clear">Clear</button>
+                </div>
+                <div class="transcript-section-right">
+                    <span>Target:</span>
+                    <button class="vf-button--clear-target">Clear</button>
+                    <button class="vf-button--replace">Replace</button>
+                    <button class="vf-button--prepend">Prepend</button>
+                    <button class="vf-button--append">Append</button>
+                </div>
         `;
 
         transcript.appendChild(header);
@@ -1384,9 +1352,9 @@ class UIComponent {
     //         this.sendTranscriptToTargetElement();
     //         this.clearTranscriptArea();
     //         this.hideTranscriptArea();
-    //         if (this.controller.transcriberComponent.isListening) {
-    //             this.controller.toggleRecording();
-    //         }
+            // if (this.controller.transcriberComponent.isListening) {
+            //     this.controller.toggleRecording();
+            // }
     //     });
 
     //     clearBtn.addEventListener("click", () => {
@@ -1396,6 +1364,65 @@ class UIComponent {
     //         }
     //     });
     // }
+    // setupTranscriptAreaButtonHandlers(transcript) {
+    //     const closeBtn = transcript.querySelector(".vf-transcript-close");
+    //     const copyBtn = transcript.querySelector(".vf-button--copy");
+    //     const clearBtn = transcript.querySelector(".vf-button--clear");
+    //     const prependBtn = transcript.querySelector(".vf-button--prepend");
+    //     const appendBtn = transcript.querySelector(".vf-button--append");
+    //     const replaceBtn = transcript.querySelector(".vf-button--replace");
+    //     const clearTargetBtn = transcript.querySelector(".vf-button--clear-target");
+
+    //     copyBtn.addEventListener("click", () => {
+    //         console.debug("Copy button clicked");
+    //         this.copyTranscriptToClipboard();
+    //     });
+
+    //     clearBtn.addEventListener("click", () => {
+    //         console.debug("Clear transcript button clicked");
+    //         this.clearTranscriptArea();
+    //         if (this.controller.transcriberComponent.isListening) {
+    //             this.controller.toggleRecording();
+    //         }
+    //     });
+
+    //     prependBtn.addEventListener("click", () => {
+    //         console.debug("Prepend button clicked");
+    //         const transcript = this.getTranscript();
+    //         this.getTextAreaManager().prependText(transcript);
+    //         this.clearTranscriptArea();
+    //         this.hideTranscriptArea();
+    //     });
+
+    //     appendBtn.addEventListener("click", () => {
+    //         console.debug("Append button clicked");
+    //         const transcript = this.getTranscript();
+    //         this.getTextAreaManager().appendText(transcript);
+    //         this.clearTranscriptArea();
+    //         this.hideTranscriptArea();
+    //     });
+
+    //     replaceBtn.addEventListener("click", () => {
+    //         console.debug("Replace button clicked");
+    //         const transcript = this.getTranscript();
+    //         this.getTextAreaManager().replaceText(transcript);
+    //         this.clearTranscriptArea();
+    //         this.hideTranscriptArea();
+    //     });
+
+    //     clearTargetBtn.addEventListener("click", () => {
+    //         console.debug("Clear target button clicked");
+    //         this.getTextAreaManager().clearTarget();
+    //     });
+
+    //     closeBtn.addEventListener("click", () => {
+    //         this.hideTranscriptArea();
+    //         if (this.controller.transcriberComponent.isListening) {
+    //             this.controller.toggleRecording();
+    //         }
+    //     });
+    // }
+
     setupTranscriptAreaButtonHandlers(transcript) {
         const closeBtn = transcript.querySelector(".vf-transcript-close");
         const copyBtn = transcript.querySelector(".vf-button--copy");
@@ -1405,46 +1432,87 @@ class UIComponent {
         const replaceBtn = transcript.querySelector(".vf-button--replace");
         const clearTargetBtn = transcript.querySelector(".vf-button--clear-target");
 
+        // Helper function for destructive actions
+        const handleDestructiveAction = (button, action) => {
+            if (button.dataset.confirm !== "true") {
+                const originalText = button.textContent;
+                button.textContent = "Sure?";
+                button.dataset.confirm = "true";
+
+                const timer = setTimeout(() => {
+                    button.textContent = originalText;
+                    button.dataset.confirm = "false";
+                }, 2000);
+
+                button.addEventListener("mouseleave", () => {
+                    clearTimeout(timer);
+                    button.textContent = originalText;
+                    button.dataset.confirm = "false";
+                }, { once: true });
+
+                return;
+            }
+
+            // Perform the action if confirmed
+            action();
+            button.textContent = button.dataset.originalText;
+            button.dataset.confirm = "false";
+        };
+
+        // Store original text for destructive buttons
+        [clearBtn, clearTargetBtn, replaceBtn].forEach(btn => {
+            btn.dataset.originalText = btn.textContent;
+        });
+
         copyBtn.addEventListener("click", () => {
-            console.debug("Copy button clicked");
             this.copyTranscriptToClipboard();
         });
 
         clearBtn.addEventListener("click", () => {
-            console.debug("Clear transcript button clicked");
+            handleDestructiveAction(clearBtn, () => {
+                this.clearTranscriptArea();
+                if (this.controller.transcriberComponent.isListening) {
+                    this.controller.toggleRecording();
+                }
+            });
+        });
+
+        prependBtn.addEventListener("click", () => {
+            const transcript = this.getTranscript();
+            this.getTextAreaManager().prependText(transcript);
             this.clearTranscriptArea();
+            this.hideTranscriptArea();
             if (this.controller.transcriberComponent.isListening) {
                 this.controller.toggleRecording();
             }
         });
 
-        prependBtn.addEventListener("click", () => {
-            console.debug("Prepend button clicked");
-            const transcript = this.getTranscript();
-            this.getTextAreaManager().prependText(transcript);
-            this.clearTranscriptArea();
-            this.hideTranscriptArea();
-        });
-
         appendBtn.addEventListener("click", () => {
-            console.debug("Append button clicked");
             const transcript = this.getTranscript();
             this.getTextAreaManager().appendText(transcript);
             this.clearTranscriptArea();
             this.hideTranscriptArea();
+            if (this.controller.transcriberComponent.isListening) {
+                this.controller.toggleRecording();
+            }
         });
 
         replaceBtn.addEventListener("click", () => {
-            console.debug("Replace button clicked");
-            const transcript = this.getTranscript();
-            this.getTextAreaManager().replaceText(transcript);
-            this.clearTranscriptArea();
-            this.hideTranscriptArea();
+            handleDestructiveAction(replaceBtn, () => {
+                const transcript = this.getTranscript();
+                this.getTextAreaManager().replaceText(transcript);
+                this.clearTranscriptArea();
+                this.hideTranscriptArea();
+                if (this.controller.transcriberComponent.isListening) {
+                    this.controller.toggleRecording();
+                }
+            });
         });
 
         clearTargetBtn.addEventListener("click", () => {
-            console.debug("Clear target button clicked");
-            this.getTextAreaManager().clearTarget();
+            handleDestructiveAction(clearTargetBtn, () => {
+                this.getTextAreaManager().clearTarget();
+            });
         });
 
         closeBtn.addEventListener("click", () => {
@@ -1454,6 +1522,7 @@ class UIComponent {
             }
         });
     }
+
     updateTranscript(text, isFinal) {
         const transcript = this.container.querySelector(".vf-transcript");
         if (!transcript) return;
