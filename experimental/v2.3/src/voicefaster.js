@@ -770,7 +770,7 @@ class UIComponent {
     // Add this method
     getTextAreaManager() {
         if (!this.textAreaManager) {
-            this.textAreaManager = new ReactTextAreaManager(
+            this.textAreaManager = new TextAreaManager(
                 this.controller.config.targetElementId
             );
         }
