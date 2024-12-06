@@ -1166,12 +1166,11 @@ class UIComponent {
         });
 
         clearBtn.addEventListener("click", () => {
-            handleDestructiveAction(clearBtn, () => {
+            console.debug("Clear transcript button clicked");
                 this.clearTranscriptArea();
                 if (this.controller.transcriberComponent.isListening) {
                     this.controller.toggleRecording();
                 }
-            });
         });
 
         prependBtn.addEventListener("click", () => {
