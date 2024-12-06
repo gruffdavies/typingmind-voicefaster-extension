@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.84';
+    const VOICEFASTER_VERSION = '2.3.87';
 
     class EventEmitter {
     constructor() {
@@ -874,6 +874,14 @@ class UIComponent {
         SpeakerButton.innerHTML = this.speakerIconHTML();
         SpeakerControl.appendChild(SpeakerButton);
 
+        SpeakerButton.addEventListener("click", () => {
+            if (this.controller.speakerComponent.isPlaying) {
+                this.controller.speakerComponent.pause();
+            } else {
+                this.controller.speakerComponent.processNextInQueue();
+            }
+        });
+
         controls.appendChild(micControl);
         controls.appendChild(settingsBtn);
         controls.appendChild(SpeakerControl);
@@ -1043,7 +1051,6 @@ class UIComponent {
                 <div class="transcript-section-right">
                     <span>Target:</span>
                     <button class="vf-button--clear-target">Clear</button>
-                    <button class="vf-button--replace">Replace</button>
                     <button class="vf-button--prepend">Prepend</button>
                     <button class="vf-button--append">Append</button>
                 </div>
@@ -1112,320 +1119,11 @@ class UIComponent {
         manager.appendText(transcript);
     }
 
-    // Keeping these until I'm happy a new version is better
-    // appendTargetElementTextReactSafeOLD(transcript) {
-    //     const targetElement = this.getTargetElement();
-    //     const currentValue = targetElement.value;
-    //     const newValue = (currentValue + ' ' + transcript).trim();
-
-    //     // Find React props
-    //     const propsKey = Object.keys(targetElement).find((key) =>
-    //         key.startsWith("__reactProps$")
-    //     );
-    //     const props = targetElement[propsKey];
-
-    //     console.log("🔍 React props:", props);
-
-    //     // Set the value first
-    //     targetElement.value = newValue;
-
-    //     let isHandlingChange = false;
-
-    //     // Create events once
-    //     const changeEvent = {
-    //         target: {
-    //             ...targetElement,
-    //             value: newValue
-    //         },
-    //         currentTarget: targetElement,
-    //         type: "change",
-    //         preventDefault: () => { },
-    //         persist: () => { },
-    //     };
-
-    //     const focusEvent = {
-    //         target: targetElement,
-    //         currentTarget: targetElement,
-    //         type: "focus",
-    //         preventDefault: () => { },
-    //         persist: () => { },
-    //     };
-
-    //     try {
-    //         // Handle React if present
-    //         if (props?.onChange && !isHandlingChange) {
-    //             console.log("📡 Calling onChange");
-    //             isHandlingChange = true;
-    //             props.onChange(changeEvent);
-    //             isHandlingChange = false;
-    //         }
-
-    //         if (props?.onFocus) {
-    //             console.log("📡 Calling onFocus");
-    //             props.onFocus(focusEvent);
-    //         }
-
-    //         // Always dispatch DOM events (works for both React and non-React)
-    //         targetElement.dispatchEvent(new Event("change", { bubbles: true }));
-    //         targetElement.dispatchEvent(new Event("input", { bubbles: true }));
-
-    //         console.log("✅ Events dispatched");
-    //     } catch (error) {
-    //         console.error("Error:", error);
-    //         isHandlingChange = false;
-    //     }
-
-    //     // Set up MutationObserver to handle React updates
-    //     const observer = new MutationObserver((mutations) => {
-    //         if (isHandlingChange) return;
-
-    //         mutations.forEach((mutation) => {
-    //             if (
-    //                 (mutation.type === "attributes" ||
-    //                     mutation.type === "characterData") &&
-    //                 targetElement.value !== newValue
-    //             ) {
-    //                 console.log("🔄 Value changed by React, restoring...");
-    //                 isHandlingChange = true;
-    //                 targetElement.value = newValue;
-
-    //                 // Redispatch events
-    //                 if (props?.onChange) props.onChange(changeEvent);
-    //                 targetElement.dispatchEvent(new Event("change", { bubbles: true }));
-    //                 targetElement.dispatchEvent(new Event("input", { bubbles: true }));
-    //                 isHandlingChange = false;
-    //             }
-    //         });
-    //     });
-
-    //     observer.observe(targetElement, {
-    //         attributes: true,
-    //         characterData: true,
-    //         childList: true,
-    //         subtree: true,
-    //     });
-
-    //     // Cleanup observer after 2 seconds
-    //     setTimeout(() => {
-    //         observer.disconnect();
-    //         console.log("👋 Observer disconnected");
-    //     }, 2000);
-    // }
-
-
-    // appendTargetElementTextReactSafeOLD2(transcript) {
-    //     const targetElement = this.getTargetElement();
-    //     const currentValue = targetElement.value;  // Store current value
-    //     const newValue = (currentValue + ' ' + transcript).trim();  // Create new value once
-
-    //     // Find React props
-    //     const propsKey = Object.keys(targetElement).find((key) =>
-    //         key.startsWith("__reactProps$")
-    //     );
-    //     const props = targetElement[propsKey];
-
-    //     console.log("🔍 React props:", props);
-
-    //     // Store original handlers
-    //     const originalOnChange = props?.onChange;
-    //     const originalOnFocus = props?.onFocus;
-
-    //     // Set the value
-    //     targetElement.value = newValue;  // Use newValue instead of appending
-
-    //     // Create a change event that maintains the value
-    //     const changeEvent = {
-    //         target: {
-    //             ...targetElement,
-    //             value: newValue  // Use newValue in event
-    //         },
-    //         currentTarget: targetElement,
-    //         type: "change",
-    //         preventDefault: () => { },
-    //         persist: () => { },
-    //     };
-
-    //     // Create a focus event
-    //     const focusEvent = {
-    //         target: targetElement,
-    //         currentTarget: targetElement,
-    //         type: "focus",
-    //         preventDefault: () => { },
-    //         persist: () => { },
-    //     };
-
-    //     let isHandlingChange = false;  // Add flag to prevent loops
-
-    //     // Call both handlers if they exist
-    //     try {
-    //         if (originalOnChange && !isHandlingChange) {
-    //             console.log("📡 Calling onChange");
-    //             isHandlingChange = true;
-    //             originalOnChange(changeEvent);
-    //             isHandlingChange = false;
-    //         }
-
-    //         if (originalOnFocus) {
-    //             console.log("📡 Calling onFocus");
-    //             originalOnFocus(focusEvent);
-    //         }
-
-    //         // Also dispatch DOM events
-    //         targetElement.dispatchEvent(new Event("change", { bubbles: true }));
-    //         targetElement.dispatchEvent(new Event("input", { bubbles: true }));
-
-    //         console.log("✅ Events dispatched");
-    //     } catch (error) {
-    //         console.error("Error:", error);
-    //         isHandlingChange = false;  // Reset flag on error
-    //     }
-
-    //     // Add a MutationObserver to monitor for value changes
-    //     const observer = new MutationObserver((mutations) => {
-    //         if (isHandlingChange) return;  // Skip if we're handling a change
-
-    //         mutations.forEach((mutation) => {
-    //             if (
-    //                 (mutation.type === "attributes" ||
-    //                     mutation.type === "characterData") &&
-    //                 targetElement.value !== newValue  // Compare with newValue
-    //             ) {
-    //                 // React has changed the value, so restore it
-    //                 console.log("🔄 Value changed by React, restoring...");
-    //                 isHandlingChange = true;
-    //                 targetElement.value = newValue;  // Use newValue
-
-    //                 // Redispatch events
-    //                 if (originalOnChange) originalOnChange(changeEvent);
-    //                 targetElement.dispatchEvent(new Event("change", { bubbles: true }));
-    //                 targetElement.dispatchEvent(new Event("input", { bubbles: true }));
-    //                 isHandlingChange = false;
-    //             }
-    //         });
-    //     });
-
-    //     observer.observe(targetElement, {
-    //         attributes: true,
-    //         characterData: true,
-    //         childList: true,
-    //         subtree: true,
-    //     });
-
-    //     // Cleanup observer after 2 seconds
-    //     setTimeout(() => {
-    //         observer.disconnect();
-    //         console.log("👋 Observer disconnected");
-    //     }, 2000);
-    // }
-
     getTargetElement() {
         this.targetElement = document.getElementById(this.controller.config.targetElementId);
         return this.targetElement;
     }
 
-    // sendTranscriptToTargetElement() {
-    //     this.getTargetElement();
-    //     console.log("🎯Target element:", this.targetElement);
-    //     const transcript = this.getTranscript();
-
-    //     // this should work for react and normal DOM elements
-    //     this.appendTargetElementTextReactSafe(transcript);
-
-    // }
-
-    // setupTranscriptAreaButtonHandlers(transcript) {
-    //     const closeBtn = transcript.querySelector(".vf-transcript-close");
-    //     const copyBtn = transcript.querySelector(".vf-button--copy");
-    //     const sendBtn = transcript.querySelector(".vf-button--send");
-    //     const clearBtn = transcript.querySelector(".vf-button--clear");
-
-    //     copyBtn.addEventListener("click", () => {
-    //         console.debug("copy button clicked");
-    //         this.copyTranscriptToClipboard();
-    //     });
-
-    //     closeBtn.addEventListener("click", () => {
-    //         this.hideTranscriptArea();
-    //         if (this.controller.transcriberComponent.isListening) {
-    //             this.controller.toggleRecording();
-    //         }
-    //     });
-
-    //     sendBtn.addEventListener("click", () => {
-    //         console.debug("Send button clicked");
-    //         this.sendTranscriptToTargetElement();
-    //         this.clearTranscriptArea();
-    //         this.hideTranscriptArea();
-            // if (this.controller.transcriberComponent.isListening) {
-            //     this.controller.toggleRecording();
-            // }
-    //     });
-
-    //     clearBtn.addEventListener("click", () => {
-    //         this.clearTranscriptArea();
-    //         if (this.controller.transcriberComponent.isListening) {
-    //             this.controller.toggleRecording();
-    //         }
-    //     });
-    // }
-    // setupTranscriptAreaButtonHandlers(transcript) {
-    //     const closeBtn = transcript.querySelector(".vf-transcript-close");
-    //     const copyBtn = transcript.querySelector(".vf-button--copy");
-    //     const clearBtn = transcript.querySelector(".vf-button--clear");
-    //     const prependBtn = transcript.querySelector(".vf-button--prepend");
-    //     const appendBtn = transcript.querySelector(".vf-button--append");
-    //     const replaceBtn = transcript.querySelector(".vf-button--replace");
-    //     const clearTargetBtn = transcript.querySelector(".vf-button--clear-target");
-
-    //     copyBtn.addEventListener("click", () => {
-    //         console.debug("Copy button clicked");
-    //         this.copyTranscriptToClipboard();
-    //     });
-
-    //     clearBtn.addEventListener("click", () => {
-    //         console.debug("Clear transcript button clicked");
-    //         this.clearTranscriptArea();
-    //         if (this.controller.transcriberComponent.isListening) {
-    //             this.controller.toggleRecording();
-    //         }
-    //     });
-
-    //     prependBtn.addEventListener("click", () => {
-    //         console.debug("Prepend button clicked");
-    //         const transcript = this.getTranscript();
-    //         this.getTextAreaManager().prependText(transcript);
-    //         this.clearTranscriptArea();
-    //         this.hideTranscriptArea();
-    //     });
-
-    //     appendBtn.addEventListener("click", () => {
-    //         console.debug("Append button clicked");
-    //         const transcript = this.getTranscript();
-    //         this.getTextAreaManager().appendText(transcript);
-    //         this.clearTranscriptArea();
-    //         this.hideTranscriptArea();
-    //     });
-
-    //     replaceBtn.addEventListener("click", () => {
-    //         console.debug("Replace button clicked");
-    //         const transcript = this.getTranscript();
-    //         this.getTextAreaManager().replaceText(transcript);
-    //         this.clearTranscriptArea();
-    //         this.hideTranscriptArea();
-    //     });
-
-    //     clearTargetBtn.addEventListener("click", () => {
-    //         console.debug("Clear target button clicked");
-    //         this.getTextAreaManager().clearTarget();
-    //     });
-
-    //     closeBtn.addEventListener("click", () => {
-    //         this.hideTranscriptArea();
-    //         if (this.controller.transcriberComponent.isListening) {
-    //             this.controller.toggleRecording();
-    //         }
-    //     });
-    // }
 
     setupTranscriptAreaButtonHandlers(transcript) {
         const closeBtn = transcript.querySelector(".vf-transcript-close");
@@ -1433,7 +1131,6 @@ class UIComponent {
         const clearBtn = transcript.querySelector(".vf-button--clear");
         const prependBtn = transcript.querySelector(".vf-button--prepend");
         const appendBtn = transcript.querySelector(".vf-button--append");
-        const replaceBtn = transcript.querySelector(".vf-button--replace");
         const clearTargetBtn = transcript.querySelector(".vf-button--clear-target");
 
         // Helper function for destructive actions
@@ -1464,7 +1161,7 @@ class UIComponent {
         };
 
         // Store original text for destructive buttons
-        [clearBtn, clearTargetBtn, replaceBtn].forEach(btn => {
+        [clearBtn, clearTargetBtn].forEach(btn => {
             btn.dataset.originalText = btn.textContent;
         });
 
@@ -1499,18 +1196,6 @@ class UIComponent {
             if (this.controller.transcriberComponent.isListening) {
                 this.controller.toggleRecording();
             }
-        });
-
-        replaceBtn.addEventListener("click", () => {
-            handleDestructiveAction(replaceBtn, () => {
-                const transcript = this.getTranscript();
-                this.getTextAreaManager().replaceText(transcript);
-                this.clearTranscriptArea();
-                this.hideTranscriptArea();
-                if (this.controller.transcriberComponent.isListening) {
-                    this.controller.toggleRecording();
-                }
-            });
         });
 
         clearTargetBtn.addEventListener("click", () => {
@@ -2846,9 +2531,13 @@ class SpeakerComponent extends EventEmitter {
         console.warn("queueText not implemented yet but called with text:", text);
     }
 
-    pause() {
+    async pause() {
         this.audio.pause();
-        this.emit("stateChange", "paused");
+        this.isPlaying = false;
+        this.emit("stateChange", { isSpeaking: false });
+        if (this.visualizer) {
+            await this.visualizer.setMode("idle");
+        }
     }
 
     stop() {
