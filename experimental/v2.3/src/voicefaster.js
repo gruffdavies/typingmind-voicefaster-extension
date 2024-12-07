@@ -1996,7 +1996,7 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
         super();
         this.config = {
             // DeepGram params
-            model: "nova-2-conversationalai",
+            model: "nova-2",
             language: "en-GB",
             smart_format: true,
             interim_results: true,
