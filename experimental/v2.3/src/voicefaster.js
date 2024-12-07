@@ -629,7 +629,45 @@ class TextAreaManager {
             persist: () => { },
         };
     }
+    async retryValueChange(value, maxRetries = 3) {
+        let attempts = 0;
 
+        while (attempts < maxRetries) {
+            if (this.notifyValueChange(value)) {
+                return true;
+            }
+
+            attempts++;
+            console.warn(`Retry attempt ${attempts}/${maxRetries}`);
+            await new Promise(resolve => setTimeout(resolve, 100 * attempts));
+        }
+
+        return false;
+    }
+
+    async appendText(text) {
+        try {
+            if (!this.element) {
+                this.initialize();
+            }
+
+            const currentValue = this.element.value;
+            const newValue = (currentValue + ' ' + text).trim();
+
+            const success = await this.retryValueChange(newValue);
+
+            if (success) {
+                this.setupValueProtection(newValue);
+            } else {
+                this.handleError(
+                    new Error('🚨Failed to append text after retries'),
+                    'append operation failed'
+                );
+            }
+        } catch (error) {
+            this.handleError(error, 'append operation');
+        }
+    }
     notifyValueChange(value) {
         if (!this.element) {
             try {
@@ -641,6 +679,13 @@ class TextAreaManager {
         }
 
         try {
+            // Log initial state
+            console.debug('Setting value:', {
+                current: this.element.value,
+                new: value,
+                isReact: this.isReactElement
+            });
+
             const beforeValue = this.element.value;
 
             // Force React to notice the change
@@ -656,81 +701,70 @@ class TextAreaManager {
                 throw new Error(`Direct value setting failed. Expected: "${value}", Got: "${this.element.value}"`);
             }
 
-            // Trigger native events
-            const inputEvent = new Event('input', { bubbles: true });
-            const changeEvent = new Event('change', { bubbles: true });
-
-            this.element.dispatchEvent(inputEvent);
-            this.element.dispatchEvent(changeEvent);
-
-            if (this.isReactElement) {
-                const props = this.getReactProps();
-                if (props?.onChange) {
-                    props.onChange(this.createSyntheticEvent(value));
-                }
-            }
-
-            // Verify the change after React
+            // Add verification timeout
             setTimeout(() => {
                 if (this.element.value !== value) {
-                    this.handleError(
-                        new Error(`Value verification failed after React update. Before: "${beforeValue}", Attempted: "${value}", Got: "${this.element.value}"`),
-                        'React state synchronization'
-                    );
-                    // Try one more time with direct setting
+                    console.warn('Value verification failed:', {
+                        before: beforeValue,
+                        attempted: value,
+                        current: this.element.value
+                    });
+
+                    // Retry with direct setting
                     this.element.value = value;
+
+                    // Dispatch events again
+                    this.dispatchDOMEvents();
                 }
-            }, 0);
+            }, 100);
 
             return true;
 
         } catch (error) {
             this.handleError(error, 'Failed to set textarea value');
-            // Fallback attempt
-            try {
-                this.element.value = value;
-                return true;
-            } catch (secondError) {
-                this.handleError(
-                    secondError,
-                    'Both primary and fallback value setting failed'
-                );
-                return false;
-            }
+            return false;
         }
     }
 
+
     dispatchDOMEvents() {
-        // Dispatch events in the correct order for best compatibility
-        this.element.dispatchEvent(new Event("input", { bubbles: true }));
-        this.element.dispatchEvent(new Event("change", { bubbles: true }));
-        console.log("✅ DOM events dispatched");
+        const events = ['input', 'change'];
+        events.forEach(eventType => {
+            const event = new Event(eventType, { bubbles: true });
+            this.element.dispatchEvent(event);
+            console.debug(`✅ Dispatched ${eventType} event`);
+        });
     }
 
     setupValueProtection(expectedValue) {
         this.cleanupObserver();
 
-        // Only need observer for React elements
         if (!this.isReactElement) return;
 
         this.observer = new MutationObserver(mutations => {
             if (this.isHandlingChange) return;
 
-            mutations.forEach(mutation => {
+            for (const mutation of mutations) {
                 if (this.shouldRestoreValue(mutation, expectedValue)) {
+                    console.debug('🔍Value protection triggered:', {
+                        expected: expectedValue,
+                        current: this.element.value
+                    });
                     this.restoreValue(expectedValue);
+                    break;
                 }
-            });
+            }
         });
 
         this.observer.observe(this.element, {
             attributes: true,
             characterData: true,
             childList: true,
-            subtree: true,
+            subtree: true
         });
 
-        setTimeout(() => this.cleanupObserver(), 2000);
+        // Extend protection duration for React components
+        setTimeout(() => this.cleanupObserver(), 3000);
     }
 
     shouldRestoreValue(mutation, expectedValue) {
@@ -779,29 +813,6 @@ class TextAreaManager {
         this.setupValueProtection(newValue);
     }
 
-    appendText(text) {
-        try {
-            if (!this.element) {
-                this.initialize();
-            }
-
-            const currentValue = this.element.value;
-            const newValue = (currentValue + ' ' + text).trim();
-
-            const success = this.notifyValueChange(newValue);
-
-            if (success) {
-                this.setupValueProtection(newValue);
-            } else {
-                this.handleError(
-                    new Error('Failed to append text'),
-                    'append operation failed'
-                );
-            }
-        } catch (error) {
-            this.handleError(error, 'append operation');
-        }
-    }
 
     clearTarget() {
         if (!this.element) this.initialize();
@@ -1194,11 +1205,11 @@ class UIComponent {
         this.transcriptArea.hidden = false;
     }
 
-    sendTranscriptToTargetElement() {
-        console.log("🎯 Send button clicked");
-        const transcript = this.getTranscript();
-        this.appendTargetElementTextReactSafe(transcript);
-    }
+    // sendTranscriptToTargetElement() {
+    //     console.log("🎯 Send button clicked");
+    //     const transcript = this.getTranscript();
+    //     this.appendTargetElementTextReactSafe(transcript);
+    // }
 
 
     clearTranscriptArea() {
@@ -1221,10 +1232,11 @@ class UIComponent {
         return transcript;
     }
 
-    appendTargetElementTextReactSafe(transcript) {
-        const manager = this.getTextAreaManager();
-        manager.appendText(transcript);
-    }
+
+    // appendTargetElementTextReactSafe(transcript) {
+    //     const manager = this.getTextAreaManager();
+    //     manager.appendText(transcript);
+    // }
 
     getTargetElement() {
         this.targetElement = document.getElementById(this.controller.config.targetElementId);
@@ -2060,9 +2072,19 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
         this.connectionState = ConnectionState.CLOSING;
         this.clearTimeouts();
 
-        // Clean up MediaRecorder first
+        // Clean up MediaRecorder first with proper awaiting
         if (this.mediaRecorder) {
-            this.mediaRecorder.stop();
+            await new Promise((resolve) => {
+                // Handle any final data
+                const originalDataHandler = this.mediaRecorder.ondataavailable;
+                this.mediaRecorder.ondataavailable = (event) => {
+                    if (originalDataHandler) {
+                        originalDataHandler(event);
+                    }
+                    resolve();
+                };
+                this.mediaRecorder.stop();
+            });
             this.mediaRecorder = null;
         }
 
@@ -2072,6 +2094,7 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
                 await this.closeWebSocket();
             } catch (error) {
                 console.warn("Error during WebSocket closure:", error);
+                this.handleError(error);
             }
         }
 
@@ -2229,6 +2252,13 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
         console.debug(
             `DeepGram.processAudioData called, connection state: ${this.connectionState}`
         );
+
+        // Add proper handling for CLOSING state
+        if (this.connectionState === ConnectionState.CLOSING) {
+            console.debug('Discarding audio data - connection is closing');
+            return;
+        }
+
         if (
             this.connectionState === ConnectionState.CONNECTED &&
             this.ws?.readyState === WebSocket.OPEN
@@ -2255,7 +2285,7 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
             this.bufferAudioData(audioData);
         } else {
             console.warn(
-                ` WebSocket in terminal state (${this.connectionState}), discarding audio data`
+                `WebSocket in terminal state (${this.connectionState}), discarding audio data`
             );
         }
     }
