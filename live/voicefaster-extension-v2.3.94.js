@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.96';
+    const VOICEFASTER_VERSION = '2.3.94';
 
     class EventEmitter {
     constructor() {
@@ -579,7 +579,7 @@ class AudioVisualizer {
 // Responsible for managing text areas in the DOM that the transcript will be appended to
 // React textareas needs special handling vs vanilla HTML/JS textareas
 class TextAreaManager {
-    constructor(targetElementId, controller) {
+    constructor(targetElementId) {
         this.targetElementId = targetElementId;
         this.controller = controller;
         this.element = null;
@@ -886,8 +886,7 @@ class UIComponent {
     getTextAreaManager() {
         if (!this.textAreaManager) {
             this.textAreaManager = new TextAreaManager(
-                this.controller.config.targetElementId,
-                this.controller,
+                this.controller.config.targetElementId
             );
         }
         return this.textAreaManager;

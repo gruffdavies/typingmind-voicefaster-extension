@@ -224,7 +224,19 @@ class VoiceFasterController {
 
     handleError(error) {
         this.state.hasError = true;
-        this.state.errorMessage = error.message || "Unknown error occurred";
+        // Extract meaningful error information
+        const errorDetails = {
+            message: error.message || "Unknown error",
+            context: error.context || "",
+            stack: error.stack,
+            originalError: error.originalError
+        };
+
+        // Create a detailed error message
+        this.state.errorMessage = `${errorDetails.context ? `[${errorDetails.context}] ` : ''}${errorDetails.message}`;
+
+        // Show in UI via UIComponent
+        this.uiComponent.showError(this.state.errorMessage);
 
         // Auto-clear error after 5 seconds
         setTimeout(() => {
@@ -563,12 +575,21 @@ class AudioVisualizer {
 // Responsible for managing text areas in the DOM that the transcript will be appended to
 // React textareas needs special handling vs vanilla HTML/JS textareas
 class TextAreaManager {
-    constructor(targetElementId) {
+    constructor(targetElementId, controller) {
         this.targetElementId = targetElementId;
+        this.controller = controller;
         this.element = null;
         this.isHandlingChange = false;
         this.observer = null;
         this.isReactElement = false;  // Track if it's a React element
+    }
+
+    handleError(error, context) {
+        console.error(`TextAreaManager Error (${context}):`, error);
+        if (this.controller?.handleError) {
+            const detailedError = this.createDetailedError(error, context);
+            this.controller.handleError(detailedError);
+        }
     }
 
     initialize() {
@@ -610,27 +631,72 @@ class TextAreaManager {
     }
 
     notifyValueChange(value) {
-        if (!this.element) this.initialize();
+        if (!this.element) {
+            try {
+                this.initialize();
+            } catch (error) {
+                this.handleError(error, 'Failed to initialize textarea');
+                return false;
+            }
+        }
 
         try {
-            this.isHandlingChange = true;
+            const beforeValue = this.element.value;
 
-            // Set the value
-            this.element.value = value;
+            // Force React to notice the change
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+                window.HTMLTextAreaElement.prototype,
+                "value"
+            ).set;
 
-            // Handle React if present
+            nativeInputValueSetter.call(this.element, value);
+
+            // Verify immediate change
+            if (this.element.value !== value) {
+                throw new Error(`Direct value setting failed. Expected: "${value}", Got: "${this.element.value}"`);
+            }
+
+            // Trigger native events
+            const inputEvent = new Event('input', { bubbles: true });
+            const changeEvent = new Event('change', { bubbles: true });
+
+            this.element.dispatchEvent(inputEvent);
+            this.element.dispatchEvent(changeEvent);
+
             if (this.isReactElement) {
                 const props = this.getReactProps();
                 if (props?.onChange) {
-                    console.log("📡 Calling React onChange");
                     props.onChange(this.createSyntheticEvent(value));
                 }
             }
 
-            // Always dispatch DOM events
-            this.dispatchDOMEvents();
-        } finally {
-            this.isHandlingChange = false;
+            // Verify the change after React
+            setTimeout(() => {
+                if (this.element.value !== value) {
+                    this.handleError(
+                        new Error(`Value verification failed after React update. Before: "${beforeValue}", Attempted: "${value}", Got: "${this.element.value}"`),
+                        'React state synchronization'
+                    );
+                    // Try one more time with direct setting
+                    this.element.value = value;
+                }
+            }, 0);
+
+            return true;
+
+        } catch (error) {
+            this.handleError(error, 'Failed to set textarea value');
+            // Fallback attempt
+            try {
+                this.element.value = value;
+                return true;
+            } catch (secondError) {
+                this.handleError(
+                    secondError,
+                    'Both primary and fallback value setting failed'
+                );
+                return false;
+            }
         }
     }
 
@@ -678,6 +744,27 @@ class TextAreaManager {
         this.notifyValueChange(value);
     }
 
+    showError(message) {
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "vf-error";
+        errorDiv.textContent = message;
+
+        // Style for better visibility
+        errorDiv.style.backgroundColor = "#ff00001a";
+        errorDiv.style.border = "1px solid #ff0000";
+        errorDiv.style.padding = "10px";
+        errorDiv.style.margin = "5px";
+        errorDiv.style.borderRadius = "4px";
+
+        const existingError = this.container.querySelector(".vf-error");
+        if (existingError) {
+            existingError.remove();
+        }
+
+        this.container.appendChild(errorDiv);
+        setTimeout(() => errorDiv.remove(), 5000);
+    }
+
     replaceText(text) {
         if (!this.element) this.initialize();
         this.notifyValueChange(text.trim());
@@ -693,11 +780,27 @@ class TextAreaManager {
     }
 
     appendText(text) {
-        if (!this.element) this.initialize();
-        const currentValue = this.element.value;
-        const newValue = (currentValue + ' ' + text).trim();
-        this.notifyValueChange(newValue);
-        this.setupValueProtection(newValue);
+        try {
+            if (!this.element) {
+                this.initialize();
+            }
+
+            const currentValue = this.element.value;
+            const newValue = (currentValue + ' ' + text).trim();
+
+            const success = this.notifyValueChange(newValue);
+
+            if (success) {
+                this.setupValueProtection(newValue);
+            } else {
+                this.handleError(
+                    new Error('Failed to append text'),
+                    'append operation failed'
+                );
+            }
+        } catch (error) {
+            this.handleError(error, 'append operation');
+        }
     }
 
     clearTarget() {
@@ -713,6 +816,13 @@ class TextAreaManager {
         this.element.blur();  // Help with mobile keyboard
     }
 
+    createDetailedError(error, context) {
+        const detailedError = new Error(error.message);
+        detailedError.context = context;
+        detailedError.originalError = error;
+        detailedError.stack = error.stack;
+        return detailedError;
+    }
     getValue() {
         if (!this.element) this.initialize();
         return this.element.value;
@@ -772,7 +882,8 @@ class UIComponent {
     getTextAreaManager() {
         if (!this.textAreaManager) {
             this.textAreaManager = new TextAreaManager(
-                this.controller.config.targetElementId
+                this.controller.config.targetElementId,
+                this.controller,
             );
         }
         return this.textAreaManager;

@@ -44,9 +44,12 @@ User voice is transribed and sent to the agent chat window as text in real time 
 
 1. Set the extension URL in TypingMind:
    - Navigate to Menu > Settings > Advanced Settings > Extensions
-   - Add: `https://gruffdavies.github.io/typingmind-voicefaster-extension/live/voicefaster-extension-v2.3.84.js`
+   - Add:
+```
+https://gruffdavies.github.io/typingmind-voicefaster-extension/live/voicefaster-extension-v2.3.96.js
+```
 
-2. Configure API Keys in TypingMind settings:
+1. Configure API Keys in TypingMind settings:
    - ElevenLabs API key (required for TTS)
    - DeepGram API key (optional, enables enhanced STT)
 
