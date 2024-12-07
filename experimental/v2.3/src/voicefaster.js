@@ -1200,8 +1200,12 @@ class UIComponent {
         clearTargetBtn.addEventListener("click", () => {
             handleDestructiveAction(clearTargetBtn, () => {
 
-            console.debug("Clear target button clicked");
+                console.debug("Clear target button clicked");
                 this.getTextAreaManager().clearTarget();
+                this.hideTranscriptArea();
+                if (this.controller.transcriberComponent.isListening) {
+                    this.controller.toggleRecording();
+                }
             });
         });
 
