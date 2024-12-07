@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.101';
+    const VOICEFASTER_VERSION = '2.3.119';
 
     class EventEmitter {
     constructor() {
@@ -67,6 +67,7 @@ class VoiceFasterController {
         this.deepgramApiKey = null;
         this.elevenLabsApiKey = null;
         this.uiComponent = null;
+        this.verboseDebug = false;
 
         this.initialize();
     }
@@ -189,11 +190,11 @@ class VoiceFasterController {
     setupTranscriberHandlers() {
         this.transcriberComponent.setHandlers({
             onTranscript: (text, isFinal) => {
-                console.debug("Transcript received:", { text, isFinal }); // Add logging
+                if (this.verboseDebug) { console.debug("Transcript received:", { text, isFinal }); }
                 this.handleTranscript(text, isFinal);
             },
             onStateChange: (state) => {
-                console.debug("Transcriber state changed:", state); // Add logging
+                if (this.verboseDebug) { console.debug("Transcriber state changed:", state); } // Add logging
                 this.handleTranscriberStateChange(state);
             },
             onError: (error) => this.handleError(error),
@@ -211,14 +212,7 @@ class VoiceFasterController {
     }
 
     handleTranscript(text, isFinal) {
-        console.debug("Handling transcript:", { text, isFinal }); // Add logging
-        // if (this.config.targetElement && isFinal) {
-        //     const currentText = this.config.targetElement.value;
-        //     const spacer = currentText && !currentText.endsWith(' ') ? ' ' : '';
-        //     this.config.targetElement.value = currentText + spacer + text;
-        //     this.config.targetElement.dispatchEvent(new Event('change'));
-        // }
-
+        if (this.verboseDebug) { console.debug("Handling transcript:", { text, isFinal }); }
         this.uiComponent.updateTranscript(text, isFinal);
     }
 
@@ -586,6 +580,7 @@ class TextAreaManager {
         this.isHandlingChange = false;
         this.observer = null;
         this.isReactElement = false;  // Track if it's a React element
+        this.clearTimeout = null;
     }
 
     handleError(error, context) {
@@ -719,11 +714,10 @@ class TextAreaManager {
     }
 
     async appendText(text) {
+        if (!this.element) {
+            this.initialize();
+        }
         try {
-            if (!this.element) {
-                this.initialize();
-            }
-
             const currentValue = this.element.value;
             const newValue = (currentValue + ' ' + text).trim();
 
@@ -911,12 +905,6 @@ class TextAreaManager {
         this.setupValueProtection('');
     }
 
-    clear() {
-        if (!this.element) this.initialize();
-
-        this.notifyValueChange('');
-        this.element.blur();  // Help with mobile keyboard
-    }
 
     createDetailedError(error, context) {
         const detailedError = new Error(error.message);
@@ -930,27 +918,84 @@ class TextAreaManager {
         return this.element.value;
     }
 
-    focus() {
-        if (!this.element) this.initialize();
+    // focus() {
+    //     if (!this.element) this.initialize();
 
-        this.element.focus();
-        if (this.isReactElement) {
-            const props = this.getReactProps();
-            if (props?.onFocus) {
-                props.onFocus(this.createSyntheticEvent('', 'focus'));
+    //     this.element.focus();
+    //     if (this.isReactElement) {
+    //         const props = this.getReactProps();
+    //         if (props?.onFocus) {
+    //             props.onFocus(this.createSyntheticEvent('', 'focus'));
+    //         }
+    //     }
+    // }
+
+    // blur() {
+    //     if (!this.element) this.initialize();
+
+    //     this.element.blur();
+    //     if (this.isReactElement) {
+    //         const props = this.getReactProps();
+    //         if (props?.onBlur) {
+    //             props.onBlur(this.createSyntheticEvent('', 'blur'));
+    //         }
+    //     }
+    // }
+    focus() {
+        try {
+            if (!this.element) this.initialize();
+
+            // Native DOM focus
+            this.element.focus();
+
+            // Dispatch native DOM event
+            const focusEvent = new Event('focus', { bubbles: true });
+            this.element.dispatchEvent(focusEvent);
+
+            // Handle React synthetic event
+            if (this.isReactElement) {
+                const props = this.getReactProps();
+                if (props?.onFocus) {
+                    props.onFocus(this.createSyntheticEvent('', 'focus'));
+                }
             }
+
+            // Verify focus success
+            if (document.activeElement !== this.element) {
+                throw new Error('Focus operation failed');
+            }
+
+        } catch (error) {
+            this.handleError(error, 'focus operation');
         }
     }
 
     blur() {
-        if (!this.element) this.initialize();
+        try {
+            if (!this.element) this.initialize();
 
-        this.element.blur();
-        if (this.isReactElement) {
-            const props = this.getReactProps();
-            if (props?.onBlur) {
-                props.onBlur(this.createSyntheticEvent('', 'blur'));
+            // Native DOM blur
+            this.element.blur();
+
+            // Dispatch native DOM event
+            const blurEvent = new Event('blur', { bubbles: true });
+            this.element.dispatchEvent(blurEvent);
+
+            // Handle React synthetic event
+            if (this.isReactElement) {
+                const props = this.getReactProps();
+                if (props?.onBlur) {
+                    props.onBlur(this.createSyntheticEvent('', 'blur'));
+                }
             }
+
+            // Verify blur success
+            if (document.activeElement === this.element) {
+                throw new Error('Blur operation failed');
+            }
+
+        } catch (error) {
+            this.handleError(error, 'blur operation');
         }
     }
 
@@ -978,6 +1023,7 @@ class UIComponent {
         this.queueVisualizerContainer = null;
         this.queueUIManager = null;
         this.textAreaManager = null;
+        this.pendingTranscriptClear = null;
     }
 
     // Add this method
@@ -1062,7 +1108,16 @@ class UIComponent {
         micButton.dataset.state = "idle";
         micButton.innerHTML = this.micIconHTML();
         micButton.addEventListener("click", () => {
-            console.log("Mic button clicked");
+            console.debug("🎯🎯Mic button clicked");
+
+            // If there's a pending clear, cancel it and show the transcript area
+            if (this.pendingTranscriptClear) {
+                console.debug("⚠️Found Pending CLEAR, cancelling it");
+                clearTimeout(this.pendingTranscriptClear);
+                this.pendingTranscriptClear = null;
+                this.showTranscriptArea();  // This will show the transcript before it's cleared
+            }
+
             this.controller.toggleRecording();
         });
         micControl.appendChild(micButton);
@@ -1296,12 +1351,6 @@ class UIComponent {
         this.transcriptArea.hidden = false;
     }
 
-    // sendTranscriptToTargetElement() {
-    //     console.log("🎯 Send button clicked");
-    //     const transcript = this.getTranscript();
-    //     this.appendTargetElementTextReactSafe(transcript);
-    // }
-
 
     clearTranscriptArea() {
         this.transcriptArea.querySelector(".vf-text--interim").textContent = "";
@@ -1323,11 +1372,12 @@ class UIComponent {
         return transcript;
     }
 
+    finaliseTranscript() {
+        const transcript = this.getTranscript();
+        this.transcriptArea.querySelector(".vf-text--final").textContent = transcript;
+        this.transcriptArea.querySelector(".vf-text--interim").textContent = "";
+    }
 
-    // appendTargetElementTextReactSafe(transcript) {
-    //     const manager = this.getTextAreaManager();
-    //     manager.appendText(transcript);
-    // }
 
     getTargetElement() {
         this.targetElement = document.getElementById(this.controller.config.targetElementId);
@@ -1389,27 +1439,30 @@ class UIComponent {
             });
         });
 
-        prependBtn.addEventListener("click", () => {
-            console.debug("Prepend button clicked");
-            const transcript = this.getTranscript();
-            this.getTextAreaManager().prependText(transcript);
-            this.clearTranscriptArea();
-            this.hideTranscriptArea();
-            if (this.controller.transcriberComponent.isListening) {
-                this.controller.toggleRecording();
-            }
-        });
 
-        appendBtn.addEventListener("click", () => {
-            console.debug("Append button clicked");
+        const handleSendTranscript = (action) => {
+            console.debug(`${action} button clicked`);
+            this.finaliseTranscript();
             const transcript = this.getTranscript();
-            this.getTextAreaManager().appendText(transcript);
-            this.clearTranscriptArea();
+
+            // Use the appropriate method based on action
+            this.getTextAreaManager()[`${action}Text`](transcript);
             this.hideTranscriptArea();
+
+            // Clear transcript after 3 seconds (can be cancelled)
+            this.pendingTranscriptClear = setTimeout(() => {
+                console.debug("🧹Clearing transcript after send timeout");
+                this.clearTranscriptArea();
+                this.pendingTranscriptClear = null;
+            }, 2000);
+
             if (this.controller.transcriberComponent.isListening) {
                 this.controller.toggleRecording();
             }
-        });
+        };
+
+        prependBtn.addEventListener("click", () => handleSendTranscript('prepend'));
+        appendBtn.addEventListener("click", () => handleSendTranscript('append'));
 
         clearTargetBtn.addEventListener("click", () => {
             handleDestructiveAction(clearTargetBtn, () => {
@@ -2110,6 +2163,7 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
         this.reconnectTimeout = null;
         this.mediaRecorder = null;
         this.connectionState = ConnectionState.CLOSED;
+        this.verboseDebug = false;
         console.log(
             "DeepGramTranscriber constructor finished. Config:",
             this.config
@@ -2319,11 +2373,15 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
         this.mediaRecorder.start(250);
     }
 
+    debug(message) {
+        if (this.verboseDebug) {
+            console.debug(message);
+        }
+    }
+
     processBufferedAudio() {
         if (this.connectionState !== ConnectionState.CONNECTED) return;
-        console.debug(
-            `Processing buffered audio: ${this.audioBuffer.length} chunks`
-        );
+        this.debug(`Processing buffered audio: ${this.audioBuffer.length} chunks`);
         while (
             this.audioBuffer.length > 0 &&
             this.ws?.readyState === WebSocket.OPEN
@@ -2331,7 +2389,7 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
             const audioData = this.audioBuffer.shift();
             try {
                 this.ws.send(audioData);
-                console.debug("Buffered audio chunk sent, size:", audioData.byteLength);
+                this.debug("Buffered audio chunk sent, size:", audioData.byteLength);
             } catch (error) {
                 console.error("Error sending buffered audio:", error);
                 this.audioBuffer.unshift(audioData);
@@ -2340,9 +2398,11 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
         }
     }
     processAudioData(audioData) {
-        console.debug(
-            `DeepGram.processAudioData called, connection state: ${this.connectionState}`
-        );
+        if (this.verboseDebug) {
+            console.debug(
+                `DeepGram.processAudioData called, connection state: ${this.connectionState}`
+            );
+        }
 
         // Add proper handling for CLOSING state
         if (this.connectionState === ConnectionState.CLOSING) {
@@ -2356,10 +2416,12 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
         ) {
             try {
                 this.ws.send(audioData);
-                console.debug(
-                    "Audio data sent to DeepGram, size:",
-                    audioData.byteLength
-                );
+                if (this.verboseDebug) {
+                    console.debug(
+                        "Audio data sent to DeepGram, size:",
+                        audioData.byteLength
+                    );
+                }
             } catch (error) {
                 console.error("Error sending audio to DeepGram:", error);
                 if (this.connectionState === ConnectionState.CONNECTED) {
@@ -2384,10 +2446,12 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
     bufferAudioData(audioData) {
         if (this.audioBuffer.length < this.config.maxBufferSize) {
             this.audioBuffer.push(audioData);
-            console.debug(
-                "🎯 Audio data buffered, buffer size:",
-                this.audioBuffer.length
-            );
+            if (this.verboseDebug) {
+                console.debug(
+                    "🎯 Audio data buffered, buffer size:",
+                    this.audioBuffer.length
+                );
+            }
         } else {
             console.warn("⚠️ Audio buffer full, dropping oldest chunk");
             this.audioBuffer.shift();
