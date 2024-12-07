@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.99';
+    const VOICEFASTER_VERSION = '2.3.101';
 
     class EventEmitter {
     constructor() {
@@ -607,10 +607,79 @@ class TextAreaManager {
     }
 
     detectReactElement() {
-        return !!Object.keys(this.element).find(key =>
-            key.startsWith("__reactProps$")
+        // More robust React detection
+        return (
+            !!Object.keys(this.element).find(key => key.startsWith("__reactProps$")) ||
+            !!this.element._reactEvents ||
+            !!this.element[Object.keys(this.element).find(key => key.includes("react"))]
         );
     }
+
+    notifyValueChange(value) {
+        if (!this.element) {
+            this.initialize();
+        }
+
+        try {
+            // Log initial state
+            console.debug('Setting value:', {
+                current: this.element.value,
+                new: value,
+                isReact: this.isReactElement
+            });
+
+            const beforeValue = this.element.value;
+
+            // Use React's synthetic event system if available
+            if (this.isReactElement) {
+                const props = this.getReactProps();
+                if (props?.onChange) {
+                    props.onChange(this.createSyntheticEvent(value));
+                }
+            }
+
+            // Force value change
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+                window.HTMLTextAreaElement.prototype,
+                "value"
+            ).set;
+
+            nativeInputValueSetter.call(this.element, value);
+
+            // Verify immediate change
+            if (this.element.value !== value) {
+                throw new Error(`Direct value setting failed. Expected: "${value}", Got: "${this.element.value}"`);
+            }
+
+            // Add verification timeout with retry
+            setTimeout(() => {
+                if (this.element.value !== value) {
+                    console.warn('Value verification failed:', {
+                        before: beforeValue,
+                        attempted: value,
+                        current: this.element.value
+                    });
+
+                    // Retry with both approaches
+                    nativeInputValueSetter.call(this.element, value);
+                    if (this.isReactElement) {
+                        const props = this.getReactProps();
+                        if (props?.onChange) {
+                            props.onChange(this.createSyntheticEvent(value));
+                        }
+                    }
+                    this.dispatchDOMEvents();
+                }
+            }, 100);
+
+            return true;
+        } catch (error) {
+            this.handleError(error, 'Failed to set textarea value');
+            return false;
+        }
+    }
+
+
 
     getReactProps() {
         if (!this.isReactElement) return null;
@@ -674,12 +743,7 @@ class TextAreaManager {
     }
     notifyValueChange(value) {
         if (!this.element) {
-            try {
-                this.initialize();
-            } catch (error) {
-                this.handleError(error, 'Failed to initialize textarea');
-                return false;
-            }
+            this.initialize();
         }
 
         try {
@@ -692,7 +756,15 @@ class TextAreaManager {
 
             const beforeValue = this.element.value;
 
-            // Force React to notice the change
+            // Use React's synthetic event system if available
+            if (this.isReactElement) {
+                const props = this.getReactProps();
+                if (props?.onChange) {
+                    props.onChange(this.createSyntheticEvent(value));
+                }
+            }
+
+            // Force value change
             const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
                 window.HTMLTextAreaElement.prototype,
                 "value"
@@ -705,7 +777,7 @@ class TextAreaManager {
                 throw new Error(`Direct value setting failed. Expected: "${value}", Got: "${this.element.value}"`);
             }
 
-            // Add verification timeout
+            // Add verification timeout with retry
             setTimeout(() => {
                 if (this.element.value !== value) {
                     console.warn('Value verification failed:', {
@@ -714,16 +786,19 @@ class TextAreaManager {
                         current: this.element.value
                     });
 
-                    // Retry with direct setting
-                    this.element.value = value;
-
-                    // Dispatch events again
+                    // Retry with both approaches
+                    nativeInputValueSetter.call(this.element, value);
+                    if (this.isReactElement) {
+                        const props = this.getReactProps();
+                        if (props?.onChange) {
+                            props.onChange(this.createSyntheticEvent(value));
+                        }
+                    }
                     this.dispatchDOMEvents();
                 }
             }, 100);
 
             return true;
-
         } catch (error) {
             this.handleError(error, 'Failed to set textarea value');
             return false;
@@ -731,14 +806,26 @@ class TextAreaManager {
     }
 
 
+
     dispatchDOMEvents() {
         const events = ['input', 'change'];
         events.forEach(eventType => {
-            const event = new Event(eventType, { bubbles: true });
-            this.element.dispatchEvent(event);
+            // Create both native and React synthetic events
+            const nativeEvent = new Event(eventType, { bubbles: true });
+            this.element.dispatchEvent(nativeEvent);
+
+            if (this.isReactElement) {
+                const props = this.getReactProps();
+                if (props?.[`on${eventType.charAt(0).toUpperCase() + eventType.slice(1)}`]) {
+                    props[`on${eventType.charAt(0).toUpperCase() + eventType.slice(1)}`](
+                        this.createSyntheticEvent(this.element.value, eventType)
+                    );
+                }
+            }
             console.debug(`✅ Dispatched ${eventType} event`);
         });
     }
+
 
     setupValueProtection(expectedValue) {
         this.cleanupObserver();
@@ -746,16 +833,15 @@ class TextAreaManager {
         if (!this.isReactElement) return;
 
         this.observer = new MutationObserver(mutations => {
-            if (this.isHandlingChange) return;
-
             for (const mutation of mutations) {
-                if (this.shouldRestoreValue(mutation, expectedValue)) {
-                    console.debug('🔍Value protection triggered:', {
-                        expected: expectedValue,
-                        current: this.element.value
-                    });
-                    this.restoreValue(expectedValue);
-                    break;
+                if (mutation.type === "attributes" || mutation.type === "characterData") {
+                    if (this.element.value !== expectedValue) {
+                        console.debug('Value protection triggered:', {
+                            expected: expectedValue,
+                            current: this.element.value
+                        });
+                        this.notifyValueChange(expectedValue);
+                    }
                 }
             }
         });
@@ -770,6 +856,7 @@ class TextAreaManager {
         // Extend protection duration for React components
         setTimeout(() => this.cleanupObserver(), 3000);
     }
+
 
     shouldRestoreValue(mutation, expectedValue) {
         return (mutation.type === "attributes" ||
@@ -2000,7 +2087,7 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
         super();
         this.config = {
             // DeepGram params
-            model: "nova-2-conversationalai",
+            model: "nova-2",
             language: "en-GB",
             smart_format: true,
             interim_results: true,
