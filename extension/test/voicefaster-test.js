@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.127';
+    const VOICEFASTER_VERSION = '2.3.128';
 
     class EventEmitter {
     constructor() {
@@ -848,7 +848,7 @@ class TextAreaManager {
         });
 
         // Protect value for N milliseconds
-        setTimeout(() => this.cleanupObserver(), 250);
+        setTimeout(() => this.cleanupObserver(), 500);
     }
 
 

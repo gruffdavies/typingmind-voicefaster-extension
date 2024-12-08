@@ -844,7 +844,7 @@ class TextAreaManager {
         });
 
         // Protect value for N milliseconds
-        setTimeout(() => this.cleanupObserver(), 250);
+        setTimeout(() => this.cleanupObserver(), 500);
     }
 
 
