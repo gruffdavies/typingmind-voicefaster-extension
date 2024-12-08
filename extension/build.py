@@ -47,7 +47,11 @@ try:
 
     # Set output filename
     versioned_filename = f'dist/voicefaster-extension-v{new_version}.js'
+    latest_filename = f'dist/voicefaster-extension-latest.js'
     test_filename = 'test/voicefaster-test.js'
+
+    # Get the root directory
+    project_root_rel = '../'
 
     # Read other files
     css_content = read_file('src/voicefaster.css')
@@ -61,6 +65,7 @@ try:
 
     # Write the result
     write_file(versioned_filename, output)
+    write_file(latest_filename, output)
     write_file(test_filename, output)
 
     print(f"Build completed successfully! Output: {versioned_filename}")
@@ -70,11 +75,22 @@ try:
         response = input("Copy to live directory? (y/n): ").lower()
         if response in ['y', 'n']:
             if response == 'y':
-                live_dir = Path('../../live')
+                live_dir = Path(f'{project_root_rel}live')
                 if not live_dir.exists():
-                    live_dir.mkdir(parents=True)
+                    print(f"No live directory found at {live_dir}")
+                    response = input("Create live directory? (y/n): ").lower()
+                    if response == 'y':
+                        live_dir.mkdir(parents=True)
+                    else:
+                        break
                 shutil.copy2(versioned_filename, live_dir / Path(versioned_filename).name)
-                print(f"Copied to ../../live/{Path(versioned_filename).name}")
+                print(f"Copied to live/{Path(versioned_filename).name}")
+                response = input(f"Copy -latest.js to live too? (y/n): ").lower()
+                if response == 'y':
+                    shutil.copy2(latest_filename, live_dir / Path(latest_filename).name)
+                    print(f"Copied to live/{Path(latest_filename).name}")
+                else:
+                    break
             break
         print("Please enter 'y' or 'n'")
 
