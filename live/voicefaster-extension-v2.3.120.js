@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.119';
+    const VOICEFASTER_VERSION = '2.3.120';
 
     class EventEmitter {
     constructor() {
@@ -847,8 +847,8 @@ class TextAreaManager {
             subtree: true
         });
 
-        // Extend protection duration for React components
-        setTimeout(() => this.cleanupObserver(), 3000);
+        // Protect value for N milliseconds
+        setTimeout(() => this.cleanupObserver(), 250);
     }
 
 

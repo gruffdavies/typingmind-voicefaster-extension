@@ -1,4 +1,8 @@
-class EventEmitter {
+(() => {
+
+    const VOICEFASTER_VERSION = '2.3.120';
+
+    class EventEmitter {
     constructor() {
         this.events = new Map();
     }
@@ -843,8 +847,8 @@ class TextAreaManager {
             subtree: true
         });
 
-        // Extend protection duration for React components
-        setTimeout(() => this.cleanupObserver(), 3000);
+        // Protect value for N milliseconds
+        setTimeout(() => this.cleanupObserver(), 250);
     }
 
 
@@ -2848,3 +2852,721 @@ class SpeakerComponent extends EventEmitter {
         this.queue = new SpeechQueue();
     }
 }
+
+
+
+    /* Bootstrapping Code */
+    let voicefaster_css = `:root {
+    /* Core Theme Colors */
+    --vf-widget-neutral: #f5ede3;
+    --vf-widget-primary: #40A9FF;
+
+    --vf-widget: var(--vf-widget-primary);
+
+    --vf-human: #78FF64;
+    /* Human speech color */
+    --vf-agent: #FF4040;
+    /* Agent speech color */
+
+    /* Widget Accent Colours */
+    --vf-widget-bright: var(--vf-widget);
+    --vf-widget-muted: color-mix(in srgb, var(--vf-widget) 60%, transparent);
+    --vf-widget-subtle: color-mix(in srgb, var(--vf-widget) 40%, transparent);
+    --vf-widget-ghost: color-mix(in srgb, var(--vf-widget) 20%, transparent);
+
+    /* Surface Colors */
+    --vf-surface: rgb(28 28 28 / 0.85);
+    --vf-surface-raised: rgb(32 32 32 / 0.90);
+    --vf-surface-deep: rgb(38 38 38 / 0.95);
+
+    /* Button Surface Colors */
+    --vf-button-surface: rgb(45 45 45 / 0.95);
+    --vf-button-hover: rgb(55 55 55 / 0.95);
+    --vf-button-active: rgb(65 65 65 / 0.95);
+
+    /* Drag Bar specific */
+    --vf-dragbar-bg: rgb(22 22 22 / 0.95);
+    --vf-dragbar-handle: rgb(128 128 128 / 0.3);
+
+    --vf-text: var(--vf-widget-neutral);
+    --vf-text-muted: color-mix(in srgb, var(--vf-widget-neutral) 60%, transparent);
+    --vf-text-dim: color-mix(in srgb, var(--vf-widget-neutral) 40%, transparent);
+
+    /* Human Speech Colors */
+    --vf-human-bright: var(--vf-human);
+    --vf-human-muted: color-mix(in srgb, var(--vf-human) 60%, transparent);
+    --vf-human-subtle: color-mix(in srgb, var(--vf-human) 40%, transparent);
+    --vf-human-ghost: color-mix(in srgb, var(--vf-human) 20%, transparent);
+
+    /* Agent Speech Colors */
+    --vf-agent-bright: var(--vf-agent);
+    --vf-agent-muted: color-mix(in srgb, var(--vf-agent) 60%, transparent);
+    --vf-agent-subtle: color-mix(in srgb, var(--vf-agent) 40%, transparent);
+    --vf-agent-ghost: color-mix(in srgb, var(--vf-agent) 20%, transparent);
+
+    /* Button States */
+    --vf-mic-idle: var(--vf-human-muted);
+    --vf-mic-active: var(--vf-human-bright);
+    --vf-tts-idle: var(--vf-agent-muted);
+    --vf-tts-active: var(--vf-agent-bright);
+
+    /* Bubble States */
+    --vf-bubble-requesting: white;
+    --vf-bubble-queued: yellow;
+    --vf-bubble-playing: blue;
+    --vf-bubble-completed: green;
+    --vf-bubble-error: #ff0000;
+    --vf-bubble-stale: #9e9e9e;
+
+    /* --vf-bubble-requesting: white;
+    --vf-bubble-queued: var(--vf-agent-muted);
+    --vf-bubble-playing: var(--vf-widget-primary);
+    --vf-bubble-completed: var(--vf-agent-subtle);
+    --vf-bubble-error: var(--vf-agent);
+    --vf-bubble-stale: var(--vf-text-dim); */
+
+    /* Effects */
+    --vf-blur: blur(12px);
+    --vf-shadow: 0 4px 12px rgb(0 0 0 / 0.3);
+    --vf-glow-mic: 0 0 12px var(--vf-human);
+    --vf-glow-tts: 0 0 12px var(--vf-agent);
+    --vf-border: 1px solid rgb(255 255 255 / 0.1);
+
+    /* Timing */
+    --vf-transition-fast: 150ms ease;
+    --vf-transition-normal: 250ms ease;
+
+    /* Layout */
+    --vf-padding-xl: 12px;
+    --vf-padding-l: 8px;
+    --vf-padding-m: 4px;
+    --vf-padding-s: 2px;
+    --vf-padding-xs: 1px;
+}
+
+
+
+/* Main Widget */
+.vf-widget {
+    position: fixed;
+    /* left: calc(100vw - 160px - 1rem);  /* St */
+    right: 1rem;
+    top: 5rem;
+    width: 160px;
+    background: var(--vf-surface);
+    backdrop-filter: var(--vf-blur);
+    border: var(--vf-border);
+    border-radius: 8px;
+    box-shadow: var(--vf-shadow);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    z-index: 1000;
+    overflow: visible;
+    padding: var(--vf-padding-xs);
+    min-width: 160px;
+}
+
+.vf-widget-container {
+    position: relative;
+    overflow: visible;
+}
+
+/* Drag Bar */
+.vf-dragbar {
+    background: var(--vf-dragbar-bg);
+    width: 100%;
+    height: 24px;
+    cursor: grab;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 6px 6px 0 0;
+    position: relative;
+    /* For canvas positioning */
+    overflow: hidden;
+    /* Keep visualization inside border radius */
+}
+
+.vf-dragbar-viz {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    /* Allow drag events to pass through */
+    opacity: 0.4;
+    /* Make visualization subtle */
+}
+
+.vf-dragbar-handle {
+    width: 32px;
+    height: 2px;
+    background: var(--vf-dragbar-handle);
+    border-radius: 2px;
+    position: relative;
+    /* Keep handle above visualization */
+    z-index: 2;
+}
+
+
+/* Controls */
+.vf-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--vf-padding-l) var(--vf-padding-xl) 0;
+    gap: 4px;
+}
+
+/* Buttons */
+.vf-button {
+    background: var(--vf-button-surface);
+    width: 48px;
+    height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--vf-transition-fast);
+    border-radius: 50%;
+    border: none;
+    color: var(--vf-text-muted);
+    cursor: pointer;
+    justify-content: center;
+    position: relative;
+    padding: 12px;
+}
+
+.vf-button-mic {
+    color: var(--vf-mic-idle);
+}
+
+.vf-button-tts {
+    color: var(--vf-tts-idle);
+}
+
+/* Add hover effects */
+.vf-button:hover {
+    background: var(--vf-button-hover);
+}
+
+.vf-button:active {
+    transform: scale(0.95);
+    background: var(--vf-button-active);
+}
+
+.vf-button:active {
+    background: var(--vf-button-active);
+}
+
+/* Center icons better */
+.vf-button i {
+    font-size: 1.375rem;
+    line-height: 1;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    /* Keep icon above canvas */
+}
+
+/* Listening Animation */
+@keyframes listening-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(120, 255, 100, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(120, 255, 100, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(120, 255, 100, 0);
+    }
+}
+
+
+/* Settings button specifically */
+.vf-settings-btn {
+    width: 28px;
+    height: 28px;
+    padding: 6px;
+    background: var(--vf-surface);
+    border-radius: 4px;
+    color: var(--vf-text-muted);
+    border: none;
+    transition: all var(--vf-transition-fast);
+}
+
+.vf-settings-btn:hover {
+    color: var(--vf-text);
+    background: var(--vf-surface-deep);
+}
+
+/* Visualizers */
+.vf-visualizer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    /* Between button background and icon */
+}
+
+/* Button States */
+.vf-mic .vf-button[data-state="listening"] {
+    color: var(--vf-mic-active);
+    animation: listening-pulse 2s infinite;
+    box-shadow: var(--vf-glow-mic);
+}
+
+.vf-tts .vf-button[data-state="speaking"] {
+    color: var(--vf-tts-active);
+    box-shadow: var(--vf-glow-tts);
+}
+
+/* Info Bar */
+.vf-info, .vf-provider-info{
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--vf-widget-muted);
+    margin-left: 6px;
+    margin-right: 6px;
+    margin-top: 2px;
+    margin-bottom: -2px;
+}
+
+/* Bubble Tray */
+.vf-bubble-tray {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    flex-wrap: wrap;
+}
+
+/* Missing TTS Playing Animation */
+@keyframes playing-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 64, 64, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 64, 64, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 64, 64, 0);
+    }
+}
+
+.vf-bubble[data-state="playing"] {
+    background: var(--vf-bubble-playing);
+    box-shadow: var(--vf-glow-tts);
+    animation: playing-pulse 2s infinite;
+}
+
+
+.vf-bubble {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transition: all var(--vf-transition-normal);
+}
+
+/* Bubble States */
+.vf-bubble[data-state="requesting"] {
+    background: var(--vf-bubble-requesting);
+}
+
+.vf-bubble[data-state="queued"] {
+    background: var(--vf-bubble-queued);
+}
+
+.vf-bubble[data-state="playing"] {
+    background: var(--vf-bubble-playing);
+    box-shadow: var(--vf-glow-tts);
+}
+
+.vf-bubble[data-state="completed"] {
+    background: var(--vf-bubble-completed);
+}
+
+.vf-bubble[data-state="error"] {
+    background: var(--vf-bubble-error);
+}
+
+.vf-bubble[data-state="stale"] {
+    background: var(--vf-bubble-stale);
+}
+
+
+
+/* *************** */
+/* Transcript Area */
+/* *************** */
+
+/* Transcript Container */
+.vf-transcript {
+    background: var(--vf-surface-deep);
+    border-radius: 8px;
+    border: var(--vf-border);
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 26rem;
+    max-width: calc(100vw - 2rem);
+    box-shadow: var(--vf-shadow);
+    color: var(--vf-text);
+    overflow: hidden;
+    font-size: 0.8rem;
+}
+
+.vf-transcript[hidden] {
+    display: none;
+}
+
+/* Transcript Header */
+.vf-transcript-header {
+    padding: var(--vf-padding-m) var(--vf-padding-l);
+    border-bottom: var(--vf-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.vf-transcript-close {
+    background: transparent;
+    border: none;
+    color: var(--vf-text-muted);
+    cursor: pointer;
+    padding: 4px;
+    transition: color var(--vf-transition-fast);
+}
+
+.vf-transcript-close:hover {
+    color: var(--vf-text);
+}
+
+/* Transcript Content */
+.vf-transcript-content {
+    padding: var(--vf-padding-l);
+    min-height: 60px;
+    max-height: 200px;
+    overflow-y: auto;
+    display: inline-block;
+    flex-direction: row;
+    font-size: 0.7rem;
+}
+
+.vf-text--final,
+.vf-text--interim {
+    display: inline;
+    width: fit-content;
+}
+
+.vf-text--interim {
+    color: var(--vf-human-muted);
+    font-style: italic;
+}
+
+.vf-text--final {
+    color: var(--vf-human);
+}
+
+/* Transcript Actions Container */
+.vf-transcript-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--vf-padding-m) var(--vf-padding-l);
+    border-top: var(--vf-border);
+}
+
+.transcript-action-section-left,
+.transcript-action-section-right {
+    display: flex;
+    align-items: center;
+    gap: var(--vf-padding-m);
+}
+
+.transcript-action-section-right {
+    margin-left: auto; /* Push right section to the right */
+}
+
+/* Ensure buttons in right section stay together */
+.transcript-action-section-right button {
+    margin-right: var(--vf-padding-m);
+}
+
+.transcript-action-section-right button:last-child {
+    margin-right: 0;
+}
+
+/* Labels */
+.vf-transcript-actions span {
+    color: var(--vf-text-muted);
+    font-size: 0.7rem;
+}
+
+
+/* Base Button Styles */
+.vf-transcript-actions button {
+    padding: 4px 8px;
+    background: var(--vf-button-surface);
+    border: none;
+    color: var(--vf-text);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all var(--vf-transition-fast);
+    font-size: 0.6rem;
+    min-width: fit-content;
+}
+
+.vf-transcript-actions button:hover {
+    background: var(--vf-button-hover);
+}
+
+/* Primary Action Button */
+.vf-transcript-actions .vf-button--append {
+    background-color: #4CAF50;
+    color: white;
+    margin-left: auto; /* Push to right */
+}
+
+.vf-transcript-actions .vf-button--append:hover {
+    background-color: #45a049;
+}
+
+/* Destructive Action Buttons */
+
+.vf-transcript-actions .vf-button--clear-target[data-confirm="true"],
+.vf-transcript-actions .vf-button--clear[data-confirm="true"] {
+    background-color: #ff4444;
+    color: white;
+}
+
+/* Utility Buttons */
+.vf-transcript-actions .vf-button--copy,
+.vf-transcript-actions .vf-button--prepend {
+    background-color: var(--vf-button-surface);
+}
+
+/* Button Hover States */
+.vf-transcript-actions button:hover {
+    background-color: var(--vf-button-hover);
+}
+
+
+.vf-transcript-actions .vf-button--clear-target[data-confirm="true"]:hover,
+.vf-transcript-actions .vf-button--clear[data-confirm="true"]:hover,
+.vf-transcript-actions .vf-button--replace[data-confirm="true"]:hover {
+    background-color: #ff3333;
+}
+
+/* End transcript */
+
+
+/* ************** */
+/* Settings Panel */
+/* ************** */
+
+.vf-settings {
+    position: relative;
+    right: 100%;
+    background: var(--vf-surface-deep);
+    border-radius: 8px;
+    border: var(--vf-border);
+    width: 280px;
+    box-shadow: var(--vf-shadow);
+    color: var(--vf-text);
+    z-index: 1001;
+    font-size: 0.7rem;
+}
+
+/* Settings Header */
+.vf-settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--vf-padding-l);
+    border-bottom: var(--vf-border);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.vf-settings-close {
+    background: transparent;
+    border: none;
+    color: var(--vf-text-muted);
+    cursor: pointer;
+    padding: 4px;
+    transition: color var(--vf-transition-fast);
+    display: flex;
+    align-items: center;
+}
+
+.vf-settings-close:hover {
+    color: var(--vf-text);
+}
+
+/* Settings Sections */
+.vf-settings-section {
+    padding: var(--vf-padding-l);
+    border-bottom: var(--vf-border);
+}
+
+.vf-settings-section:last-child {
+    border-bottom: none;
+}
+
+.vf-settings-title {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--vf-text-muted);
+    margin: 0 0 var(--vf-padding-l);
+}
+
+/* Settings Controls */
+.vf-settings-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vf-padding-l);
+}
+
+.vf-settings-item {
+    display: flex;
+    align-items: center;
+    gap: var(--vf-padding-m);
+    /* font-size: 0.6rem; */
+}
+
+/* Dropdowns */
+.vf-settings select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 100%;
+    padding: 8px 32px 8px 12px;
+    font-size: 0.75rem;
+    line-height: 1.2;
+    border: var(--vf-border);
+    border-radius: 4px;
+    background: var(--vf-button-surface);
+    color: var(--vf-text);
+    cursor: pointer;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23f5ede3' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px;
+}
+
+.vf-settings-item select {
+    background: var(--vf-button-surface);
+    border: var(--vf-border);
+    color: var(--vf-text);
+    padding: 6px var(--vf-padding-l);
+    border-radius: 4px;
+    width: 100%;
+    cursor: pointer;
+    transition: background var(--vf-transition-fast);
+}
+
+.vf-settings-item select:hover {
+    background: var(--vf-button-hover);
+}
+
+/* Checkboxes */
+.vf-settings-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    border: var(--vf-border);
+    background: var(--vf-button-surface);
+    border-radius: 3px;
+    cursor: pointer;
+    accent-color: var(--vf-widget);
+}
+
+/* Number Inputs */
+.vf-settings-item input[type="number"] {
+    background: var(--vf-button-surface);
+    border: var(--vf-border);
+    color: var(--vf-text);
+    padding: 4px var(--vf-padding-m);
+    border-radius: 4px;
+    width: 60px;
+    text-align: center;
+}
+
+.vf-settings-item input[type="number"]:hover {
+    background: var(--vf-button-hover);
+}
+
+/* Hide spin buttons for number inputs */
+.vf-settings-item input[type="number"]::-webkit-inner-spin-button,
+.vf-settings-item input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Labels */
+.vf-settings-item label {
+    display: flex;
+    align-items: center;
+    gap: var(--vf-padding-m);
+    cursor: pointer;
+    color: var(--vf-text);
+}
+
+/* Settings Panel Hidden State */
+.vf-settings[hidden] {
+    display: none;
+}`;
+
+    function injectStyles() {
+        const styleElement = document.createElement('style')
+        styleElement.setAttribute('data-voicefaster-version', VOICEFASTER_VERSION)
+        styleElement.textContent = voicefaster_css
+        document.head.appendChild(styleElement)
+        console.log('VoiceFaster styles injected')
+    }
+
+    function createVoiceFaster() {
+        injectStyles();
+        try {
+            const targetElementId = 'chat-input-textbox';
+            voiceFaster = new VoiceFasterController({
+                targetElementId,
+                transcribeToStagingArea: true
+            });
+
+            // Export for both module and non-module environments
+            if (typeof exports !== 'undefined') {
+                exports.VoiceFasterController = VoiceFasterController;
+            }
+            window.voiceFaster = voiceFaster;
+            console.log('VoiceFaster initialized:', voiceFaster);
+
+        } catch (error) {
+            console.error('VoiceFaster initialization failed:', error);
+        }
+    }
+
+    let voiceFaster = null;
+
+
+    createVoiceFaster();
+
+    // add handler to for plugin to queue audio stream
+    window.addEventListener("message", (event) => {
+        console.log("Window received message:", event.data);
+        if (event.data.type === "QUEUE_AUDIO_STREAM" && window.voiceFaster?.speakerComponent) {
+            window.voiceFaster.speakerComponent.queueAudioItem(event.data.payload);
+        }
+    });
+
+
+
+})();
