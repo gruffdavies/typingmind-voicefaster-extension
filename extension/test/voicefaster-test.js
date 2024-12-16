@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.130';
+    const VOICEFASTER_VERSION = '2.3.131';
 
     class EventEmitter {
     constructor() {
@@ -1059,7 +1059,7 @@ class UIComponent {
 
     setInitialPosition() {
         // TODO: get from settings
-        this.container.style.transform = "translate(0, 100px)"; // Sets initial offset
+        this.container.style.transform = "translate(-10px, 100px)"; // Sets initial offset
     }
 
     createHeader() {

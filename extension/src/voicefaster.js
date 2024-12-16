@@ -1055,7 +1055,7 @@ class UIComponent {
 
     setInitialPosition() {
         // TODO: get from settings
-        this.container.style.transform = "translate(0, 100px)"; // Sets initial offset
+        this.container.style.transform = "translate(-10px, 100px)"; // Sets initial offset
     }
 
     createHeader() {
