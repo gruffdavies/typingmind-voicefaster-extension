@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.127';
+    const VOICEFASTER_VERSION = '2.3.130';
 
     class EventEmitter {
     constructor() {
@@ -848,7 +848,7 @@ class TextAreaManager {
         });
 
         // Protect value for N milliseconds
-        setTimeout(() => this.cleanupObserver(), 250);
+        setTimeout(() => this.cleanupObserver(), 500);
     }
 
 
@@ -1054,6 +1054,12 @@ class UIComponent {
         this.container = document.createElement("div");
         this.container.className = "vf-widget";
         this.container.dataset.state = "idle";
+        this.setInitialPosition();
+    }
+
+    setInitialPosition() {
+        // TODO: get from settings
+        this.container.style.transform = "translate(0, 100px)"; // Sets initial offset
     }
 
     createHeader() {
@@ -1454,7 +1460,7 @@ class UIComponent {
                 console.debug("🧹Clearing transcript after send timeout");
                 this.clearTranscriptArea();
                 this.pendingTranscriptClear = null;
-            }, 2000);
+            }, 5000); // TOD: make this configurable in settings
 
             if (this.controller.transcriberComponent.isListening) {
                 this.controller.toggleRecording();
@@ -2305,7 +2311,11 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
             punctuate: this.config.punctuate,
             smart_format: this.config.smart_format,
         };
-        const keywords = ["keywords=KwizIQ:2"].join("&");
+        // TODO: Make this available in settings
+        const keywords = [
+            "keywords=KwizIQ:2",
+            "keywords=Pidgin:2"
+          ].join("&");
         const deepgramUrl = `${deepgramBaseURL}?${new URLSearchParams(
             deepgramOptions
         )}&${keywords}`;

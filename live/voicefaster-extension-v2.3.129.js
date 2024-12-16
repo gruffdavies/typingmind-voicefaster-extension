@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.130';
+    const VOICEFASTER_VERSION = '2.3.129';
 
     class EventEmitter {
     constructor() {
@@ -1054,7 +1054,7 @@ class UIComponent {
         this.container = document.createElement("div");
         this.container.className = "vf-widget";
         this.container.dataset.state = "idle";
-        this.setInitialPosition();
+        setInitialPosition();
     }
 
     setInitialPosition() {

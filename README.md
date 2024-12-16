@@ -46,8 +46,16 @@ User voice is transribed and sent to the agent chat window as text in real time 
    - Navigate to Menu > Settings > Advanced Settings > Extensions
    - Add:
 
+**Latest Available Version:**
+
 ```txt
-https://gruffdavies.github.io/typingmind-voicefaster-extension/live/voicefaster-extension-v2.3.119.js
+https://gruffdavies.github.io/typingmind-voicefaster-extension/live/voicefaster-extension-latest.js
+```
+
+**Specific Version:**
+
+```txt
+https://gruffdavies.github.io/typingmind-voicefaster-extension/live/voicefaster-extension-vX.Y.Z.js
 ```
 
 1. Configure API Keys in TypingMind settings:
