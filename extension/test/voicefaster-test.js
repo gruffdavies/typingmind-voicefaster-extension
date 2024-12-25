@@ -1,6 +1,6 @@
 (() => {
 
-    const VOICEFASTER_VERSION = '2.3.131';
+    const VOICEFASTER_VERSION = '2.3.136';
 
     class EventEmitter {
     constructor() {
@@ -1059,7 +1059,7 @@ class UIComponent {
 
     setInitialPosition() {
         // TODO: get from settings
-        this.container.style.transform = "translate(-10px, 100px)"; // Sets initial offset
+        this.container.style.transform = "translate(-10px, 20px)"; // Sets initial offset
     }
 
     createHeader() {
@@ -1545,21 +1545,25 @@ class UIComponent {
         let startX, startY;
         let startRight; // Track distance from right edge
 
+        // In the dragStart function, modify to account for the initial offset
+        // Note that the position according to the element is wrong as it doesn't take into
+        // account the transform.
         const dragStart = (e) => {
             if (e.target === dragHandle || dragHandle.contains(e.target)) {
                 isDragging = true;
                 e.preventDefault();
 
                 const rect = this.container.getBoundingClientRect();
-                // Calculate distance from right edge of viewport
-                startRight = window.innerWidth - rect.right;
+                // Get the current transform values
+                const transform = window.getComputedStyle(this.container).transform;
+                const matrix = new DOMMatrix(transform);
+
+                startRight = window.innerWidth - (rect.right - matrix.m41);
                 startX = e.type === "mousedown" ? e.clientX : e.touches[0].clientX;
-                startY =
-                    (e.type === "mousedown" ? e.clientY : e.touches[0].clientY) -
-                    rect.top;
+                startY = (e.type === "mousedown" ? e.clientY : e.touches[0].clientY) - rect.top;
             }
         };
-
+        
         const drag = (e) => {
             if (!isDragging) return;
             e.preventDefault();
@@ -2315,7 +2319,7 @@ class DeepGramTranscriber extends BaseTranscriberProvider {
         const keywords = [
             "keywords=KwizIQ:2",
             "keywords=Pidgin:2"
-          ].join("&");
+        ].join("&");
         const deepgramUrl = `${deepgramBaseURL}?${new URLSearchParams(
             deepgramOptions
         )}&${keywords}`;
