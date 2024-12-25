@@ -1009,6 +1009,177 @@ class TextAreaManager {
         this.isHandlingChange = false;
     }
 }
+// PositionManager.js
+class PositionManager {
+    constructor(container) {
+        this.container = container;
+        this.defaultPosition = { right: 10, top: 20 };
+        this.currentPosition = null;
+        this.isKeyboardVisible = false;
+        this.visualViewport = window.visualViewport;
+        this.safeAreaInsets = this.getSafeAreaInsets();
+
+        // Initialize position management
+        this.initialize();
+
+        // Bind event handlers
+        this.handleViewportChange = this.handleViewportChange.bind(this);
+        this.handleOrientationChange = this.handleOrientationChange.bind(this);
+    }
+
+    initialize() {
+        // Load stored position or use default
+        this.currentPosition = this.loadStoredPosition() || this.defaultPosition;
+        this.applyPosition(this.currentPosition);
+
+        // Setup event listeners
+        if (this.visualViewport) {
+            this.visualViewport.addEventListener('resize', this.handleViewportChange);
+            this.visualViewport.addEventListener('scroll', this.handleViewportChange);
+        }
+
+        window.addEventListener('orientationchange', this.handleOrientationChange);
+
+        // Initial position check
+        requestAnimationFrame(() => this.validateAndAdjustPosition());
+    }
+
+    getSafeAreaInsets() {
+        // Get CSS environment variables for safe area
+        return {
+            top: parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0'),
+            right: parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sar') || '0'),
+            bottom: parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sab') || '0'),
+            left: parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sal') || '0')
+        };
+    }
+
+    handleViewportChange() {
+        // Debounce viewport changes
+        if (this.viewportTimeout) {
+            clearTimeout(this.viewportTimeout);
+        }
+
+        this.viewportTimeout = setTimeout(() => {
+            const oldHeight = this.lastViewportHeight;
+            const newHeight = this.visualViewport.height;
+            this.lastViewportHeight = newHeight;
+
+            // Detect keyboard visibility
+            if (oldHeight && newHeight < oldHeight * 0.75) {
+                this.isKeyboardVisible = true;
+            } else if (oldHeight && newHeight > oldHeight * 0.9) {
+                this.isKeyboardVisible = false;
+            }
+
+            this.validateAndAdjustPosition();
+        }, 100);
+    }
+
+    handleOrientationChange() {
+        // Wait for orientation change to complete
+        setTimeout(() => {
+            this.validateAndAdjustPosition();
+        }, 300);
+    }
+
+    validateAndAdjustPosition() {
+        const bounds = this.calculateBounds();
+        const currentRect = this.container.getBoundingClientRect();
+
+        // Check if current position is valid
+        if (!this.isPositionValid(currentRect, bounds)) {
+            const newPosition = this.calculateSafePosition(currentRect, bounds);
+            this.applyPosition(newPosition, true);
+        }
+    }
+
+    calculateBounds() {
+        const viewportWidth = this.visualViewport?.width || window.innerWidth;
+        const viewportHeight = this.visualViewport?.height || window.innerHeight;
+
+        return {
+            top: this.safeAreaInsets.top,
+            right: viewportWidth - this.safeAreaInsets.right,
+            bottom: viewportHeight - (this.isKeyboardVisible ? 0 : this.safeAreaInsets.bottom),
+            left: this.safeAreaInsets.left
+        };
+    }
+
+    isPositionValid(rect, bounds) {
+        return (
+            rect.top >= bounds.top &&
+            rect.right <= bounds.right &&
+            rect.bottom <= bounds.bottom &&
+            rect.left >= bounds.left
+        );
+    }
+
+    calculateSafePosition(rect, bounds) {
+        const newPosition = { ...this.currentPosition };
+
+        // Adjust horizontal position
+        if (rect.right > bounds.right) {
+            newPosition.right = Math.max(0, bounds.right - rect.width);
+        } else if (rect.left < bounds.left) {
+            newPosition.right = bounds.right - rect.width;
+        }
+
+        // Adjust vertical position
+        if (rect.bottom > bounds.bottom) {
+            newPosition.top = Math.max(bounds.top, bounds.bottom - rect.height);
+        } else if (rect.top < bounds.top) {
+            newPosition.top = bounds.top;
+        }
+
+        return newPosition;
+    }
+
+    applyPosition(position, animate = false) {
+        const style = this.container.style;
+
+        if (animate) {
+            style.transition = 'transform 0.3s ease-out';
+            requestAnimationFrame(() => {
+                style.transform = `translate(${-position.right}px, ${position.top}px)`;
+            });
+            setTimeout(() => {
+                style.transition = '';
+            }, 300);
+        } else {
+            style.transform = `translate(${-position.right}px, ${position.top}px)`;
+        }
+
+        this.currentPosition = position;
+        this.savePosition(position);
+    }
+
+    loadStoredPosition() {
+        try {
+            const stored = localStorage.getItem('vf-position');
+            return stored ? JSON.parse(stored) : null;
+        } catch (e) {
+            console.warn('Failed to load stored position:', e);
+            return null;
+        }
+    }
+
+    savePosition(position) {
+        try {
+            localStorage.setItem('vf-position', JSON.stringify(position));
+        } catch (e) {
+            console.warn('Failed to save position:', e);
+        }
+    }
+
+    cleanup() {
+        if (this.visualViewport) {
+            this.visualViewport.removeEventListener('resize', this.handleViewportChange);
+            this.visualViewport.removeEventListener('scroll', this.handleViewportChange);
+        }
+        window.removeEventListener('orientationchange', this.handleOrientationChange);
+    }
+}
 
 // UIManager.js
 class UIComponent {
@@ -1020,6 +1191,7 @@ class UIComponent {
         this.queueUIManager = null;
         this.textAreaManager = null;
         this.pendingTranscriptClear = null;
+        this.positionManager = null;
     }
 
     // Add this method
@@ -1039,6 +1211,9 @@ class UIComponent {
         this.createControls();
         this.createInfo();
         this.createBubbleTray();
+        // Initialize position manager after container creation
+        this.positionManager = new PositionManager(this.container);
+
         this.createTranscriptArea();
         this.createSettings();
         this.makeDraggable();
@@ -1559,7 +1734,7 @@ class UIComponent {
                 startY = (e.type === "mousedown" ? e.clientY : e.touches[0].clientY) - rect.top;
             }
         };
-        
+
         const drag = (e) => {
             if (!isDragging) return;
             e.preventDefault();
@@ -1661,6 +1836,10 @@ class UIComponent {
     }
 
     cleanup() {
+        if (this.positionManager) {
+            this.positionManager.cleanup();
+            this.positionManager = null;
+        }
         if (this.textAreaManager) {
             this.textAreaManager.cleanup();
             this.textAreaManager = null;
